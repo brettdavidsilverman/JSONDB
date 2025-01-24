@@ -1,0 +1,8 @@
+{
+   "Database": {
+      "server": "localhost",
+      "username": "brett",
+      "password": "xxxx",
+      "database": "JSONDB"
+   }
+}

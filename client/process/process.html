@@ -1,0 +1,181 @@
+<html lang="en">
+   <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <title id="title">Process</title>
+      <script src="/head.js"></script>
+      <script src="/error.js"></script>
+      <script src="/client/stream/stream.js"></script>
+      <script src="/client/power-encoding/power-encoding.js"></script>
+      <script src="/client/id/id.js"></script>
+      <script src="/client/evaluate.js"></script>      <script src="/client/logon/authentication.js"></script>
+      <script src="/client/punycode.js"></script>
+      <script src="/client/coordinates/script.js"></script>
+      <script src="/client/movable/script.js"></script>
+      <script src="/client/process/script.js"></script>
+      <link rel="stylesheet" type="text/css" href="/style.css"/>
+      <link rel="stylesheet" type="text/css" href="style.css"/>
+      <style>
+
+
+      </style>
+   </head>
+   <body>
+      
+      <h1 id="h1">Process</h1>
+      <script src="/client/origin.js"></script>
+      
+
+      <form id="urlForm" onsubmit="return false;">
+         <label for="urlInput">Fetch process path</label>
+         <input type="text" id="urlInput"></input>
+         <button id="fetchButton" onclick="fetchProcesses()">Fetch</button>
+         <button id="saveButton" onclick="saveProcesses()">Save</button>
+      </form>
+      
+      <script>
+var processes;
+var url = document.getElementById("urlInput");
+var fetchButton = document.getElementById("fetchButton");
+var saveButton = document.getElementById("saveButton");
+
+var value = localStorage.getItem("process.html.url");
+if (value)
+   url.value = value;
+   
+function fetchProcesses() {
+   
+   if (!url.value) {
+      alert("Please enter a path to a process");
+      return Promise.reject("Missing url");
+   }
+   
+   fetchButton.disabled = true;
+   
+   return fetchJSON(url.value).
+   then(
+      function(procs) {
+         processes = procs;
+         createProcesses();
+         localStorage.setItem("process.html.url", url.value);
+         fetchButton.disabled = false;
+      }
+   ).
+   catch(
+      function(error) {
+         fetchButton.disabled = false;
+         if (confirm(error + ". Create default?"))
+            createProcesses();
+      }
+   );
+}
+
+function saveProcesses() {
+   var url = document.getElementById("urlInput").value;
+   saveButton.disabled = true;
+   
+   postJSON(url, processes).
+   then(
+      function() {
+         saveButton.disabled = false;
+      }
+   ).
+   catch(
+      function(error) {
+         Error(error, saveProcesses);
+         saveButton.disabled = false;
+      }
+   );
+}
+
+processes =
+{
+   "Maximum": {
+      "type": "input",
+      "input": "number",
+      "topLeft": {
+         "x": 100,
+         "y": 200
+      }
+   },
+   "Count": {
+      "type": "variable",
+      "initial": 1,
+      "topLeft": {
+         "x": 400,
+         "y": 200
+      }
+   },
+   "Branch": {
+      "type": "branch",
+      "inputs": [
+         "maximum",
+         "count"
+      ],
+      "goto": "Exit",
+      "function": "function(maximum, count) {\r\n   return count >= maximum;\r\n}",
+      "topLeft": {
+         "x": 200,
+         "y": 450
+      }
+   },
+   "Increment": {
+      "type": "function",
+      "inputs": [
+         "count"
+      ],
+      "function": "function(count) {\r\n   return ++count;\r\n}",
+      "topLeft": {
+         "x": 200,
+         "y": 750
+      }
+   },
+
+   "Exit": {
+      "type": "output",
+      "inputs": [
+         "count"
+      ],
+      "function": "function(count) {\r\n   return count;\r\n}",
+      "topLeft": {
+         "x": 200,
+         "y": 1050
+      }
+   },
+   "routes": [
+      {
+         "from": "Maximum",
+         "to": "Branch",
+         "label": "maximum"
+      },
+      {
+         "from": "Count",
+         "to": "Branch",
+         "label": "count"
+      },
+      {
+         "from": "Branch",
+         "to": "Increment",
+         "label": "count"
+      },
+      {
+         "from": "Increment",
+         "to": "Branch",
+         "label": "count"
+      }
+      
+   ]
+      
+}
+setupProcessEditor();
+
+if (url.value)
+   fetchProcesses();
+else
+   createProcesses();
+
+
+      </script>
+   </body>
+
+</html>

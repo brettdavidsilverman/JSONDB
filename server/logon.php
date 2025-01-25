@@ -63,10 +63,11 @@ $credentials =
       $ipAddress
    );
    
-setCredentialsCookie($credentials);
-
 $connection->close();
    
+setCredentialsCookie($credentials);
+
+
 
 
 ?>

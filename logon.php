@@ -94,6 +94,10 @@ function logon()
    authentication.logon(email.value, secret).then(
       function(response) {
          if (response) {
+            localStorage.setItem(
+               "authentication.email",
+               email.value
+            );
             const params = new URL(document.location.href).searchParams;
             if (params.has("redirect")) {
                redirect = params.get("redirect");
@@ -241,6 +245,7 @@ function createThumbnail(file)
          "authentication.thumbnail",
          thumbnail.src
       );
+
    }
       
    function prepareCanvas(canvas)
@@ -262,11 +267,18 @@ function createThumbnail(file)
 
 function updateForm()
 {
- 
+   var _email =
+      localStorage.getItem(
+         "authentication.email"
+      );
+      
+   if (_email)
+      email.value = _email;
+      
    var thumbnailSrc = localStorage.getItem(
       "authentication.thumbnail"
    );
-
+   
    if (thumbnailSrc)
    {
       thumbnail.src = thumbnailSrc;
@@ -293,29 +305,6 @@ document.body.onload = function()
          updateForm();
       }
    );
-}
-
-document.getCookie = function(name)
-{
-   var cookies = document.cookie.split(";");
-   for (i in cookies)
-   {
-      var cookie = cookies[i];
-      var parts = cookie.split("=");
-      var _name = null;
-      if (parts.length >= 1)
-         _name = parts[0].trim();
-      var value = null;
-      if (parts.length >= 2)
-         value = parts[1].trim();
-      if (name == _name) {
-         return value;
-      }
-            
-   }
-   
-   return undefined;
-      
 }
 
 

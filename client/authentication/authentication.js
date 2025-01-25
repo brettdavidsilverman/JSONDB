@@ -80,17 +80,15 @@ class Authentication
          fetch(this.url + "/server/authenticate.php", parameters)
          .then(
             function(response) {
-               return response.json()
-            }
-         )
-         .then(
-            function(json) {
-               _this.authenticated =
-                  json.authenticated;
-               _this.sessionId =
-                  json.sessionId;
-               
-               return _this;
+               if (response.ok) {
+                  var creds =
+                     _this.getCredentials();
+                  Object.assign(_this, creds);
+               }
+               else
+                  _this.authenticated = false;
+                  
+               return _this.authenticated;
             }
          );
 
@@ -166,12 +164,12 @@ function authenticate() {
    var promise =
       authentication.getStatus().
       then(
-         function(auth) {
+         function(authenticated) {
  
-            if (!auth.authenticated) {
+            if (!authenticated) {
                 
                var currentPage = document.location.href;
-               var newPage = authentication.authenticationServer + "/client/logon/";
+               var newPage = authentication.authenticationServer + "/logon.php";
                var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
                document.location.href = url;
             }

@@ -67,4 +67,6 @@ setCredentialsCookie($credentials);
 
 $connection->close();
    
+
+
 ?>

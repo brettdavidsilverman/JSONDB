@@ -11,7 +11,7 @@ class Authentication
    
    logon(email, secret)
    {
-   
+
       var _this = this;
       
       this.authenticated = false;
@@ -37,9 +37,18 @@ class Authentication
          fetch(this.url + "/server/logon.php", parameters)
          .then(
             function(response) {
-               return response.json();
+               if (response.ok) {
+                  var creds =
+                     _this.getCredentials();
+                  Object.assign(_this, creds);
+               }
+               else
+                  _this.authenticated = false;
+                  
+               return _this.authenticated;
             }
-         )
+         );
+         /*
          .then(
             function(json) {
                _this.authenticated = 
@@ -49,7 +58,8 @@ class Authentication
                return _this;
             }
          );
-
+         */
+         
       return promise;
    }
    
@@ -112,6 +122,39 @@ class Authentication
       return promise;
    }
    
+   getCookie(name)
+   {
+      var cookies = document.cookie.split(";");
+      for (var i in cookies)
+      {
+         var cookie = cookies[i];
+         var parts = cookie.split("=");
+         var _name = null;
+         if (parts.length >= 1)
+            _name = parts[0].trim();
+         var value = null;
+         if (parts.length >= 2)
+            value = parts[1].trim();
+         if (name == _name) {
+            return value;
+         }
+            
+      }
+   
+      return undefined;
+      
+   }
+   
+   getCredentials() {
+      var cookie = this.getCookie("credentials");
+      if (cookie) {
+         cookie = decodeURIComponent(cookie);
+         return JSON.parse(cookie);
+      }
+      return null;
+   }
+
+
 }
 
 function authenticate() {

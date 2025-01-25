@@ -80,19 +80,20 @@ function logon()
  
    thumbnail.classList.add("pressed");
   
-   if (!secret) {
-      alert("Please select a secret");
-      return false;
-   }
-   
    if (!email.value) {
       alert("Please enter your email address");
       return false;
    }
    
+   
+   if (!secret) {
+      alert("Please select a secret");
+      return false;
+   }
+   
    authentication.logon(email.value, secret).then(
       function(response) {
-         if (authentication.authenticated) {
+         if (response) {
             const params = new URL(document.location.href).searchParams;
             if (params.has("redirect")) {
                redirect = params.get("redirect");
@@ -103,7 +104,7 @@ function logon()
             }
          }
          else {
-            alert(response);
+            alert("Invalid email or secret");
          }
       }
    ).then(

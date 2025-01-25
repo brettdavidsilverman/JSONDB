@@ -32,8 +32,7 @@ function setCredentialsCookie($credentials)
       true
    );
  
-   
-  // echo json_encode($credentials);
+
 }
 
 ?>

@@ -67,7 +67,7 @@ class Authentication
       var _this = this;
 
       var promise =
-         fetch(this.url + "/server/authenticated.php", parameters)
+         fetch(this.url + "/server/authenticate.php", parameters)
          .then(
             function(response) {
                return response.json()

@@ -1,4 +1,7 @@
 <?php
+require_once 'connection.php';
+require_once 'credentials.php';
+
 function logon($connection, $email, $secret, $ipAddress)
 {
    $statement = $connection->prepare(
@@ -8,27 +11,35 @@ function logon($connection, $email, $secret, $ipAddress)
    $statement->bind_param('sss', $email, $secret, $ipAddress );
    
    $statement->execute();
-   $result = $statement->get_result();
-   $row = $result->fetch_assoc();
    
-   $userId = $row['userId'];
-   $sessionId = $row['sessionId'];
+   $statement->bind_result(
+      $userId,
+      $sessionId,
+      $expiryDate
+   );
    
+   if (!$statement->fetch())
+      $sessionId = NULL;
+      
    $statement->close();
    
-   if (is_null($sessionId))
-      return NULL;
-   else {
-      $json = array(
+   if (!is_null($sessionId))
+   {
+      $credentials = array(
          "userId" => $userId, 
          "sessionId" => $sessionId,
+         "expiryDate" => $expiryDate,
          "authenticated" => true
       );
-      return $json;
+      
    }
+   else
+      $credentials = null;
+      
+   return $credentials;
 }
 
-$connection = require('connection.php');
+$connection = getConnection();
 
 $filePointer = fopen('php://input', 'r');
 
@@ -52,11 +63,7 @@ $credentials =
       $ipAddress
    );
    
-if (!is_null($credentials)) {
-   $output = json_encode($credentials);
-
-   echo $output;
-}
+setCredentialsCookie($credentials);
 
 $connection->close();
    

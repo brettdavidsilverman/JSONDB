@@ -21,6 +21,4 @@ function getConnection() {
    return $connection;
 }
 
-return getConnection();
-
 ?>

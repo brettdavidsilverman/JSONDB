@@ -1,4 +1,15 @@
 <?php
-   $headers = apache_request_headers();
-   var_dump($headers['Host']);
+   $url = '/logon.php';
+   $redirect = $_SERVER['REQUEST_URI'];
+   $query = '?redirect=' . urlencode($redirect);
+   
+   $url = $url . $query;
 ?>
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+   </head>
+   <body>
+      bee.fish
+   </body>
+</html>

@@ -1,24 +1,5 @@
 <?php
-require_once 'connection.php';
-require_once 'credentials.php';
-
-function logoff($connection, $sessionId, $ipAddress)
-{
-   $statement = $connection->prepare(
-     "CALL logoff(?, ?);"
-   );
-   
-   $statement->bind_param(
-      'ss',
-      $sessionId,
-      $ipAddress
-   );
-   
-   $statement->execute();
-
-   $statement->close();
-   
-}
+require_once 'functions.php';
 
 $connection = getConnection();
 

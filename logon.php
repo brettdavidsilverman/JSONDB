@@ -17,7 +17,7 @@
    <body>
       <h1>Logon</h1>
       <p>Please provide your email address and secret to logon.</p>
-      <a href="/client/logon/authentication.js">authentication.js</a>
+      <a href="/client/authentication/authentication.js">authentication.js</a>
       <form id="form" onsubmit="onsubmit()">
          <label for="email">
             Email
@@ -31,7 +31,8 @@
          <input type="file" id="secretFile" onchange="createSecret(this.files[0]);" accept="image/*" style="display:none;" ></input>
          <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
          <div id="logonDiv">
-            <button onclick="logon(); return false;">Logon</button>
+            <button id="logoffButton" onclick="logoff(); return false;">Logoff</button>
+            <button id="logonButton" onclick="logon(); return false;">Logon</button>
          </div>
          <script>
          
@@ -62,14 +63,19 @@ var thumbnail =
 var email =
    document.getElementById("email");
    
+var logonButton =
+   document.getElementById("logonButton");
+   
+var logoffButton =
+   document.getElementById("logoffButton");
+   
 var secret = null;
 
 function thumbnailClicked(event)
 {
    if (authentication.authenticated) {
       event.preventDefault();
-      if (confirm("Logoff?"))
-         logoff();
+      logoff();
    }
    else
       return true;
@@ -78,7 +84,7 @@ function thumbnailClicked(event)
 function logon()
 {
  
-   thumbnail.classList.add("pressed");
+   
   
    if (!email.value) {
       alert("Please enter your email address");
@@ -91,6 +97,8 @@ function logon()
       return false;
    }
    
+   thumbnail.classList.add("pressed");
+   
    authentication.logon(email.value, secret).then(
       function(response) {
          if (response) {
@@ -102,9 +110,6 @@ function logon()
             if (params.has("redirect")) {
                redirect = params.get("redirect");
                document.location.href = redirect;
-            }
-            else {
-               document.location.reload();
             }
          }
          else {
@@ -128,6 +133,9 @@ function logon()
 
 function logoff()
 {
+   if (!confirm("Logoff?"))
+      return;
+      
    secret = null;
    thumbnail.classList.remove("pressed");
    authentication.logoff().then(
@@ -180,6 +188,7 @@ function createSecret(file)
       function(_secret) {
          thumbnail.style.filter = "none";
          secret = _secret;
+         updateForm();
       }
    );
    
@@ -287,10 +296,15 @@ function updateForm()
    if (authentication.authenticated)
    {
       thumbnail.classList.add("pressed");
+      logoffButton.disabled = false;
+      logonButton.disabled = true;
+
    }
    else
    {
       thumbnail.classList.remove("pressed");
+      logoffButton.disabled = true;
+      logonButton.disabled = (secret == null);
    }
 
       
@@ -300,11 +314,15 @@ function updateForm()
 document.body.onload = function()
 {
    form.reset();
-   authentication.getStatus().then(
-      function(auth){
-         updateForm();
-      }
-   );
+   
+   if (authentication.authenticated)
+      updateForm();
+   else
+      authentication.getStatus().then(
+         function(auth){
+            updateForm();
+         }
+      );
 }
 
 

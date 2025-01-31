@@ -1,0 +1,6 @@
+RewriteEngine on
+# RewriteCond %{QUERY_STRING} (.*)
+# RewriteRule ^(.*)$ http://www.google.com/?path=$1&query=%1 [R=301,B]
+
+
+# RewriteRule ^(.*)$ http://www.google.com/?path=$1 [R=301,B,QSA]

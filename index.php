@@ -1,3 +1,7 @@
+<?php
+   require_once 'server/functions.php';
+   authenticate();
+?>
 <!DOCTYPE html>
 <html lang="en">
    <head>
@@ -57,7 +61,7 @@
       <br />
       <a href="/client/">Javascript client library</a>
       <br />
-      <a href="https://github.com/brettdavidsilverman/bee.fish">Bee.Fish on Git Hub</a>
+      <a href="https://github.com/brettdavidsilverman/JSONDB">Bee.Fish on Git Hub</a>
       <script>
 
 const defaultURL = 
@@ -82,8 +86,7 @@ title.innerText = origin;
 
 fetchButton.disabled = true;
 
-authenticate();
-
+authenticate();
 function loadJSON() {
    var url = pathInput.value;
    

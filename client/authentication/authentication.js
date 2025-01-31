@@ -1,12 +1,12 @@
 class Authentication
 {
    constructor(authenticationServer = document.location.origin) {
-     // Object.assign(this, input);
-      this.authenticated = false;
+      var creds = this.getCredentials();
+      Object.assign(this, creds);
       this.authenticationServer =
          authenticationServer;
       this.url = this.authenticationServer;
-      
+
    }
    
    logon(email, secret)
@@ -36,7 +36,7 @@ class Authentication
       var promise =  
          fetch(this.url + "/server/logon.php", parameters)
          .then(
-            function(response) {
+            function(response) {
                if (response.ok) {
                   var creds =
                      _this.getCredentials();
@@ -63,8 +63,30 @@ class Authentication
       return promise;
    }
    
+   get authenticated() {
+      var credentials = this.getCredentials();
+
+      if (credentials != null) {
+         var expiryDate = new Date(credentials.expiryDate);
+         var authed =
+            (expiryDate > new Date()) &&
+            (credentials.authenticated);
+         return authed;
+      }
+     
+     return false;
+      
+   }
+   
+   set authenticated(value) {
+
+      if (!value) {
+         document.cookie = "sessionId=;path=/;max-age=0;"
+      }
+   }
+   
    getStatus()
-   {
+   {
       var _this = this;
       
       this.authenticated = false;
@@ -99,8 +121,6 @@ class Authentication
    {
       var _this = this;
       
-      this.authenticated = false;
-
       var parameters = {
          method: "POST",
          credentials: "include"
@@ -116,7 +136,6 @@ class Authentication
          
       this.authenticated = false;
       this.secret = null;
-      document.cookie = "sessionId=;path=/;max-age=0;"
       return promise;
    }
    
@@ -160,29 +179,18 @@ function authenticate() {
    var authentication =
       new Authentication(
          document.location.origin
-      );
-   var promise =
-      authentication.getStatus().
-      then(
-         function(authenticated) {
- 
-            if (!authenticated) {
-                
-               var currentPage = document.location.href;
-               var newPage = authentication.authenticationServer + "/logon.php";
-               var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
-               document.location.href = url;
-            }
-            return auth;
-         }
-      )
-      .catch (
-         function(error) {
-            Error(error, authenticate);
-          }
       );
       
-   return promise;
+   if (authentication.authenticated)
+      return Promise.resolve(true);
+   var currentPage = document.location.href;
+   var newPage = authentication.authenticationServer + "/logon.php";
+   var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
+  
+  document.location.href = url;
+   
+      
+   return Promise.resolve(false);
 
 }
 

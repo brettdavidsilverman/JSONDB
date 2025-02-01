@@ -182,15 +182,15 @@ function authenticate() {
       );
       
    if (authentication.authenticated)
-      return Promise.resolve(true);
+      return true;
    var currentPage = document.location.href;
    var newPage = authentication.authenticationServer + "/logon.php";
    var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
   
-  document.location.href = url;
+   document.location.href = url;
    
       
-   return Promise.resolve(false);
+   return false;
 
 }
 

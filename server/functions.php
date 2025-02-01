@@ -102,8 +102,7 @@ function logoff($connection, $sessionId, $ipAddress)
 
 function setCredentialsCookie($credentials)
 {
-   $headers = apache_request_headers();
-   $host = $headers['Host'];
+   $host = getHost();
    $expiryTime = null;
    
    if (!is_null($credentials)) {
@@ -128,11 +127,14 @@ function setCredentialsCookie($credentials)
       "credentials",
       json_encode($credentials),
       $expiryTime,
+      "/"
+   );
+   /*,
       "/",
       $host,
       true
    );
- 
+ */
 
 }
 
@@ -145,6 +147,11 @@ function redirect($url)
 
     exit();
 }
+
+function getHost() {
+    return $_SERVER['HTTP_HOST'];
+}
+
 
 function _authenticate($connection, $sessionId, $ipAddress)
 {

@@ -1,15 +1,4 @@
 <?php
-   $url = '/logon.php';
-   $redirect = $_SERVER['REQUEST_URI'];
-   $query = '?redirect=' . urlencode($redirect);
-   
-   $url = $url . $query;
+   require_once 'server/functions.php';
+   echo getHost();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-   <head>
-   </head>
-   <body>
-      bee.fish
-   </body>
-</html>

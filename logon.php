@@ -28,14 +28,14 @@
             <br />
             <img id="thumbnail" width="100" height="100" onclick="return thumbnailClicked(event)"></img>
          </label>
-         <input type="file" id="secretFile" onchange="createSecret(this.files[0]);" accept="image/*" style="display:none;" ></input>
+         <input type="file" id="secretFile" onchange="createThumbnail(this.files[0]);" accept="image/*" style="display:none;" ></input>
          <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
          <div id="logonDiv">
             <button id="logoffButton" onclick="logoff(); return false;">Logoff</button>
             <button id="logonButton" onclick="logon(); return false;">Logon</button>
          </div>
          <script>
-         
+
 function onsubmit(event)
 {
    event.preventDefault();
@@ -83,9 +83,7 @@ function thumbnailClicked(event)
 
 function logon()
 {
- 
-   
-  
+
    if (!email.value) {
       alert("Please enter your email address");
       return false;
@@ -106,6 +104,12 @@ function logon()
                "authentication.email",
                email.value
             );
+            
+            localStorage.setItem(
+               "authentication.thumbnail",
+               thumbnail.src
+            );
+            
             const params = new URL(document.location.href).searchParams;
             if (params.has("redirect")) {
                redirect = params.get("redirect");
@@ -113,6 +117,7 @@ function logon()
             }
          }
          else {
+            secret = null;
             alert("Invalid email or secret");
          }
       }
@@ -175,20 +180,16 @@ function createSecret(file)
 
    thumbnail.classList.remove("pressed");
    
-   if (!file)
-      return;
-
    thumbnail.style.filter = "grayscale(100%)";
-   thumbnail.src = null;
- 
-   createThumbnail(file);
-
+   
    getFileHash(file)
    .then(
       function(_secret) {
          thumbnail.style.filter = "none";
          secret = _secret;
-         updateForm();
+         updateForm(false);
+         if (email.value)
+            logon();
       }
    );
    
@@ -245,16 +246,13 @@ function createThumbnail(file)
 
       // get the image
       var jpeg =
-         canvas.toDataURL("image/jpeg", 1.0);
+         canvas.toDataURL("image/jpeg", 0.5);
      
       // set the thumbnail
       thumbnail.src = jpeg;
-      
-      localStorage.setItem(
-         "authentication.thumbnail",
-         thumbnail.src
-      );
 
+      createSecret(file);
+      
    }
       
    function prepareCanvas(canvas)
@@ -274,23 +272,25 @@ function createThumbnail(file)
 }
 
 
-function updateForm()
+function updateForm(setFields = true)
 {
-   var _email =
-      localStorage.getItem(
-         "authentication.email"
-      );
-      
-   if (_email)
-      email.value = _email;
-      
-   var thumbnailSrc = localStorage.getItem(
-      "authentication.thumbnail"
-   );
+   secretFile.value = null;
    
-   if (thumbnailSrc)
-   {
-      thumbnail.src = thumbnailSrc;
+   if (setFields) {
+      var _email =
+         localStorage.getItem(
+            "authentication.email"
+         );
+      
+      if (_email)
+         email.value = _email;
+      
+      var thumbnailSrc = localStorage.getItem(
+         "authentication.thumbnail"
+      );
+   
+      if (thumbnailSrc)
+         thumbnail.src = thumbnailSrc;
    }
 
    if (authentication.authenticated)
@@ -311,7 +311,7 @@ function updateForm()
 }
 
 
-document.body.onload = function()
+function update()
 {
    form.reset();
    
@@ -325,7 +325,7 @@ document.body.onload = function()
       );
 }
 
-
+update();
          </script>
 
       </form>

@@ -42,23 +42,13 @@ class Authentication
                      _this.getCredentials();
                   Object.assign(_this, creds);
                }
-               else
+               else {
                   _this.authenticated = false;
-                  
+               }
+               
                return _this.authenticated;
             }
          );
-         /*
-         .then(
-            function(json) {
-               _this.authenticated = 
-                  json.authenticated;
-               _this.sessionId =
-                  json.sessionId;
-               return _this;
-            }
-         );
-         */
          
       return promise;
    }
@@ -117,9 +107,87 @@ class Authentication
       return promise;
    }
    
+   getUserEmailExists(email) {
+
+      var parameters = {
+         method: "POST",
+         body: JSON.stringify(email)
+      }
+         
+      var promise =
+         fetch(this.url + "/server/userEmailExists.php", parameters)
+         .then(
+            function(response) {
+               return response.json();
+            }
+         )
+         .then(
+            function(exists) {
+               return exists;
+            }
+         );
+
+      return promise;
+   }
+   
+   createUser(email, secret) {
+
+      var parameters = {
+         method: "POST",
+         body: JSON.stringify(
+            {
+               email: email,
+               secret: secret
+            }
+         )
+      }
+
+      var promise =
+         fetch(this.url + "/server/createUser.php", parameters)
+         .then(
+            function(response) {
+               return response.json();
+            }
+         )
+         .then(
+            function(status) {
+               return status;
+            }
+         );
+
+      return promise;
+   }
+   
+   validateUserEmail(email, newUserSecret) {
+
+      var parameters = {
+         method: "POST",
+         body: JSON.stringify(
+            {
+               email: email,
+               newUserSecret: newUserSecret
+            }
+         )
+      }
+
+      var promise =
+         fetch(this.url + "/server/validateUserEmail.php", parameters)
+         .then(
+            function(response) {
+               return response.json();
+            }
+         )
+         .then(
+            function(status) {
+               return status;
+            }
+         );
+
+      return promise;
+   }
+   
    logoff()
    {
-      var _this = this;
       
       var parameters = {
          method: "POST",
@@ -135,7 +203,7 @@ class Authentication
          );
          
       this.authenticated = false;
-      this.secret = null;
+      secret = null;
       return promise;
    }
    

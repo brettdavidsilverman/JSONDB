@@ -45,6 +45,53 @@ function userEmailExists($connection, $email)
    return $exists;
 }
 
+function createUser($connection, $email, $secret)
+{
+   $statement = $connection->prepare(
+     "CALL createUser(?, ?);"
+   );
+   
+   $statement->bind_param('ss', $email, $secret);
+   
+   $statement->execute();
+   
+   $userId = NULL;
+   $newUserSecret = NULL;
+   
+   $statement->bind_result($userId, $newUserSecret);
+   
+   if (!$statement->fetch()) {
+      return NULL;
+   }
+   
+   $statement->close();
+   
+   return $newUserSecret;
+}
+
+function validateUserEmail($connection, $email, $newUserSecret)
+{
+   $statement = $connection->prepare(
+     "CALL validateUserEmail(?, ?);"
+   );
+   
+   $statement->bind_param('ss', $email, $newUserSecret);
+   
+   $statement->execute();
+   
+   $userValidated = NULL;
+   
+   $statement->bind_result($userValidated);
+   
+   if (!$statement->fetch()) {
+      return false;
+   }
+   
+   $statement->close();
+   
+   return $userValidated;
+}
+
 function logon($connection, $email, $secret, $ipAddress)
 {
    $statement = $connection->prepare(
@@ -102,7 +149,6 @@ function logoff($connection, $sessionId, $ipAddress)
 
 function setCredentialsCookie($credentials)
 {
-   $host = getHost();
    $expiryTime = null;
    
    if (!is_null($credentials)) {
@@ -129,29 +175,17 @@ function setCredentialsCookie($credentials)
       $expiryTime,
       "/"
    );
-   /*,
-      "/",
-      $host,
-      true
-   );
- */
-
 }
 
 function redirect($url)
 {
     if (headers_sent() === false)
     {
-        header('Location: ' . $url, true, 302);
+        header('Location: ' . $url, true, 307);
     }
 
     exit();
 }
-
-function getHost() {
-    return $_SERVER['HTTP_HOST'];
-}
-
 
 function _authenticate($connection, $sessionId, $ipAddress)
 {
@@ -235,6 +269,22 @@ function authenticate()
    }
    else
       return true;
+}
+
+
+function getPostedData()
+{
+   $filePointer = fopen('php://input', 'r');
+
+   $input =
+      stream_get_contents($filePointer);
+      
+   fclose($filePointer);
+   
+   $json =
+      json_decode($input, true);
+      
+   return $json;
 }
 
 ?>

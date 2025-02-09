@@ -18,7 +18,7 @@
       <h1>Logon</h1>
       <p>Please provide your email address and secret to logon.</p>
       <a href="/client/authentication/authentication.js">authentication.js</a>
-      <form id="form" onsubmit="onsubmit()">
+      <form id="form" onsubmit="return false;">
          <label for="email">
             Email
          </label>
@@ -35,13 +35,6 @@
             <button id="logonButton" onclick="logon(); return false;">Logon</button>
          </div>
          <script>
-
-function onsubmit(event)
-{
-   event.preventDefault();
-   return false;
-}
-
 
 var console = new Console();
 console.log("Hello world");
@@ -74,8 +67,8 @@ var secret = null;
 function thumbnailClicked(event)
 {
    if (authentication.authenticated) {
-      event.preventDefault();
       logoff();
+      return false;
    }
    else
       return true;
@@ -100,30 +93,52 @@ function logon()
    authentication.logon(email.value, secret).then(
       function(response) {
          if (response) {
-            localStorage.setItem(
-               "authentication.email",
-               email.value
-            );
-            
-            localStorage.setItem(
-               "authentication.thumbnail",
-               thumbnail.src
-            );
-            
+            saveFields();
             const params = new URL(document.location.href).searchParams;
             if (params.has("redirect")) {
                redirect = params.get("redirect");
                document.location.href = redirect;
             }
+            else
+               updateForm();
          }
          else {
-            secret = null;
-            alert("Invalid email or secret");
+           authentication.getUserEmailExists(email.value)
+           .then(
+              function(exists) {
+                 if (exists) {
+                    alert("Invalid email or secret");
+                    updateForm(false);
+                 }
+                 else {
+                    if (confirm("Email does not exist. Do you wish to create a new user?"))
+                    {
+                       authentication.createUser(
+                          email.value, secret
+                       ).
+                       then(
+                          function (ok) {
+                             if (ok) {
+                                alert("Please check your inbox to validate your email");
+                             }
+                             else {
+                                alert("Error occurred");
+                             }
+                             updateForm(false);
+                          }
+                       );
+                       
+                    }
+                    else {
+                       
+                       updateForm(false);
+                    }
+                 }
+                 
+              }
+           );
+           
          }
-      }
-   ).then(
-      function() {
-         updateForm();
       }
    ).catch(
       function(error) {
@@ -153,6 +168,8 @@ function logoff()
    
 }
 
+// Returns a base64 encode SHA-512 hash
+// of the file
 function getFileHash(file) {
     const sha = new jsSHA("SHA-512", "ARRAYBUFFER");
     var fileReader = new FileReader();
@@ -175,25 +192,6 @@ function getFileHash(file) {
 
 }
 
-function createSecret(file)
-{
-
-   thumbnail.classList.remove("pressed");
-   
-   thumbnail.style.filter = "grayscale(100%)";
-   
-   getFileHash(file)
-   .then(
-      function(_secret) {
-         thumbnail.style.filter = "none";
-         secret = _secret;
-         updateForm(false);
-         if (email.value)
-            logon();
-      }
-   );
-   
-}
 
 function createThumbnail(file)
 {
@@ -271,6 +269,25 @@ function createThumbnail(file)
 
 }
 
+function createSecret(file)
+{
+
+   thumbnail.classList.remove("pressed");
+   
+   thumbnail.style.filter = "grayscale(100%)";
+   
+   getFileHash(file)
+   .then(
+      function(_secret) {
+         thumbnail.style.filter = "none";
+         secret = _secret;
+         updateForm(false);
+         if (email.value)
+            logon();
+      }
+   );
+   
+}
 
 function updateForm(setFields = true)
 {
@@ -310,6 +327,17 @@ function updateForm(setFields = true)
       
 }
 
+function saveFields() {
+   localStorage.setItem(
+      "authentication.email",
+      email.value
+   );
+            
+   localStorage.setItem(
+      "authentication.thumbnail",
+      thumbnail.src
+   );
+}
 
 function update()
 {
@@ -326,6 +354,7 @@ function update()
 }
 
 update();
+
          </script>
 
       </form>

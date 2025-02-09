@@ -30,7 +30,7 @@ CREATE TABLE `Secret` (
   UNIQUE KEY `UI_Secret_userId_secret` (`userId`,`secret`(256)) USING BTREE,
   KEY `I_Secret_userId` (`userId`) USING BTREE,
   CONSTRAINT `FK_Secret_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -39,7 +39,7 @@ CREATE TABLE `Secret` (
 
 LOCK TABLES `Secret` WRITE;
 /*!40000 ALTER TABLE `Secret` DISABLE KEYS */;
-INSERT INTO `Secret` VALUES (1,1,_binary 'Mthb/S2LdTLit2YF+gpYUCjdmC6x2LLQN2CEa8pktxDpMfafZsAPIKS+Gn9FyM1EAPe/1VKBwTt/sLluw/M1/A==');
+INSERT INTO `Secret` VALUES (31,61,_binary 'KyU66Sne2RSLHm0HO6l0OpPdTxlIqSwzCrbAtwzN+NRunZUpGEdPMzC1K44fDcd+ScuZjOrHsauIDvqAO3mARQ==');
 /*!40000 ALTER TABLE `Secret` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -110,11 +110,12 @@ CREATE TABLE `User` (
   `userId` bigint NOT NULL AUTO_INCREMENT,
   `userEmail` varchar(320) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `logonSecretId` bigint DEFAULT NULL,
+  `newUserSecret` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`),
   KEY `I_User_logonSecretId` (`logonSecretId`) USING BTREE,
   CONSTRAINT `FK_User_logonSecretId` FOREIGN KEY (`logonSecretId`) REFERENCES `Secret` (`secretId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=62 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,7 +124,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (1,'brettdavidsilverman@gmail.com',1);
+INSERT INTO `User` VALUES (61,'brettdavidsilverman@gmail.com',31,NULL);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -179,10 +180,11 @@ CREATE DEFINER=`brett`@`%` FUNCTION `userEmailExists`( email NVARCHAR ( 320 ) ) 
 BEGIN
    DECLARE emailExists INT;
    
-   SELECT   COUNT(*)
-   INTO        emailExists
-   FROM     User
-   WHERE  UserEmail = email;
+   SET          emailExists = (
+      SELECT   COUNT(*)
+      FROM     User
+      WHERE  UserEmail = email
+   );
    
    RETURN emailExists; 
 END ;;
@@ -258,6 +260,80 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `createUser` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `createUser`(
+   email NVARCHAR(320),
+   secret BLOB
+)
+BEGIN
+
+   START TRANSACTION;
+   
+   SET @email = email;
+   SET @secret = secret;
+   SET @userId = NULL;
+   
+   IF NOT EXISTS(
+         SELECT *
+         FROM    User
+         WHERE   userEmail = @email) THEN
+         
+      INSERT INTO User(
+         userEmail,
+         newUserSecret )
+      VALUES  ( @email, UUID() );
+      
+      SET   @userId = (
+         SELECT   userId
+         FROM      User
+         WHERE   userEmail = @email
+      );
+      
+      INSERT
+      INTO        Secret (
+                            userId,
+                            secret
+                         )
+       VALUES ( @userId,
+                           @secret);
+                           
+      SET          @secretId = (
+         SELECT   secretId
+         FROM      Secret
+         WHERE   userId = @userId
+         AND         secret = @secret
+      );
+      
+      
+      UPDATE   User
+      SET             logonSecretId = @secretId
+      WHERE    userId = @userId;
+      
+   END IF;
+   
+   COMMIT;
+   
+   SELECT   userId,
+                      newUserSecret
+   FROM     User
+   WHERE  userId = @userId;
+      
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `logoff` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -304,6 +380,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `logon`(
 )
 BEGIN
 
+   START TRANSACTION;
+   
    SET @email = email;
    SET @secret = secret;
    SET @ipAddress = ipAddress;
@@ -318,7 +396,9 @@ BEGIN
       ON                    Secret.secretId =
                                  User.logonSecretId
       WHERE           User.userEmail = @email
+      AND                 User.newUserSecret IS NULL
       AND                 Secret.secret = @secret
+      
    );
    
    SET @sessionId = uuid();
@@ -356,6 +436,53 @@ BEGIN
                        NOW(),
                        INTERVAL @timeout SECOND
                     ) as expiryDate;
+                    
+   COMMIT; 
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `validateUserEmail` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `validateUserEmail`(
+   email NVARCHAR(320),
+   newUserSecret VARCHAR(36)
+)
+BEGIN
+
+   START TRANSACTION;
+   
+   SET @email = email;
+   SET @newUserSecret = newUserSecret;
+   SET @userId = (
+      SELECT   userId
+      FROM      User
+      WHERE   User.userEmail = @email
+      AND         User.newUserSecret = @newUserSecret
+   );
+   
+   IF NOT ISNULL(@userId) THEN
+      UPDATE   User
+      SET             newUserSecret = NULL
+      WHERE    userId = @userId;
+   END IF;
+   
+   
+   SELECT NOT ISNULL(@userId)
+   AS            validated;
+   
+   COMMIT;
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -372,4 +499,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-01-25 19:21:57
+-- Dump completed on 2025-02-09 20:49:54

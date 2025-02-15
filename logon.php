@@ -16,20 +16,20 @@
    </head>
    <body>
       <h1>Logon</h1>
-      <p>Please provide your email address and secret to logon.</p>
+      <p>Please provide your email address and a secret to logon.</p>
+      <div>
+         <a href="resetPasswordLink.php">Reset password</a>
+      </div>
       <a href="/client/authentication/authentication.js">authentication.js</a>
       <form id="form" onsubmit="return false;">
          <label for="email">
             Email
          </label>
          <input type="email" id="email"></input>
-         <label for="secretFile">
-            Secret
-            <br />
-            <img id="thumbnail" width="100" height="100" onclick="return thumbnailClicked(event)"></img>
-         </label>
-         <input type="file" id="secretFile" onchange="createThumbnail(this.files[0]);" accept="image/*" style="display:none;" ></input>
-         <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
+<?php
+   $thumbnailId  = "thumbnail";
+   include "include/thumbnail.php";
+?>
          <div id="logonDiv">
             <button id="logoffButton" onclick="logoff(); return false;">Logoff</button>
             <button id="logonButton" onclick="logon(); return false;">Logon</button>
@@ -61,10 +61,8 @@ var logonButton =
    
 var logoffButton =
    document.getElementById("logoffButton");
-   
-var secret = null;
 
-function thumbnailClicked(event)
+thumbnail.onclick = function(event)
 {
    if (authentication.authenticated) {
       logoff();
@@ -83,14 +81,14 @@ function logon()
    }
    
    
-   if (!secret) {
+   if (!thumbnail.secret) {
       alert("Please select a secret");
       return false;
    }
    
    thumbnail.classList.add("pressed");
    
-   authentication.logon(email.value, secret).then(
+   authentication.logon(email.value, thumbnail.secret).then(
       function(response) {
          if (response) {
             saveFields();
@@ -107,18 +105,19 @@ function logon()
            .then(
               function(exists) {
                  if (exists) {
-                    alert("Invalid email or secret");
+                    alert("Invalid email or secret or email not validated yet.");
                     updateForm(false);
                  }
                  else {
                     if (confirm("Email does not exist. Do you wish to create a new user?"))
                     {
                        authentication.createUser(
-                          email.value, secret
+                          email.value, thumbnail.secret
                        ).
                        then(
                           function (ok) {
                              if (ok) {
+                                saveFields();
                                 alert("Please check your inbox to validate your email");
                              }
                              else {
@@ -156,7 +155,7 @@ function logoff()
    if (!confirm("Logoff?"))
       return;
       
-   secret = null;
+   thumbnail.secret = null;
    thumbnail.classList.remove("pressed");
    authentication.logoff().then(
       function(response) {
@@ -193,7 +192,7 @@ function getFileHash(file) {
 }
 
 
-function createThumbnail(file)
+function createThumbnail(file, thumbnail)
 {
 
    // Create a thumbail copy from
@@ -249,7 +248,7 @@ function createThumbnail(file)
       // set the thumbnail
       thumbnail.src = jpeg;
 
-      createSecret(file);
+      createSecret(file, thumbnail);
       
    }
       
@@ -269,7 +268,7 @@ function createThumbnail(file)
 
 }
 
-function createSecret(file)
+function createSecret(file, thumbnail)
 {
 
    thumbnail.classList.remove("pressed");
@@ -278,11 +277,11 @@ function createSecret(file)
    
    getFileHash(file)
    .then(
-      function(_secret) {
+      function(secret) {
          thumbnail.style.filter = "none";
-         secret = _secret;
+         thumbnail.secret = secret;
          updateForm(false);
-         if (email.value)
+         if (email.value && thumbnail.id == "thumbnail")
             logon();
       }
    );
@@ -291,7 +290,6 @@ function createSecret(file)
 
 function updateForm(setFields = true)
 {
-   secretFile.value = null;
    
    if (setFields) {
       var _email =
@@ -321,7 +319,7 @@ function updateForm(setFields = true)
    {
       thumbnail.classList.remove("pressed");
       logoffButton.disabled = true;
-      logonButton.disabled = (secret == null);
+      logonButton.disabled = (thumbnail.secret == null);
    }
 
       

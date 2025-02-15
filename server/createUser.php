@@ -43,7 +43,7 @@
    // To send HTML mail, the Content-type header must be set
    $headers[] = 'MIME-Version: 1.0';
    $headers[] = 'Content-type: text/html; charset=utf-8';
-   $headers[] = 'From: brettdavidsilverman@gmail.com';
+   $headers[] = 'From: no-reply <brettdavidsilverman@gmail.com>';
    
    // Mail it
    if (mail(

@@ -1,4 +1,5 @@
 <?php
+/*
    require_once 'server/functions.php';
    
    $connection = getConnection();
@@ -11,4 +12,11 @@
       echo $newUserSecret;
       
    $connection->close();
+   */
+   
 ?>
+<script>
+var id = <?php echo $id++; ?>;
+
+alert(id);
+</script>

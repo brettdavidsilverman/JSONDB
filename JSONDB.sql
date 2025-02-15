@@ -16,33 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `Secret`
---
-
-DROP TABLE IF EXISTS `Secret`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Secret` (
-  `secretId` bigint NOT NULL AUTO_INCREMENT,
-  `userId` bigint NOT NULL,
-  `secret` blob NOT NULL,
-  PRIMARY KEY (`secretId`),
-  UNIQUE KEY `UI_Secret_userId_secret` (`userId`,`secret`(256)) USING BTREE,
-  KEY `I_Secret_userId` (`userId`) USING BTREE,
-  CONSTRAINT `FK_Secret_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Secret`
---
-
-LOCK TABLES `Secret` WRITE;
-/*!40000 ALTER TABLE `Secret` DISABLE KEYS */;
-/*!40000 ALTER TABLE `Secret` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `Session`
 --
 
@@ -108,13 +81,11 @@ DROP TABLE IF EXISTS `User`;
 CREATE TABLE `User` (
   `userId` bigint NOT NULL AUTO_INCREMENT,
   `userEmail` varchar(320) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `logonSecretId` bigint DEFAULT NULL,
+  `logonSecret` blob,
   `newUserSecret` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`userId`),
-  UNIQUE KEY `UI_userEmail` (`userEmail`),
-  KEY `I_User_logonSecretId` (`logonSecretId`) USING BTREE,
-  CONSTRAINT `FK_User_logonSecretId` FOREIGN KEY (`logonSecretId`) REFERENCES `Secret` (`secretId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=62 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `UI_userEmail` (`userEmail`)
+) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -287,35 +258,16 @@ BEGIN
          
       INSERT INTO User(
          userEmail,
+         logonSecret,
          newUserSecret )
-      VALUES  ( @email, UUID() );
+      VALUES  ( @email, @secret, UUID() );
       
       SET   @userId = (
          SELECT   userId
          FROM      User
          WHERE   userEmail = @email
       );
-      
-      INSERT
-      INTO        Secret (
-                            userId,
-                            secret
-                         )
-       VALUES ( @userId,
-                           @secret);
-                           
-      SET          @secretId = (
-         SELECT   secretId
-         FROM      Secret
-         WHERE   userId = @userId
-         AND         secret = @secret
-      );
-      
-      
-      UPDATE   User
-      SET             logonSecretId = @secretId
-      WHERE    userId = @userId;
-      
+     
    END IF;
    
    COMMIT;
@@ -390,12 +342,9 @@ BEGIN
    SET                @userId = (
       SELECT          User.userId
       FROM             User
-      INNER JOIN Secret
-      ON                    Secret.secretId =
-                                 User.logonSecretId
-      WHERE           User.userEmail = @email
+      WHERE          User.userEmail = @email
       AND                 User.newUserSecret IS NULL
-      AND                 Secret.secret = @secret
+      AND                 User.logonSecret = @secret
       
    );
    
@@ -497,4 +446,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-02-09 20:51:04
+-- Dump completed on 2025-02-16  9:40:59

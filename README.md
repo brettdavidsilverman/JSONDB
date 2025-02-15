@@ -10,7 +10,7 @@ edit /etc/postfix/main.cf
 create google app password
 
 edit /etc/postfix/sasl_passwd
-   [smtp.gmail.com]:587 brettdavidsilverman@gmail.com:<app password>
+   [smtp.gmail.com]:587 noreply.bee.fish@gmail.com:<app password>
    
 sudo postmap /etc/postfix/sasl_passwd
 sudo chown root:root /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db

@@ -202,8 +202,7 @@ class Authentication
             }
          );
          
-      this.authenticated = false;
-      secret = null;
+      this.authenticated = false;
       return promise;
    }
    

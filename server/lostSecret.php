@@ -2,21 +2,19 @@
    require_once 'functions.php';
    
    $connection = getConnection();
-   
+      
    $json = getPostedData();
    
    $email = $json['email'];
-   $secret = $json['secret'];
-   
-   $newUserSecret = createUser(
+
+   $lostSecret = lostSecret(
       $connection,
-      $email,
-      $secret
+      $email
    );
    
    $connection->close();
    
-   if (is_null($newUserSecret)) {
+   if (is_null($lostSecret)) {
       echo 'false';
       return;
    }
@@ -25,17 +23,17 @@
    $to = $email;
 
    // Subject
-   $subject = 'Validate bee.fish user';
+   $subject = 'Reset password for bee.fish';
 
    // Message
    $message = "
 <html>
 <head>
-  <title>Validate email</title>
+  <title>Reset password email</title>
 </head>
 <body>
-  <h1>Validate email</h1>
-  <p><a href=\"https://bee.fish/server/validateUserEmail.php?newUserSecret=$newUserSecret&email=$email\">Please validate your email address by clicking this link</a></p>
+  <h1>Reset password</h1>
+  <p><a href=\"https://bee.fish/logon.php?lostSecret=$lostSecret&email=$email\">Set your password by clicking this link</a></p>
 </body>
 </html>
 ";

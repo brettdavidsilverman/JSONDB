@@ -186,6 +186,63 @@ class Authentication
       return promise;
    }
    
+   lostSecret(email) {
+
+      var parameters = {
+         method: "POST",
+         body: JSON.stringify(
+            {
+               email: email
+            }
+         )
+      }
+
+      var promise =
+         fetch(this.url + "/server/lostSecret.php", parameters)
+         .then(
+            function(response) {
+               return response.json();
+            }
+         )
+         .then(
+            function(status) {
+               return status;
+            }
+         );
+
+      return promise;
+   }
+   
+   resetSecret(email, lostSecret, newSecret) {
+
+      var parameters = {
+         method: "POST",
+         body: JSON.stringify(
+            {
+               email: email,
+               lostSecret: lostSecret,
+               newSecret: newSecret
+            }
+         )
+      }
+
+      var promise =
+         fetch(this.url + "/server/resetSecret.php", parameters)
+         .then(
+            function(response) {
+               return response.json();
+            }
+         )
+         .then(
+            function(status) {
+               return status;
+            }
+         );
+
+      return promise;
+   }
+   
+   
    logoff()
    {
       

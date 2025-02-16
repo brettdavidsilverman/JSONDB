@@ -83,9 +83,10 @@ CREATE TABLE `User` (
   `userEmail` varchar(320) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `logonSecret` blob,
   `newUserSecret` varchar(36) DEFAULT NULL,
+  `lostSecret` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -391,6 +392,86 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `lostSecret` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `lostSecret`(
+   email NVARCHAR(320)
+)
+BEGIN
+   START TRANSACTION;
+   SET @email = email;
+   
+   UPDATE   User
+   SET             lostSecret = UUID()
+   WHERE    userEmail = @email;
+   
+   SELECT   lostSecret
+   FROM     User
+   WHERE   userEmail = @email;
+    
+   COMMIT;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `resetSecret` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `resetSecret`(
+   email NVARCHAR(320),
+   lostSecret VARCHAR(36),
+   newSecret BLOB
+)
+BEGIN
+
+   START TRANSACTION;
+   
+   SET @email = email;
+   SET @lostSecret = lostSecret;
+   SET @newSecret = newSecret;
+   
+   SET   @userId = (
+      SELECT   userId
+      FROM     User
+      WHERE  userEmail = @email
+      AND        lostSecret = @lostSecret
+   );
+  
+   IF NOT ISNULL( @userId) THEN
+      UPDATE   User
+      SET             logonSecret = @newSecret,
+                           lostSecret = NULL
+      WHERE   userId = @userId;
+   END IF;
+   
+   SELECT   NOT ISNULL(@userId)
+   AS              response;
+   
+   COMMIT;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `validateUserEmail` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -446,4 +527,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-02-16  9:40:59
+-- Dump completed on 2025-02-16 14:02:44

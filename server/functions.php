@@ -69,6 +69,52 @@ function createUser($connection, $email, $secret)
    return $newUserSecret;
 }
 
+function lostSecret($connection, $email)
+{
+   $statement = $connection->prepare(
+     "CALL lostSecret(?);"
+   );
+   
+   $statement->bind_param('s', $email);
+   
+   $statement->execute();
+   
+   $lostSecret = NULL;
+   
+   $statement->bind_result($lostSecret);
+   
+   if (!$statement->fetch()) {
+      return NULL;
+   }
+   
+   $statement->close();
+   
+   return $lostSecret;
+}
+
+function resetSecret($connection, $email, $lostSecret, $newSecret)
+{
+   $statement = $connection->prepare(
+     "CALL resetSecret(?,?,?);"
+   );
+   
+   $statement->bind_param('sss', $email, $lostSecret, $newSecret);
+   
+   $statement->execute();
+   
+   $success = NULL;
+   
+   $statement->bind_result($success);
+   
+   if (!$statement->fetch()) {
+      return NULL;
+   }
+   
+   $statement->close();
+  
+   return (bool)$success;
+}
+
 function validateUserEmail($connection, $email, $newUserSecret)
 {
    $statement = $connection->prepare(

@@ -7,7 +7,7 @@
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>
       <script src="/client/authentication/sha512.js"></script>
-      <script src="/client/authentication/authentication.js"></script>
+      <script src="/client/authentication/authentication.js?v=2"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
       <link rel="stylesheet" type="text/css" href="/logon-style.css" />
       <title>Bee.Fish logon</title>
@@ -17,23 +17,28 @@
    <body>
       <h1>Logon</h1>
       <p>Please provide your email address and a secret to logon.</p>
-      <div>
-         <a href="resetPasswordLink.php">Reset password</a>
-      </div>
       <a href="/client/authentication/authentication.js">authentication.js</a>
       <form id="form" onsubmit="return false;">
          <label for="email">
             Email
          </label>
          <input type="email" id="email"></input>
-<?php
-   $thumbnailId  = "thumbnail";
-   include "include/thumbnail.php";
-?>
+         
+         <div>
+            <label for="secretFile">
+               Secret
+               <br />
+               <img id="thumbnail" width="100" height="100"></img>
+            </label>
+            <input type="file" id="secretFile" onchange="createThumbnail(this.files[0], document.getElementById('thumbnail'));" accept="image/*" style="display:none;" ></input>
+            <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
+         </div>
+
          <div id="logonDiv">
             <button id="logoffButton" onclick="logoff(); return false;">Logoff</button>
             <button id="logonButton" onclick="logon(); return false;">Logon</button>
          </div>
+         <a href="/" onclick="lostSecret(); return false;">Lost secret?</a>
          <script>
 
 var console = new Console();
@@ -88,17 +93,49 @@ function logon()
    
    thumbnail.classList.add("pressed");
    
-   authentication.logon(email.value, thumbnail.secret).then(
+   var promise;
+   
+   const params = new URLSearchParams(location.search);
+   if (params.has("lostSecret")) {
+      promise = authentication.
+         resetSecret(
+            email.value,
+            params.get("lostSecret"),
+            thumbnail.secret
+         ).then(
+            function(response) {
+               if (response) {
+                  alert("Secret changed");
+                  return authentication.logon(
+                     email.value,
+                     thumbnail.secret
+                  );
+               }
+               else {
+                  alert("Error setting new secret");
+               }
+            }
+         );
+   }
+   else
+      promise = authentication.
+         logon(
+            email.value,
+            thumbnail.secret
+         );
+      
+   promise.then(
       function(response) {
          if (response) {
             saveFields();
             const params = new URL(document.location.href).searchParams;
-            if (params.has("redirect")) {
+            if (params.has("redirect"))
                redirect = params.get("redirect");
-               document.location.href = redirect;
-            }
             else
-               updateForm();
+               redirect = "/";
+               
+            document.location.href = redirect;
+
          }
          else {
            authentication.getUserEmailExists(email.value)
@@ -163,6 +200,30 @@ function logoff()
          updateForm();
       }
    )
+
+   
+}
+
+function lostSecret()
+{
+   if (!email.value) {
+      alert("Please enter your email address");
+      return;
+   }
+   
+   if (!confirm("This will send a link to reset your password to your email inbox. Continue?"))
+      return;
+   
+   authentication.lostSecret(
+      email.value
+   ).then(
+      function(response) {
+         if (response)
+            alert("Please check your inbox for the link to reset your password");
+         else
+            alert("Error sending email");
+      }
+   );
 
    
 }
@@ -290,22 +351,33 @@ function createSecret(file, thumbnail)
 
 function updateForm(setFields = true)
 {
+   var params = new URLSearchParams(location.search);
    
    if (setFields) {
-      var _email =
-         localStorage.getItem(
-            "authentication.email"
-         );
+      
+      var _email;
+      if (params.has("email")) {
+         _email = params.get("email");
+      } 
+      else {
+         _email =
+            localStorage.getItem(
+               "authentication.email"
+            );
+      }
       
       if (_email)
          email.value = _email;
-      
+         
       var thumbnailSrc = localStorage.getItem(
          "authentication.thumbnail"
       );
    
       if (thumbnailSrc)
          thumbnail.src = thumbnailSrc;
+      
+      
+    
    }
 
    if (authentication.authenticated)
@@ -341,14 +413,29 @@ function update()
 {
    form.reset();
    
-   if (authentication.authenticated)
-      updateForm();
-   else
-      authentication.getStatus().then(
-         function(auth){
+   var params = new URLSearchParams(location.search);
+   
+   if (params.has("lostSecret")) {
+      authentication.logoff().then(
+         function(auth) {
+            localStorage.setItem(
+               "authentication.thumbnail",
+               ""
+            );
             updateForm();
          }
       );
+   }
+   else {
+      if (authentication.authenticated)
+         updateForm();
+      else
+         authentication.getStatus().then(
+            function(auth){
+               updateForm();
+            }
+         );
+   }
 }
 
 update();

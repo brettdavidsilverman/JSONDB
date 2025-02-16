@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
    <head>
-      <script src="/head.js"></script>
+      <script src="../head.js"></script>
       <meta charset="utf-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
       <!--
@@ -41,7 +41,7 @@ var id = new Id();
 document.writeln(id);
 
 // Write out its string encoded key
-document.writeln(btoa(id.key));
+document.writeln(id.key);
 
 // Create a new id from old key
 var id2 = Id.fromKey(id.key);
@@ -57,11 +57,6 @@ var id2 = Id.fromKey(id.key);
          <textarea id="key" rows="3" cols="40"></textarea>
          <br />
          <button onclick="loadDataFromKey()" type="button">Ok</button>
-         <br />
-         <label for="base64">Base 64</label>
-         <textarea id="base64" rows="3" cols="40"></textarea>
-         <br />
-         <button onclick="loadDataFromBase64()" type="button">Ok</button>
          <br />
          <label for="name">Name</label>
          <input type="text" id="name"></input>
@@ -95,8 +90,7 @@ function loadKey()
    document.getElementById("key").value =
       id.key;
       
-   document.getElementById("base64").value =
-      btoa(id.key);
+
 }
 
 function loadDataFromKey()
@@ -105,16 +99,6 @@ function loadDataFromKey()
    
    id = new Id({key});
    
-   loadData(id);
-   
-}
-
-function loadDataFromBase64()
-{
-   var key = atob(document.getElementById("base64").value);
-   
-   id = new Id({key});
-
    loadData(id);
    
 }
@@ -132,10 +116,6 @@ function loadData(id) {
       
    document.getElementById("increment").value =
       id.increment;
-      
-   document.getElementById("base64").value =
-      btoa(id.key);
-      
    
 }
 
@@ -239,7 +219,7 @@ var a = new A();
 var key = a.key;
 
 document.writeln(
-   btoa(key)
+   key
 );
 
 document.writeln();
@@ -253,7 +233,7 @@ a2 = new A(
 );
 
 document.writeln(
-   btoa(a2.key)
+   a2.key
 );
 
 document.writeln();

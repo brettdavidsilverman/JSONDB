@@ -7,7 +7,7 @@ class Pointer extends Id
 
       function getSuperInput(input) {
          if (input.key) {
-            var id = new Id(input.key);
+            var id = Id.fromKey(input.key);
             return id;
          }
 

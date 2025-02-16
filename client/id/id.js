@@ -1,6 +1,6 @@
 class Id {
  
-   static version = "id-v0.1.0-client";
+   static version = "id-v0.2.0";
    
    // Creates a value that is
    // guaranteed to be unique
@@ -117,7 +117,7 @@ class Id {
       
       var data = stream.toString();
       
-      var key = data;
+      var key = btoa(data);
       
       Object.defineProperty(
          this, 
@@ -143,7 +143,7 @@ class Id {
       
       // extract the name and timestamp
       // from the key
-      var data = this.key;
+      var data = atob(this.key);
       
       var stream = new PowerEncoding(
          data

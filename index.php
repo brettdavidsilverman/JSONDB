@@ -61,7 +61,7 @@
       <br />
       <a href="/client/">Javascript client library</a>
       <br />
-      <a href="https://github.com/brettdavidsilverman/JSONDB">Bee.Fish on Git Hub</a>
+      <a href="https://github.com/brettdavidsilverman/JSONDB">JSONDB on Git Hub</a>
       <script>
 
 const defaultURL = 

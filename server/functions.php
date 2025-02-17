@@ -212,10 +212,8 @@ function setCredentialsCookie($credentials)
    
    if (!is_null($credentials)) {
 
-      if (array_key_exists('expiryDate', $credentials)) {
-         $expiryTime =
-            strtotime($credentials['expiryDate']);
-      }
+      $expiryTime =
+         strtotime($credentials['expiryDate']);
       
    }
    else {
@@ -226,7 +224,7 @@ function setCredentialsCookie($credentials)
    }
    
    if (is_null($expiryTime))
-      $expiryTime = time() + 3600;
+      $expiryTime = time();
    
    setcookie(
       "credentials",
@@ -277,9 +275,7 @@ function _authenticate($connection)
       $_SESSION["sessionId"] = $sessionId;
    }
    else {
-      $credentials = array(
-         "authenticated" => false
-      );
+      $credentials = null;
       session_unset();
    }
       

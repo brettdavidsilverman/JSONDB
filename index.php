@@ -86,7 +86,7 @@ title.innerText = origin;
 
 fetchButton.disabled = true;
 
-authenticate();
+//authenticate();
 function loadJSON() {
    var url = pathInput.value;
    

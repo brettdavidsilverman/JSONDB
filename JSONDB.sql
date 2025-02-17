@@ -86,7 +86,7 @@ CREATE TABLE `User` (
   `lostSecret` varchar(36) DEFAULT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=71 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -124,7 +124,7 @@ BEGIN
    SET   @settingValue = (
       SELECT  settingValue
       FROM     Setting
-      WHERE  settingCode = @settingCode
+      WHERE Setting. settingCode = @settingCode
    );
    
    RETURN @settingValue;
@@ -148,15 +148,14 @@ DELIMITER ;;
 CREATE DEFINER=`brett`@`%` FUNCTION `userEmailExists`( email NVARCHAR ( 320 ) ) RETURNS tinyint(1)
     READS SQL DATA
 BEGIN
-   DECLARE emailExists INT;
-   
-   SET          emailExists = (
+ 
+   SET       @emailExists = (
       SELECT   COUNT(*)
       FROM     User
-      WHERE  UserEmail = email
+      WHERE  User.userEmail = email
    );
    
-   RETURN emailExists; 
+   RETURN @emailExists; 
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -189,13 +188,13 @@ BEGIN
     IF EXISTS(
        SELECT *
        FROM    Session
-       WHERE sessionId = @sessionId
-       AND        ipAddress = @ipAddress
+       WHERE Session.sessionId = @sessionId
+       AND        Session.ipAddress = @ipAddress
     ) THEN
        SET   @lastAccessedDate = (
           SELECT   lastAccessedDate
           FROM      Session
-          WHERE   sessionId = @sessionId
+          WHERE   Session. sessionId = @sessionId
        );
        
        SET @expiryDate = DATE_ADD(
@@ -206,7 +205,7 @@ BEGIN
        IF @expiryDate > NOW() THEN
           UPDATE   Session
           SET            lastAccessedDate = NOW()
-          WHERE   sessionId =  @sessionId;
+          WHERE   Session.sessionId =  @sessionId;
        ELSE
           SET @sessionId = NULL;
        END IF;
@@ -222,7 +221,7 @@ BEGIN
                           INTERVAL @timeout SECOND
                        ) as expiryDate
    FROM      Session
-   WHERE   sessionId = @sessionId;
+   WHERE  Session. sessionId = @sessionId;
    
 END ;;
 DELIMITER ;
@@ -255,7 +254,7 @@ BEGIN
    IF NOT EXISTS(
          SELECT *
          FROM    User
-         WHERE   userEmail = @email) THEN
+         WHERE   User.userEmail = @email) THEN
          
       INSERT INTO User(
          userEmail,
@@ -266,7 +265,7 @@ BEGIN
       SET   @userId = (
          SELECT   userId
          FROM      User
-         WHERE   userEmail = @email
+         WHERE  User. userEmail = @email
       );
      
    END IF;
@@ -276,7 +275,7 @@ BEGIN
    SELECT   userId,
                       newUserSecret
    FROM     User
-   WHERE  userId = @userId;
+   WHERE  User.userId = @userId;
       
    
 END ;;
@@ -305,8 +304,8 @@ BEGIN
 
    DELETE
    FROM      Session
-   WHERE   sessionId = @sessionId
-   AND          ipAddress = @ipAddress;
+   WHERE   Session.sessionId = @sessionId
+   AND         Session. ipAddress = @ipAddress;
    
 END ;;
 DELIMITER ;
@@ -410,12 +409,12 @@ BEGIN
    SET @email = email;
    
    UPDATE   User
-   SET             lostSecret = UUID()
-   WHERE    userEmail = @email;
+   SET            User. lostSecret = UUID()
+   WHERE    User.userEmail = @email;
    
    SELECT   lostSecret
    FROM     User
-   WHERE   userEmail = @email;
+   WHERE   User.userEmail = @email;
     
    COMMIT;
 END ;;
@@ -450,15 +449,15 @@ BEGIN
    SET   @userId = (
       SELECT   userId
       FROM     User
-      WHERE  userEmail = @email
-      AND        lostSecret = @lostSecret
+      WHERE  User.userEmail = @email
+      AND        User. lostSecret = @lostSecret
    );
   
    IF NOT ISNULL( @userId) THEN
       UPDATE   User
       SET             logonSecret = @newSecret,
                            lostSecret = NULL
-      WHERE   userId = @userId;
+      WHERE    User.userId = @userId;
    END IF;
    
    SELECT   NOT ISNULL(@userId)
@@ -502,7 +501,7 @@ BEGIN
    IF NOT ISNULL(@userId) THEN
       UPDATE   User
       SET             newUserSecret = NULL
-      WHERE    userId = @userId;
+      WHERE    User.userId = @userId;
    END IF;
    
    
@@ -527,4 +526,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-02-16 14:02:44
+-- Dump completed on 2025-02-17 19:41:39

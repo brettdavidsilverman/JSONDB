@@ -7,7 +7,7 @@
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>
       <script src="/client/authentication/sha512.js"></script>
-      <script src="/client/authentication/authentication.js"></script>
+      <script src="/client/authentication/authentication.js?v=1"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
       <link rel="stylesheet" type="text/css" href="/logon-style.css" />
       <title>Bee.Fish logon</title>

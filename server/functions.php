@@ -109,7 +109,7 @@ function resetSecret($connection, $email, $lostSecret, $newSecret)
    $statement->bind_result($success);
    
    if (!$statement->fetch()) {
-      return NULL;
+      return null;
    }
    
    $statement->close();

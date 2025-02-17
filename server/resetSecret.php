@@ -18,7 +18,7 @@
    
    $connection->close();
    
-   if ($success)
+   if ($success == true)
       echo "true";
    else
       echo 'false';

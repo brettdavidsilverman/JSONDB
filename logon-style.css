@@ -14,9 +14,6 @@ button {
    width: auto;
 }
 
-#logonDiv {
-   text-align: right;
-}
 
 img {
    position: relative;
@@ -51,3 +48,23 @@ _form {
    bordera: 1px solid black;
    box-shadow: none;
 }
+#secretContainer {
+   position: relative;
+   top: 10px;
+   height: 180px;
+}
+
+#leftSecret {
+   position: absolute;
+}
+
+#rightSecret {
+   position: absolute;
+   display: none;
+   left: 150px;
+}
+
+#logonDiv {
+   position: relative;
+   top: 10px;
+}

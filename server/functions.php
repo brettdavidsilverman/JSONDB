@@ -1,5 +1,7 @@
 <?php
 
+session_start();
+
 function getConnection() {
    $config = file_get_contents('/home/bee/config.json'); 
    $json = json_decode($config);
@@ -161,35 +163,46 @@ function logon($connection, $email, $secret, $ipAddress)
    
    if (!is_null($sessionId))
    {
+      
+      
       $credentials = array(
          "userId" => $userId, 
-         "sessionId" => $sessionId,
          "expiryDate" => $expiryDate,
          "authenticated" => true
       );
       
+      $_SESSION["sessionId"] = $sessionId;
+      
    }
    else
+   {
       $credentials = null;
-      
+      session_unset();
+   }
+   
    return $credentials;
 }
 
-function logoff($connection, $sessionId, $ipAddress)
+function logoff($connection, $ipAddress)
 {
    $statement = $connection->prepare(
      "CALL logoff(?, ?);"
    );
    
-   $statement->bind_param(
-      'ss',
-      $sessionId,
-      $ipAddress
-   );
+   if (array_key_exists("sessionId", $_SESSION))
+   {
+      $statement->bind_param(
+         'ss',
+         $_SESSION["sessionId"],
+         $ipAddress
+      );
    
-   $statement->execute();
+      $statement->execute();
 
-   $statement->close();
+   }
+   
+   session_unset();
+ 
    
 }
 
@@ -233,7 +246,7 @@ function redirect($url)
     exit();
 }
 
-function _authenticate($connection, $sessionId, $ipAddress)
+function _authenticate($connection)
 {
  
    $statement = $connection->prepare(
@@ -242,8 +255,8 @@ function _authenticate($connection, $sessionId, $ipAddress)
    
    $statement->bind_param(
       'ss',
-      $sessionId,
-      $ipAddress
+      $_SESSION["sessionId"],
+      $_SERVER['REMOTE_ADDR']
    );
    
    $statement->execute();
@@ -258,15 +271,16 @@ function _authenticate($connection, $sessionId, $ipAddress)
    if ($statement->fetch()) {
       $credentials = array(
          "userId" => $userId, 
-         "sessionId" => $sessionId,
          "expiryDate" => $expiryDate,
          "authenticated" => true
       );
+      $_SESSION["sessionId"] = $sessionId;
    }
    else {
       $credentials = array(
          "authenticated" => false
       );
+      session_unset();
    }
       
    $statement->close();
@@ -277,33 +291,13 @@ function _authenticate($connection, $sessionId, $ipAddress)
 
 function authenticate()
 {
-   if (array_key_exists('credentials', $_COOKIE)) {
-    
-      $cookie = $_COOKIE['credentials'];
-      $credentials = json_decode($cookie, true);
-  
-      $ipAddress = $_SERVER['REMOTE_ADDR'];
+   $connection = getConnection();
    
-      if (array_key_exists("sessionId", $credentials)) {
-       
-         $sessionId = $credentials['sessionId'];
+   $credentials = _authenticate(
+      $connection
+   );
       
-         $connection = getConnection();
-      
-         $credentials = _authenticate(
-            $connection,
-            $sessionId,
-            $ipAddress
-         );
-      
-         $connection->close();
-      }
-      else
-         $credentials = null;
-   
-   }
-   else
-      $credentials = null;
+   $connection->close();
    
    setCredentialsCookie($credentials);
    

@@ -12,32 +12,48 @@
       <link rel="stylesheet" type="text/css" href="/logon-style.css" />
       <title>Bee.Fish logon</title>
       <style>
+
       </style>
    </head>
    <body>
       <h1>Logon</h1>
       <p>Please provide your email address and a secret to logon.</p>
+      
       <a href="/client/authentication/authentication.js">authentication.js</a>
+     
       <form id="form" onsubmit="return false;">
          <label for="email">
             Email
          </label>
          <input type="email" id="email"></input>
-         
-         <div>
-            <label for="secretFile">
-               Secret
-               <br />
-               <img id="thumbnail" width="100" height="100"></img>
-            </label>
-            <input type="file" id="secretFile" onchange="createThumbnail(this.files[0], document.getElementById('thumbnail'));" accept="image/*" style="display:none;" ></input>
-            <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
+         <label for="changeSecret">
+            Change secret <input type="checkbox" id="changeSecret" onchange="displaySecrets(this.checked)"></input>
+         </label>
+         <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
+         <div id="secretContainer">
+            <div id="leftSecret">
+               <label for="secretFile">
+                  Secret
+                  <br />
+                  <img id="thumbnail" width="100" height="100"></img>
+               </label>
+               <input type="file" id="secretFile" onchange="createThumbnail(this.files[0], document.getElementById('thumbnail'));" accept="image/*" style="display:none;" ></input>
+            </div>
+            <div id="rightSecret">
+               <label for="secretFile2" id="rightSecretLabel">
+                  New Secret
+                  <br />
+                  <img id="thumbnail2" width="100" height="100"></img>
+               </label>
+               <input type="file" id="secretFile2" onchange="createThumbnail(this.files[0], document.getElementById('thumbnail2'));" accept="image/*" style="display:none;" ></input>
+            </div>
          </div>
-
+        
          <div id="logonDiv">
             <button id="logoffButton" onclick="logoff(); return false;">Logoff</button>
             <button id="logonButton" onclick="logon(); return false;">Logon</button>
          </div>
+         <br />
          <a href="/" onclick="lostSecret(); return false;">Lost secret?</a>
          <script>
 
@@ -67,6 +83,9 @@ var logonButton =
 var logoffButton =
    document.getElementById("logoffButton");
 
+var changeSecret =
+   document.getElementById("changeSecret");
+   
 thumbnail.onclick = function(event)
 {
    if (authentication.authenticated) {
@@ -75,6 +94,15 @@ thumbnail.onclick = function(event)
    }
    else
       return true;
+}
+
+function displaySecrets(both) {
+   var right = document.getElementById("rightSecret");
+   if (both)
+      right.style.display = "block";
+   else
+      right.style.display = "none";
+   
 }
 
 function logon()

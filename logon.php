@@ -54,7 +54,7 @@
             <button id="logonButton" onclick="logon(); return false;">Logon</button>
          </div>
          <br />
-         <a href="/" onclick="lostSecret(); return false;">Lost secret?</a>
+         <a href="/lost-secret/" >Lost secret?</a>
          <script>
 
 var console = new Console();

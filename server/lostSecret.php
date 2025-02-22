@@ -1,6 +1,7 @@
 <?php
    require_once 'functions.php';
-   
+   echo "false";
+/*
    $connection = getConnection();
       
    $json = getPostedData();
@@ -53,4 +54,5 @@
       echo 'true';
    else
       echo 'false';
+*/
 ?>

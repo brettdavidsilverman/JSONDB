@@ -4,10 +4,11 @@
       <script src="/client/head.js"></script>
       <meta charset="utf-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <script src="https://www.google.com/recaptcha/api.js"></script>
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>
       <script src="/client/authentication/sha512.js"></script>
-      <script src="/client/authentication/authentication.js?v=1"></script>
+      <script src="/client/authentication/authentication.js?v=4"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
       <link rel="stylesheet" type="text/css" href="/logon-style.css" />
       <title>Bee.Fish logon</title>
@@ -20,7 +21,7 @@
       <p>Please provide your email address and a secret to logon.</p>
       
       <a href="/client/authentication/authentication.js">authentication.js</a>
-     
+           
       <form id="form" onsubmit="return false;">
          <label for="email">
             Email
@@ -49,12 +50,17 @@
             </div>
          </div>
         
+        
+         <button class="g-recaptcha" 
+            data-sitekey="6LfPw-AqAAAAAP7VB7iIiQ71qnVhTtkv4I8H4IT2" 
+            data-callback='lostSecret' 
+            data-action='submit'>Lost Secret</button>
+         <br />
          <div id="logonDiv">
             <button id="logoffButton" onclick="logoff(); return false;">Logoff</button>
             <button id="logonButton" onclick="logon(); return false;">Logon</button>
          </div>
-         <br />
-         <a href="/lost-secret/" >Lost secret?</a>
+         
          <script>
 
 var console = new Console();
@@ -232,7 +238,7 @@ function logoff()
    
 }
 
-function lostSecret()
+function lostSecret(token)
 {
    if (!email.value) {
       alert("Please enter your email address");
@@ -243,6 +249,7 @@ function lostSecret()
       return;
    
    authentication.lostSecret(
+      token,
       email.value
    ).then(
       function(response) {

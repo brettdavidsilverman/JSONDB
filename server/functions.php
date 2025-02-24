@@ -70,9 +70,53 @@ function createUser($connection, $email, $secret)
    
    return $newUserSecret;
 }
+function encodeQueryString ($data) {
+   $req = "";
+   foreach ( $data as $key => $value )
+             $req .= $key . '=' . urlencode( stripslashes($value) ) . '&';
 
-function lostSecret($connection, $email)
+   // Cut the last '&'
+   $req=substr($req,0,strlen($req)-1);
+   return $req;
+}
+
+function lostSecret($connection, $token, $email)
 {
+   $url = 'https://www.google.com/recaptcha/api/siteverify';
+      
+   $config = file_get_contents('/home/bee/config.json'); 
+   $settings = json_decode($config);
+
+   $secretKey =
+      $settings->{"reCaptcha"}->{"secretKey"};
+   
+   
+   $data = [
+      'secret' => $secretKey,
+      'response' => $token,
+      'remoteip' =>  $_SERVER['REMOTE_ADDR']
+   ];
+
+   // use key 'http' even if you send the request to https://...
+   $options = [
+      'http' => [
+         'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+         'method' => 'POST',
+         'content' => encodeQueryString($data)
+      ]
+   ];
+
+   $context = stream_context_create($options);
+   $result = file_get_contents($url, false, $context);
+   if ($result === false) {
+      return null;
+   }
+
+   $result = json_decode($result);
+   
+   if ($result->{"success"} == false)
+      return null;
+
    $statement = $connection->prepare(
      "CALL lostSecret(?);"
    );

@@ -1,20 +1,22 @@
 <?php
+
    require_once 'functions.php';
-   echo "false";
-/*
+
    $connection = getConnection();
       
    $json = getPostedData();
    
    $email = $json['email'];
+   $token = $json['token'];
 
    $lostSecret = lostSecret(
       $connection,
+      $token,
       $email
    );
    
    $connection->close();
-   
+
    if (is_null($lostSecret)) {
       echo 'false';
       return;
@@ -54,5 +56,5 @@
       echo 'true';
    else
       echo 'false';
-*/
+
 ?>

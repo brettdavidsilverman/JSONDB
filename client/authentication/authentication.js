@@ -186,12 +186,13 @@ class Authentication
       return promise;
    }
    
-   lostSecret(email) {
+   lostSecret(token, email) {
 
       var parameters = {
          method: "POST",
          body: JSON.stringify(
             {
+               token: token,
                email: email
             }
          )

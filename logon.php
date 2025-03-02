@@ -126,7 +126,8 @@ existingThumbnail.onclick = function(event)
 
 function toggleSecrets() {
    if (toggleSecret.checked &&
-       authentication.authenticated) 
+       authentication.authenticated &&
+       !existingThumbnail.secret) 
    {
       if (!confirm("This will first log you out"))
          return;

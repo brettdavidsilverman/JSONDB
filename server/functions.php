@@ -250,6 +250,30 @@ function logoff($connection, $ipAddress)
    
 }
 
+function changeSecret($connection, $email, $oldSecret, $newSecret)
+{
+   $statement = $connection->prepare(
+     "CALL changeSecret(?, ?, ?);"
+   );
+   
+   $statement->bind_param('sss', $email, $oldSecret, $newSecret );
+   
+   $statement->execute();
+   
+   $statement->bind_result(
+      $result
+   );
+   
+   if (!$statement->fetch())
+      $result = false;
+      
+   $statement->close();
+   
+   
+   
+   return (bool)$result;
+}
+
 function setCredentialsCookie($credentials)
 {
    $expiryTime = null;

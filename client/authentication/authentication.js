@@ -243,6 +243,37 @@ class Authentication
       return promise;
    }
    
+   changeSecret(email, oldSecret, newSecret) {
+
+      var parameters = {
+         method: "POST",
+         body: JSON.stringify(
+            {
+               email: email,
+               oldSecret: oldSecret,
+               newSecret: newSecret
+            }
+         )
+      }
+
+      var promise =
+         fetch(this.url + "/server/changeSecret.php", parameters)
+         .then(
+            function(response) {
+               return response.json();
+            }
+         )
+         .then(
+            function(status) {
+               return status;
+            }
+         );
+
+      return promise;
+   }
+   
+   
+   
    
    logoff()
    {

@@ -7,19 +7,22 @@ $json =
    getPostedData();
    
 $email = $json['email'];
-$secret = $json['secret'];
-$ipAddress = $_SERVER['REMOTE_ADDR'];
-   
-$credentials =
-   logon(
+$oldSecret = $json['oldSecret'];
+$newSecret = $json['newSecret'];
+
+$result =
+   changeSecret(
       $connection,
       $email,
-      $secret,
-      $ipAddress
+      $oldSecret,
+      $newSecret
    );
    
 $connection->close();
    
-setCredentialsCookie($credentials);
-
+if ($result)
+   echo 'true';
+else
+   echo 'false';
+   
 ?>

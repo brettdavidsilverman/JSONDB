@@ -418,6 +418,7 @@ class Canvas extends UserInput {
       parent.children.push(line);
             
       // Save and draw.
+      
       line.save();
       parent.save();
 
@@ -535,20 +536,27 @@ class Canvas extends UserInput {
       var key = await
          storage.getItem("Canvas");
 
-      var canvas;
+      var canvas = undefined;
       
       if (key)
       {
          console.log("Fetching canvas");
-         var id = Id.fromKey(key);
-         canvas = await id.load();
+         var id;
+         try {
+            id = Id.fromKey(key);
+            canvas = await id.load();
+         }
+         catch (ex) {
+            storage.removeItem("Canvas");
+         }
+       
       }
       
       if (canvas == undefined)
       {
          console.log("Creating new canvas");
          canvas = new Canvas();
-         canvas.save();
+        // canvas.save();
          storage.setItem("Canvas", canvas.key);
       }
       

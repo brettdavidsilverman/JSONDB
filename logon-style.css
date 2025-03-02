@@ -54,11 +54,11 @@ _form {
    height: 180px;
 }
 
-#leftSecret {
+#secretDiv {
    position: absolute;
 }
 
-#rightSecret {
+#changeSecretDiv {
    position: absolute;
    display: none;
    left: 150px;

@@ -21,6 +21,7 @@
    </head>
    <body>
       <h1 id="h1">bee.fish</h1>
+      <!--
       <div>
          <form onsubmit="return false;">
             <div style="text-align:left;">
@@ -57,11 +58,13 @@
       </h2>
       <br />
       <br />
+      -->
       <a href="/logon.php" id="logon">Logon/Logoff</a>
       <br />
       <a href="/client/">Javascript client library</a>
       <br />
       <a href="https://github.com/brettdavidsilverman/JSONDB">JSONDB on Git Hub</a>
+      <!--
       <script>
 
 const defaultURL = 
@@ -271,7 +274,7 @@ if (localStorage.getItem("json")) {
 }setLinks();
 
       </script>
-
+-->
    </body>
 
 </html>

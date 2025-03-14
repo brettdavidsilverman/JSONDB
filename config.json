@@ -6,7 +6,7 @@
       "database": "JSONDB"
    },
    "reCaptcha": {
-      "secretKey": "xxxx",
-      "siteKey": "6LfPw-AqAAAAAP7VB7iIiQ71qnVhTtkv4I8H4IT2"
+      "siteKey": "6LfPw-AqAAAAAP7VB7iIiQ71qnVhTtkv4I8H4IT2",
+      "secretKey": "xxxx"
    }
 }

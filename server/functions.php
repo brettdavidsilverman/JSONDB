@@ -2,10 +2,15 @@
 
 session_start();
 
-function getConnection() {
+function getConfig() {
    $config = file_get_contents('/home/bee/config.json'); 
    $json = json_decode($config);
+   return $json;
+}
 
+function getConnection() {
+   $json = getConfig();
+ 
    $database =     $json->{"Database"};
    $serverName =   $database->{"server"};
    $userName =     $database->{"username"};
@@ -83,9 +88,8 @@ function encodeQueryString ($data) {
 function lostSecret($connection, $token, $email)
 {
    $url = 'https://www.google.com/recaptcha/api/siteverify';
-      
-   $config = file_get_contents('/home/bee/config.json'); 
-   $settings = json_decode($config);
+       
+   $settings = getConfig();
 
    $secretKey =
       $settings->{"reCaptcha"}->{"secretKey"};

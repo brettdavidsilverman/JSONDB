@@ -1,4 +1,5 @@
 <?php
+   require_once "server/functions.php";
    http_response_code(401);
 ?>
 <!DOCTYPE html>
@@ -60,7 +61,7 @@
         
         
          <button class="g-recaptcha" 
-            data-sitekey="6LfPw-AqAAAAAP7VB7iIiQ71qnVhTtkv4I8H4IT2" 
+            data-sitekey="<?php echo getConfig()->{'reCaptcha'}->{'siteKey'}; ?>"
             data-callback='lostSecret' 
             data-action='submit'>Lost Secret</button>
          
@@ -222,6 +223,7 @@ function logon()
       function(response) {
          if (response) {
             saveFields();
+            
             const params = new URL(document.location.href).searchParams;
             if (params.has("redirect"))
                redirect = params.get("redirect");

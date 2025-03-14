@@ -9,8 +9,15 @@ RewriteEngine on
     Header set Expires "Wed, 12 Jan 1980 05:00:00 GMT"
   </IfModule>
 </FilesMatch>
-# RewriteCond %{QUERY_STRING} (.*)
-# RewriteRule ^(.*)$ http://www.google.com/?path=$1&query=%1 [R=301,B]
 
 
-# RewriteRule ^(.*)$ http://www.google.com/?path=$1 [R=301,B,QSA]
+# redirect https://bee.fish -> index.php
+RewriteRule ^$ /index.php [END]
+# redirect all root files to same and exit
+RewriteRule ^((.*)\.(php|css|html|js))$ /$1 [END]
+# redirect client to same and exit
+RewriteRule ^client/(.*)$ client/$1 [END]
+# redirect server to same and exit
+RewriteRule ^server/(.*)$ server/$1 [END]
+# Redirect all else to JSON.php
+RewriteRule ^(.*)$ server/JSON.php [END]

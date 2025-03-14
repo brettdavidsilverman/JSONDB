@@ -22,7 +22,7 @@
    </head>
    <body>
       <h1>Logon</h1>
-      <p>Please provide your email address and a secret to logon.</p>
+      <p>Please provide your email address and a secret then click logon.</p>
       
       <a href="/client/authentication/authentication.js">authentication.js</a>
            
@@ -30,15 +30,11 @@
          <label for="email">
             Email
          </label>
-         <input type="email" id="email"></input>
+         <input type="email" id="email" oninput="onEmailInput(event);"></input>
 
          <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
-                     
-         <label for="toggleSecret">
-            Change secret
-            <input type="checkbox" id="toggleSecret" onclick="toggleSecrets()"></input>
-         </label>
-         
+        
+
          <div id="secretContainer">
             <div id="secretDiv">
                <label for="secretFile">
@@ -51,7 +47,7 @@
             
             <div id="changeSecretDiv">
                <label for="changeSecretFile">
-                  New Secret
+                  Change Secret
                   <br />
                   <img id="changeThumbnail" width="100" height="100"></img>
                </label>
@@ -106,9 +102,6 @@ var logonButton =
 var logoffButton =
    document.getElementById("logoffButton");
 
-var toggleSecret =
-   document.getElementById("toggleSecret");
- 
 var changeSecretDiv =
    document.getElementById("changeSecretDiv");
    
@@ -125,21 +118,19 @@ existingThumbnail.onclick = function(event)
       return true;
 }
 
-function toggleSecrets() {
-   if (toggleSecret.checked &&
-       authentication.authenticated &&
-       !existingThumbnail.secret) 
-   {
-      if (!confirm("This will first log you out"))
-         return;
-      logoff(false);
+function onEmailInput(event) {
+   if (authentication.authenticated) {
+      authentication.logoff().
+      then(
+         function() {
+            updateForm(false);
+         }
+      );
    }
-   
-   if (toggleSecret.checked)
-      alert("Please select your existing secret and new secret. Then click Change Secret");
-      
-   updateForm(false);
+   else
+      updateForm(false);
 }
+
 
 function changeSecret() {
    authentication.changeSecret(
@@ -150,7 +141,7 @@ function changeSecret() {
       function (result) {
          if (result) {
             localStorage.setItem(
-               "authentication.existingThumbnail",
+               email.value + ".authentication.existingThumbnail",
                changeThumbnail.src
             );
             localStorage.setItem(
@@ -158,7 +149,6 @@ function changeSecret() {
                email.value
             );
             existingThumbnail.secret = changeThumbnail.secret;
-            toggleSecret.checked = false;
             updateForm(true);
             alert("Secret changed");
             return login();
@@ -355,13 +345,13 @@ function getFileHash(file) {
 }
 
 
-function createThumbnail(file, existingThumbnail)
+function createThumbnail(file, thumbnail)
 {
 
    // Create a thumbail copy from
    // secret file and draw it
    // on the canvas.
-   existingThumbnail.src = "";
+   thumbnail.src = "";
    
    var _this = this;
      
@@ -409,9 +399,9 @@ function createThumbnail(file, existingThumbnail)
          canvas.toDataURL("image/jpeg", 0.5);
      
       // set the existingThumbnail
-      existingThumbnail.src = jpeg;
+      thumbnail.src = jpeg;
 
-      createSecret(file, existingThumbnail);
+      createSecret(file, thumbnail);
       
    }
       
@@ -443,12 +433,16 @@ function createSecret(file, thumbnail)
       function(secret) {
          thumbnail.style.filter = "none";
          thumbnail.secret = secret;
+         if (thumbnail == existingThumbnail) {
+            localStorage.setItem(
+               email.value + ".authentication.existingThumbnail",
+               thumbnail.src
+            );
+         }
+      }
+   ).then(
+      function() {
          updateForm(false);
-         if (email.value &&
-            thumbnail.id == "existingThumbnail" &&
-            !toggleSecret.checked)
-            logon();
-         
       }
    );
    
@@ -474,17 +468,21 @@ function updateForm(setFields = true)
       if (_email)
          email.value = _email;
          
-      var thumbnailSrc = localStorage.getItem(
-         "authentication.existingThumbnail"
-      );
-   
-      if (thumbnailSrc)
-         existingThumbnail.src = thumbnailSrc;
-      
-      
     
    }
 
+      var thumbnailSrc =
+         localStorage.getItem(
+            email.value + ".authentication.existingThumbnail"
+         );
+   
+      if (thumbnailSrc)
+         existingThumbnail.src = thumbnailSrc;
+      else
+         existingThumbnail.src = "";
+   
+   
+   
    if (authentication.authenticated)
    {
       existingThumbnail.classList.add("pressed");
@@ -499,19 +497,33 @@ function updateForm(setFields = true)
       logonButton.disabled = (existingThumbnail.secret == null);
    }
    
-   if (toggleSecret.checked) {
-      changeSecretButton.disabled =
-         !(
-            email.value &&
-            existingThumbnail.secret &&
-            changeThumbnail.secret
-         );
-      changeSecretDiv.style.display = "block";
-   }
-   else {
-      changeSecretButton.disabled = true;
-      changeSecretDiv.style.display = "none";
-   }
+   authentication.
+   getUserEmailExists(email.value).
+   then(
+      function(exists) {
+         const params = new URLSearchParams(location.search);
+
+         if (exists &&
+            !params.has("lostSecret") &&
+            !authentication.authenticated)
+         {
+            
+            changeSecretButton.disabled =
+            !(
+               email.value &&
+               existingThumbnail.secret &&
+               changeThumbnail.secret
+            );
+            changeSecretButton.style.display = "inline";
+            changeSecretDiv.style.display = "block";
+         }
+         else {
+            changeSecretButton.disabled = true;
+            changeSecretButton.style.display = "none";
+            changeSecretDiv.style.display = "none";
+         }
+      }
+   );
 
 }
 
@@ -522,7 +534,7 @@ function saveFields() {
    );
             
    localStorage.setItem(
-      "authentication.existingThumbnail",
+      email.value + ".authentication.existingThumbnail",
       existingThumbnail.src
    );
 }
@@ -537,7 +549,7 @@ function update()
       authentication.logoff().then(
          function(auth) {
             localStorage.setItem(
-               "authentication.existingThumbnail",
+               email.value + ".authentication.existingThumbnail",
                ""
             );
             updateForm();

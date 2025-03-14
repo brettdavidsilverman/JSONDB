@@ -10,15 +10,17 @@ RewriteEngine on
   </IfModule>
 </FilesMatch>
 
+AddDefaultCharset utf-8
+AddCharset utf-8 .htm .html .js .css .json
 
 # redirect https://bee.fish -> index.php
 RewriteRule ^$ /index.php [END]
 # redirect client to same and exit
-RewriteRule ^client/(.*)$ client/$1 [END,B]
+RewriteRule ^client/(.*)$ client/$1 [END]
 # redirect server to same and exit
-RewriteRule ^server/(.*)$ server/$1 [END,B]
+RewriteRule ^server/(.*)$ server/$1 [END]
 # redirect all root files to same and exit
-RewriteRule ^((.*)\.(php|css|html|js))$ /$1 [END,B]
+RewriteRule ^((.*)\.(php|css|html|js))$ /$1 [END]
 
 # Redirect all else to JSON.php
 RewriteRule ^(.*)$ server/JSON.php [END]

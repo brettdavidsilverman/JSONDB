@@ -208,7 +208,8 @@ function logon()
             email.value,
             existingThumbnail.secret
          );
-      
+   
+
    promise.then(
       function(response) {
          if (response) {

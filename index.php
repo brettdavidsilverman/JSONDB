@@ -52,7 +52,7 @@
          
       </div>
       <h2>
-         <a id="goLink" href="/go.html">App Link</a>
+         <a id="goLink" href="/go.php">App Link</a>
       </h2>
       <h2>
          <a id="dataLink" href="/">Data Link</a>
@@ -256,8 +256,8 @@ function setLinks() {
       dataLink.href = "";
    }
    else {
-      goLink.href = "/go.html?" + encodeURIComponent(pathInput.value);
-      dataLink.href = "/" + pathInput.value;
+      goLink.href = "/go.php?" + encodeURIComponent(pathInput.value);
+      dataLink.href = pathInput.value;
    }
 }
 if (localStorage.getItem("path")) {

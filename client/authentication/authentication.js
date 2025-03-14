@@ -36,7 +36,7 @@ class Authentication
       var promise =  
          fetch(this.url + "/server/logon.php", parameters)
          .then(
-            function(response) {
+            function(response) {
                if (response.ok) {
                   var creds =
                      _this.getCredentials();

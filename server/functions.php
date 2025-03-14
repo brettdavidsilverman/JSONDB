@@ -249,6 +249,8 @@ function logoff($connection, $ipAddress)
 
    }
    
+   setCredentialsCookie(null);
+   
    session_unset();
  
    

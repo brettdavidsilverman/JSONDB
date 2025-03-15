@@ -2,11 +2,14 @@
    declare(strict_types=1);
    require_once 'functions.php';
    
-   authenticate();
+   //authenticate();
    
-   header('content-type: text/plain;');
-   echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
-   echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
+   header('Content-Type: text/plain');
+   //header('Content-Encoding: gzip');
+   http_response_code(200);
+   
+   //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
+   //echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
    
    
    
@@ -14,6 +17,7 @@
 
    $testfile = __DIR__.'/jsonstreamingparser/tests/data/example.json';
    $testfile = __DIR__.'/../tests/test.json';
+   $testfile = __DIR__.'/../tests/large.json';
    
 function escape($value) {
    return $value;
@@ -21,9 +25,8 @@ function escape($value) {
 }
 
    
-class MyListener extends \JsonStreamingParser\Listener\IdleListener
-{
-    protected $nextId = 0;
+class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
+{
     
     protected $result;
 
@@ -37,6 +40,16 @@ class MyListener extends \JsonStreamingParser\Listener\IdleListener
      * @var string[]
      */
     protected $keys;
+    
+    protected $connection;
+    protected $lines;
+    protected $pageSize = 80;
+    
+    public function __construct($connection) {
+        
+        $this->connection = $connection;
+        $this->lines = [];
+    }
 
     public function getJson()
     {
@@ -81,11 +94,6 @@ class MyListener extends \JsonStreamingParser\Listener\IdleListener
     }
     
     
-    protected function nextId($type, $parentId) {
-       static $id = 0;
-       echo 'Create ' . $type . ' parent(' . $parentId . ') #' . ++$id . "\r\n";
-       return $id;
-    }
     
     protected function startComplexValue($type): void
     {
@@ -104,7 +112,7 @@ class MyListener extends \JsonStreamingParser\Listener\IdleListener
            'type' => $type,
            'value' => [], 
            'count' => 0,
-           'id' => $this->nextId($type, $parentId)
+           'id' => $this->createId($type, $parentId)
         ];
         
         $this->stack[] = $currentItem;
@@ -128,7 +136,7 @@ class MyListener extends \JsonStreamingParser\Listener\IdleListener
 
     // Inserts the given value into the top value on the stack in the appropriate way,
     // based on whether that value is an array or an object.
-    protected function insertValue($value, $id): void
+    protected function insertValue($value, $idValue): void
     {
          
         // Grab the top item from the stack that we're currently parsing.
@@ -140,40 +148,86 @@ class MyListener extends \JsonStreamingParser\Listener\IdleListener
 
         if ('object' === $currentItem['type']) {
             $key = array_pop($this->keys);
-            //$currentItem['value'][$key] = $value;
-            echo $currentItem['id'] . ":" . '"' . escape($key) . '"' . ":";
+            $this->createValue($currentItem["id"], 'object', $key, $value, $idValue);
         }
         else {
             $index = $currentItem['count']++;
-            //$index = count($currentItem['value']);
-            echo $currentItem['id'] . "[" . $index . "] = ";
-            
-            //$currentItem['value'][] = $value;
+            $this->createValue($currentItem["id"], 'array', $index, $value, $idValue);
         }
 
-        if (is_null($value))
-           echo 'null';
-        else if (is_numeric($value))
-           echo $value;
-        else if (is_string($value))
-           echo '"' . escape($value) . '"';
-        else if (is_bool($value)) {
-           if ($value)
-              echo 'true';
-           else
-              echo 'false';
-        }
-        else if (is_array($value))
-           echo '#' . $id;
-           
-        echo "\r\n";
-        
         $this->stack[] = $currentItem;
 
     }
+    
+    protected function createId($type, $parentId) {
+       static $id = 0;
+       $line = 'Create #' . ++$id . ' ' . $type . ' parent(' . $parentId . ')' . "\r\n";
+       $this->printLine($line);
+       return $id;
+    }
+    
+    protected function createValue($id, $type, $keyOrIndex, $value, $idValue) : void {
+       $line = null;
+       if ($type === 'object')
+          $line = $id . ":" . '"' . escape($keyOrIndex) . '"' . ": ";
+       else
+          $line = $id . "[" . $keyOrIndex . "] = ";
+          
+       $stringVal;
+       if (is_null($value))
+          $stringVal = 'null';
+       else if (is_numeric($value))
+          $stringVal = (string)$value;
+       else if (is_string($value))
+          $stringVal = $value;
+       else if (is_bool($value)) {
+          if ($value)
+             $stringVal = 'true';
+          else
+             $stringVal = 'false';
+       }
+       else if (is_array($value))
+          $stringVal =  '#' . $idValue;
+           
+       $line = $line . $stringVal . "\r\n";
+       
+       $this->printLine($line);
+    }
+    
+    protected function printLine($line) : void {
+       $this->lines[] = $line;
+       
+       $length = count($this->lines);
+       
+       if ($length > $this->pageSize) {
+          echo join("", $this->lines);
+          $this->lines = [];
+       }
+       
+       //$this->sendChunk($line);
+    }
+    
+    public function sendEnd() : void {
+       
+       if (!empty($this->lines)) {
+          echo join("", $this->lines);
+          $this->lines = [];
+       }
+       echo "\r\n";
+      // echo "0\r\n\r\n";
+       //$this->sendChunk('');
+    }
+    
+    protected function sendChunk($chunk) : void 
+    {
+       // The chunk must fill the output buffer or php won't send it
+       //$chunk = str_pad($chunk, 4096);
+       printf("%x\r\n%s\r\n", strlen($chunk), $chunk);
+    }
 }
-
-   $listener = new MyListener();
+   $connection = getConnection();
+   
+   $listener = new JSONDBListener($connection);
    
    $stream = fopen($testfile, 'r');
    try {
@@ -185,7 +239,14 @@ class MyListener extends \JsonStreamingParser\Listener\IdleListener
        throw $e;
    }
 
-   var_dump($listener->getJson());
+  // var_dump($listener->getJson());
 
-
+   $connection->close();
+   
+   $listener->sendEnd();
+   
+   flush();
+ 
+   
+   
 ?>

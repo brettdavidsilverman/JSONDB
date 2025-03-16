@@ -75,6 +75,7 @@ function createUser($connection, $email, $secret)
    
    return $newUserSecret;
 }
+
 function encodeQueryString ($data) {
    $req = "";
    foreach ( $data as $key => $value )
@@ -347,6 +348,7 @@ function _authenticate($connection)
          "authenticated" => true
       );
       $_SESSION["sessionId"] = $sessionId;
+      $_SESSION["userId"] = $userId;
    }
    else {
       $credentials = null;
@@ -395,6 +397,13 @@ function getPostedData()
       json_decode($input, true);
       
    return $json;
+}
+
+function nullable($value) {
+   if (is_null($value))
+      return 'null';
+   else
+      return $value;
 }
 
 ?>

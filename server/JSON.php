@@ -3,6 +3,7 @@
    require_once 'functions.php';
    
    //authenticate();
+   $_SESSION['userId'] = 79;
    
    header('Content-Type: text/plain');
    //header('Content-Encoding: gzip');
@@ -17,7 +18,7 @@
 
    $testfile = __DIR__.'/jsonstreamingparser/tests/data/example.json';
    $testfile = __DIR__.'/../tests/test.json';
-   $testfile = __DIR__.'/../tests/large.json';
+   //$testfile = __DIR__.'/../tests/large.json';
    
 function escape($value) {
    return $value;
@@ -42,13 +43,27 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     protected $keys;
     
     protected $connection;
+    protected $createObjectStatement;
+    protected $createValueStatement;
+    
     protected $lines;
     protected $pageSize = 80;
+    public $nextId = 0;
     
     public function __construct($connection) {
         
         $this->connection = $connection;
         $this->lines = [];
+        /*
+        $this->createObjectStatement =
+           $connection->prepare(
+              "CALL createObject(?, ?, ?);"
+           );
+        $this->createValueStatement =
+           $connection->prepare(
+              "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?);"
+           );
+        */
     }
 
     public function getJson()
@@ -60,6 +75,11 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     {
         $this->stack = [];
         $this->keys = [];
+        
+        $this->connection->execute_query("DELETE FROM Object WHERE type = 'root';");
+        
+        $this->startComplexValue('root');
+        
     }
 
     public function startObject(): void
@@ -112,7 +132,7 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
            'type' => $type,
            'value' => [], 
            'count' => 0,
-           'id' => $this->createId($type, $parentId)
+           'id' => $this->createObjectId($parentId, $type)
         ];
         
         $this->stack[] = $currentItem;
@@ -146,76 +166,179 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         //   - if it's an object, associate the newly-parsed value with the most recent key
         //   - if it's an array, push the newly-parsed value to the array
 
+        $index = $currentItem['count']++;
+        
         if ('object' === $currentItem['type']) {
             $key = array_pop($this->keys);
-            $this->createValue($currentItem["id"], 'object', $key, $value, $idValue);
+            $this->createValueId($currentItem["id"], $index,  $key, $value, $idValue);
         }
         else {
-            $index = $currentItem['count']++;
-            $this->createValue($currentItem["id"], 'array', $index, $value, $idValue);
+      
+            $this->createValueId($currentItem["id"], $index, null,  $value, $idValue);
         }
 
         $this->stack[] = $currentItem;
 
     }
     
-    protected function createId($type, $parentId) {
-       static $id = 0;
-       $line = 'Create #' . ++$id . ' ' . $type . ' parent(' . $parentId . ')' . "\r\n";
+    protected function createObject($parentId, $type)
+    {
+   
+        $statement = $this->connection->prepare(
+              "CALL createObject(?, ?, ?);"
+           );
+          
+        $statement->bind_param(
+           'iis',
+           $_SESSION['userId'],
+           $parentId,
+           $type
+        );
+   
+        $statement->execute();
+   
+        $objectId = NULL;
+        $statement->bind_result($objectId);
+   
+        if (!$statement->fetch()) {
+           return NULL;
+        }
+   
+        $statement->close();
+        
+        return $objectId;
+    }
+
+    protected function createObjectId($parentId, $type) {
+      // $id = ++$this->nextId;
+       $id = $this->createObject($parentId, $type);
+       $line = 'Create #' . $id . ' ' . $type . ' parent(' . $parentId . ')';
        $this->printLine($line);
+       
+       $this->nextId = $id;
+       
        return $id;
     }
     
-    protected function createValue($id, $type, $keyOrIndex, $value, $idValue) : void {
-       $line = null;
-       if ($type === 'object')
-          $line = $id . ":" . '"' . escape($keyOrIndex) . '"' . ": ";
-       else
-          $line = $id . "[" . $keyOrIndex . "] = ";
-          
-       $stringVal;
-       if (is_null($value))
-          $stringVal = 'null';
-       else if (is_numeric($value))
-          $stringVal = (string)$value;
-       else if (is_string($value))
-          $stringVal = $value;
-       else if (is_bool($value)) {
-          if ($value)
-             $stringVal = 'true';
-          else
-             $stringVal = 'false';
-       }
-       else if (is_array($value))
-          $stringVal =  '#' . $idValue;
-           
-       $line = $line . $stringVal . "\r\n";
+    protected function createValue(
+       $objectId,
+       $objectIndex,
+       $objectKey,
+       $isNull,
+       $stringValue,
+       $numericValue,
+       $boolValue,
+       $idValue
+    )
+    {
+       $valueId = null;
        
-       $this->printLine($line);
+        // Echo results for debug
+       $line = '#' . $objectId . ': ' .
+          nullable($objectIndex) . ', ' .
+          nullable($objectKey) . ', ' .
+          ($isNull ? 'true' : 'false') . ', ' .
+          nullable($stringValue) . ', ' .
+          nullable($numericValue) . ', ' .
+          nullable($boolValue) . ', ' .
+          nullable($idValue);
+          
+        $this->printLine($line);
+       
+        $statement = $this->connection->prepare(
+              "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?);"
+           );
+        
+        $statement->bind_param(
+           'iisisdii',
+           $objectId,
+           $objectIndex,
+           $objectKey,
+           $isNull,
+           $stringValue,
+           $numericValue,
+           $boolValue,
+           $idValue
+        );
+   
+        $statement->execute();
+        
+        $statement->bind_result($valueId);
+            
+        $valueId = NULL;
+       
+   
+        if (!$statement->fetch()) {
+           return NULL;
+        }
+   
+        $statement->close();
+        
+        return $valueId;
+        
+    }
+
+    
+    protected function createValueId($objectId, $objectIndex, $objectKey, $value, $idValue)  {
+
+       $boolValue = null;
+       $isNull = null;
+       $stringValue = null;
+       $numericValue = null;
+       //$idValue
+       
+       if (is_null($value)) {
+          $isNull = true;
+       }
+       else {
+          $isNull = false;
+          if (is_numeric($value))
+             $numericValue = $value;
+          else if (is_string($value))
+             $stringValue = $value;
+          else if (is_bool($value))
+             $boolValue = $value;
+          else if (!is_array($value))
+             $idValue = null;
+       }
+       
+       
+       $valueId = $this->createValue(
+           $objectId,
+           $objectIndex,
+           $objectKey,
+           $isNull,
+           $stringValue,
+           $numericValue,
+           $boolValue,
+           $idValue
+       );
+       
+       return $valueId;
     }
     
-    protected function printLine($line) : void {
+    public function printLine($line) : void {
+       echo $line . "\r\n";
+       return ;
        $this->lines[] = $line;
        
        $length = count($this->lines);
        
        if ($length > $this->pageSize) {
-          echo join("", $this->lines);
+          echo join("\r\n", $this->lines);
           $this->lines = [];
        }
-       
-       //$this->sendChunk($line);
+       
     }
     
     public function sendEnd() : void {
        
        if (!empty($this->lines)) {
-          echo join("", $this->lines);
+          echo join("\r\n", $this->lines);
           $this->lines = [];
        }
        echo "\r\n";
-      // echo "0\r\n\r\n";
-       //$this->sendChunk('');
+
     }
     
     protected function sendChunk($chunk) : void 
@@ -242,6 +365,8 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
   // var_dump($listener->getJson());
 
    $connection->close();
+   
+   $listener->printLine("⏰" . $listener->nextId);
    
    $listener->sendEnd();
    

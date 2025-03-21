@@ -1,5 +1,5 @@
 <?php
-   require_once 'server/functions.php';
+   require_once 'server/authentication/functions.php';
    authenticate();
 ?>
 <!DOCTYPE html>
@@ -13,7 +13,7 @@
       <script src="/client/stream/stream.js"></script>
       <script src="/client/power-encoding/power-encoding.js"></script>
       <script src="/client/id/id.js"></script>
-      <script src="/client/evaluate.js"></script>      <script src="/client/authentication/authentication.js"></script>
+      <script src="/client/evaluate.js?v=1"></script>      <script src="/client/authentication/authentication.js"></script>
       <script src="/client/punycode.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
       <script>
@@ -60,9 +60,9 @@
       <br />
       <br />
      
-      <a href="logon.php" id="logon">Logon/Logoff</a>
+      <a href="client/authentication/logon.php" id="logon">Logon/Logoff</a>
       <br />
-      <a href="changeSecret.php">Change logon secret</a>
+      <a href="client/authentication/changeSecret.php">Change logon secret</a>
       <br />
       <a href="/client">Javascript client library</a>
       <br />
@@ -91,6 +91,7 @@ header.innerText = origin;
 title.innerText = origin;
 
 fetchButton.disabled = true;
+saveButton.disabled = true;
 
 authenticate();
 function loadJSON() {
@@ -167,6 +168,7 @@ pathInput.onfocus =
       if (pathInput.value == defaultURL)
          pathInput.value = "";
       fetchButton.disabled = false;
+      saveButton.disabled = false;
    };
    
    
@@ -176,10 +178,12 @@ pathInput.onblur =
           pathInput.value == defaultURL)
       {
          fetchButton.disabled = true;
+         saveButton.disabled = true;
          pathInput.value = defaultURL;
       }
       else {
          fetchButton.disabled = false;
+         saveButton.disabled = false;
       }
       setLinks();
    }
@@ -268,6 +272,7 @@ function setLinks() {
       localStorage.getItem("path");
       
    fetchButton.disabled = false;
+   saveButton.disabled = false;
 }
 
 if (localStorage.getItem("json")) {

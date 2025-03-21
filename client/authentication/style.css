@@ -1,14 +1,19 @@
 form {
-   width: 120px;
-   background-color: white;
-   border: none;
-   border-radius: 0px;
+   width: auto;
+   padding: auto;
 }
-img, label {
+
+img, label, input, button {
    border: none;
    box-shadow: 5px 5px 3px black;
    margin: 10px;
+   width: calc(100% - 20px);
 }
+
+button {
+   width: auto;
+}
+
 
 img {
    position: relative;
@@ -43,3 +48,26 @@ _form {
    bordera: 1px solid black;
    box-shadow: none;
 }
+#secretContainer {
+   position: relative;
+   top: 10px;
+   height: 180px;
+}
+
+#secretDiv {
+   position: absolute;
+}
+
+#changeSecretDiv {
+   position: absolute;
+   left: 150px;
+}
+
+#logonDiv {
+   position: relative;
+   top: 10px;
+}
+
+.error {
+   color: red;
+}

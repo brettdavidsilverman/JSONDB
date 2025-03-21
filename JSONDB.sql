@@ -30,9 +30,10 @@ CREATE TABLE `Object` (
   PRIMARY KEY (`objectId`),
   KEY `I_Object_parentId` (`parentId`) USING BTREE,
   KEY `I_Object_ownerId` (`ownerId`) USING BTREE,
+  KEY `I_Object_type` (`type`) USING BTREE,
   CONSTRAINT `FK_Object_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Object_parentId` FOREIGN KEY (`parentId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=65133 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=117565 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -41,9 +42,31 @@ CREATE TABLE `Object` (
 
 LOCK TABLES `Object` WRITE;
 /*!40000 ALTER TABLE `Object` DISABLE KEYS */;
-INSERT INTO `Object` VALUES (65128,NULL,'root',79),(65129,65128,'array',79),(65130,65129,'object',79),(65131,65130,'object',79),(65132,65129,'object',79);
 /*!40000 ALTER TABLE `Object` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Temporary view structure for view `ObjectValue`
+--
+
+DROP TABLE IF EXISTS `ObjectValue`;
+/*!50001 DROP VIEW IF EXISTS `ObjectValue`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `ObjectValue` AS SELECT 
+ 1 AS `objectId`,
+ 1 AS `parentId`,
+ 1 AS `type`,
+ 1 AS `ownerId`,
+ 1 AS `valueId`,
+ 1 AS `objectIndex`,
+ 1 AS `objectKey`,
+ 1 AS `numericValue`,
+ 1 AS `stringValue`,
+ 1 AS `idValue`,
+ 1 AS `boolValue`,
+ 1 AS `isNull`*/;
+SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `Session`
@@ -71,7 +94,6 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES ('0b6f615f-020f-11f0-8ef2-42010a98000f',79,'2025-03-16 12:33:28','211.30.168.184','2025-03-16 12:33:29');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -103,31 +125,6 @@ INSERT INTO `Setting` VALUES (1,'SESSION_TIMEOUT','1800','Session timeout in sec
 UNLOCK TABLES;
 
 --
--- Table structure for table `Test`
---
-
-DROP TABLE IF EXISTS `Test`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Test` (
-  `testId` bigint NOT NULL AUTO_INCREMENT,
-  `testValue` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`testId`),
-  UNIQUE KEY `UI_Test_testValue` (`testValue`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Test`
---
-
-LOCK TABLES `Test` WRITE;
-/*!40000 ALTER TABLE `Test` DISABLE KEYS */;
-INSERT INTO `Test` VALUES (1,NULL),(2,NULL),(3,'hello');
-/*!40000 ALTER TABLE `Test` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `User`
 --
 
@@ -140,9 +137,10 @@ CREATE TABLE `User` (
   `logonSecret` blob,
   `newUserSecret` varchar(36) DEFAULT NULL,
   `lostSecret` varchar(36) DEFAULT NULL,
+  `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=89 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -173,15 +171,15 @@ CREATE TABLE `Value` (
   `isNull` tinyint NOT NULL,
   PRIMARY KEY (`valueId`),
   UNIQUE KEY `UI_Value_objectId_objectIndex` (`objectId`,`objectIndex`) USING BTREE,
-  UNIQUE KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   KEY `I_Value_objectId` (`objectId`) USING BTREE,
   KEY `I_Value_idValue` (`idValue`) USING BTREE,
   KEY `I_Value_objectKey_numericValue` (`objectKey`(100),`numericValue`) USING BTREE,
   KEY `I_Value_objectKey_stringValue` (`objectKey`(100),`stringValue`(100)) USING BTREE,
   KEY `I_Value_objectId_objectKey` (`objectId`,`objectKey`(100)) USING BTREE,
+  KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_objectId` FOREIGN KEY (`objectId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=150 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=338083 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -190,7 +188,6 @@ CREATE TABLE `Value` (
 
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (143,65131,0,_binary 'first',NULL,_binary '🐝',NULL,NULL,0),(144,65131,1,_binary 'last',NULL,_binary '🥈',NULL,NULL,0),(145,65130,0,_binary 'name',NULL,NULL,65131,NULL,0),(146,65129,0,NULL,NULL,NULL,65130,NULL,0),(147,65132,0,_binary 'a',NULL,_binary 'b',NULL,NULL,0),(148,65129,1,NULL,NULL,NULL,65132,NULL,0),(149,65128,0,NULL,NULL,NULL,65129,NULL,0);
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -244,11 +241,13 @@ DELIMITER ;;
 CREATE DEFINER=`brett`@`%` FUNCTION `userEmailExists`( email NVARCHAR ( 320 ) ) RETURNS tinyint(1)
     READS SQL DATA
 BEGIN
- 
+   SET @email = email;
+    
    SET       @emailExists = (
       SELECT   COUNT(*)
       FROM     User
-      WHERE  User.userEmail = email
+      WHERE  User.userEmail = @email
+      AND        User.validated = 1
    );
    
    RETURN @emailExists; 
@@ -354,7 +353,7 @@ BEGIN
       SELECT          User.userId
       FROM             User
       WHERE          User.userEmail = @email
-      AND                 User.newUserSecret IS NULL
+      AND                 User.validated = 1
       AND                 User.logonSecret = @oldSecret
       
    );
@@ -448,23 +447,35 @@ BEGIN
    IF NOT EXISTS(
          SELECT *
          FROM    User
-         WHERE   User.userEmail = @email) THEN
+         WHERE   User.userEmail = @email)
+   THEN
          
       INSERT INTO User(
          userEmail,
          logonSecret,
-         newUserSecret )
-      VALUES  ( @email, @secret, UUID() );
-      /*
-      SET   @userId = (
-         SELECT   userId
-         FROM      User
-         WHERE  User. userEmail = @email
-      );
-     */
+         newUserSecret,
+         validated )
+      VALUES  ( @email, @secret, UUID(), 0 );
      
      SET @userId = LAST_INSERT_ID();
      
+   ELSEIF EXISTS(
+         SELECT   *
+         FROM     User
+         WHERE  User.userEmail = @email
+         AND        validated = 0
+   ) THEN
+        UPDATE   User
+        SET             logonSecret = @secret,
+                             newUserSecret = UUID()
+        WHERE    User.userEmail = @email;
+        
+        SET @userId = (
+           SELECT userId
+           FROM    User
+           WHERE User.userEmail = @email
+        );
+        
    END IF;
    
    COMMIT;
@@ -502,7 +513,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
            idValue BIGINT
 )
 BEGIN
-   START TRANSACTION;
+ /*  START TRANSACTION; */
    
    INSERT INTO Value(
            objectId,
@@ -524,12 +535,41 @@ BEGIN
            boolValue,
            idValue
    );
-   
+   /*
    SET @valueId = LAST_INSERT_ID();
    
    SELECT @valueId AS valueId;
    
    COMMIT;
+   */
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `getRootObjectId` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `getRootObjectId`(
+   ownerId BIGINT
+)
+BEGIN
+
+   SET @ownerId = ownerId;
+   
+   SELECT objectId
+   FROM   Object
+   WHERE ownerId = @ownerId
+   AND       type = 'root';
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -752,7 +792,8 @@ BEGIN
    
    IF NOT ISNULL(@userId) THEN
       UPDATE   User
-      SET             newUserSecret = NULL
+      SET             newUserSecret = NULL,
+                           validated = 1
       WHERE    User.userId = @userId;
    END IF;
    
@@ -768,6 +809,24 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Final view structure for view `ObjectValue`
+--
+
+/*!50001 DROP VIEW IF EXISTS `ObjectValue`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`brett`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ObjectValue` AS select `Object`.`objectId` AS `objectId`,`Object`.`parentId` AS `parentId`,`Object`.`type` AS `type`,`Object`.`ownerId` AS `ownerId`,`Value`.`valueId` AS `valueId`,`Value`.`objectIndex` AS `objectIndex`,`Value`.`objectKey` AS `objectKey`,`Value`.`numericValue` AS `numericValue`,`Value`.`stringValue` AS `stringValue`,`Value`.`idValue` AS `idValue`,`Value`.`boolValue` AS `boolValue`,`Value`.`isNull` AS `isNull` from (`Object` left join `Value` on((`Object`.`objectId` = `Value`.`objectId`))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -778,4 +837,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-16 14:10:07
+-- Dump completed on 2025-03-22  2:01:33

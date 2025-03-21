@@ -131,3 +131,15 @@ function getRedirect() {
                
 }
 
+function redirect(page) {
+    
+   var redirect = getRedirect();
+   
+   if (!page)
+      document.location.href = redirect;
+   else
+      document.location.href = 
+         page + "?redirect=" +
+         encodeURIComponent(redirect);
+}
+

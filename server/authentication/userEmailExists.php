@@ -6,23 +6,20 @@ $connection = getConnection();
 $json =
    getPostedData();
    
-$email = $json['email'];
-$oldSecret = $json['oldSecret'];
-$newSecret = $json['newSecret'];
-
-$result =
-   changeSecret(
+$email = $json;
+   
+$userEmailExists =
+   userEmailExists(
       $connection,
-      $email,
-      $oldSecret,
-      $newSecret
+      $email
    );
    
 $connection->close();
-   
-if ($result)
+
+if ($userEmailExists)
    echo 'true';
 else
    echo 'false';
-   
+
+
 ?>

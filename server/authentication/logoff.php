@@ -11,8 +11,6 @@ logoff(
 
 $connection->close();
    
-setCredentialsCookie(NULL);
-
-
+echo 'true';
 
 ?>

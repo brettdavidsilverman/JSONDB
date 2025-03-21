@@ -1,18 +1,13 @@
 <?php
    declare(strict_types=1);
-   require_once 'functions.php';
+   require_once '../authentication/functions.php';
    
    authenticate();
-   //$_SESSION['userId'] = 79;
    
    header('Content-Type: text/plain');
    //header('Content-Encoding: gzip');
-   http_response_code(500);
-   
-   exit();
-   
-   //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
-   //echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
+   echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
+   echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
    
    
    require_once 'jsonstreamingparser/vendor/autoload.php';
@@ -77,8 +72,7 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         $this->stack = [];
         $this->keys = [];
         
-        $this->connection->execute_query("TRUNCATE Value;");
-        $this->connection->execute_query("DELETE FROM Object;");
+        $this->connection->execute_query("DELETE FROM Object WHERE ownerId = " . $_SESSION["userId"]);
         
         $this->startComplexValue('root');
         
@@ -169,16 +163,14 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         //   - if it's an array, push the newly-parsed value to the array
 
         $index = $currentItem['count']++;
+        $key = null;
         
         if ('object' === $currentItem['type']) {
             $key = array_pop($this->keys);
-            $this->createValueId($currentItem["id"], $index,  $key, $value, $idValue);
-        }
-        else {
-      
-            $this->createValueId($currentItem["id"], $index, null,  $value, $idValue);
         }
 
+        $this->createValueId($currentItem["id"], $index,  $key, $value, $idValue);
+        
         $this->stack[] = $currentItem;
 
     }
@@ -268,11 +260,9 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
    
         $statement->execute();
         
-        $statement->close();
-        
-    }
+        $statement->close();        
 
-    
+    }
     protected function createValueId($objectId, $objectIndex, $objectKey, $value, $idValue)  {
 
        $boolValue = null;
@@ -313,7 +303,7 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     
     public function printLine($line) : void {
        //echo $line . "\r\n";
-       return ;
+       //return;
        $this->lines[] = $line;
        
        
@@ -326,11 +316,13 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     
     public function sendEnd($line) : void {
        
-       if (!empty($this->lines)) {
-          echo join("\r\n", $this->lines);
-          $this->lines = [];
-       }
-       echo $line . "\r\n";
+       $this->lines[] = $line;
+       
+       echo join("\r\n", $this->lines);
+       
+       $this->lines = [];
+     
+       echo "\r\n";
 
     }
     
@@ -347,10 +339,13 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
    
    date_default_timezone_set('Australia/Brisbane');
    
+   
+   //$stream = fopen($testfile, 'r');
+   $stream = fopen('php://input', 'r');
+   
    echo "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
    flush();
    
-   $stream = fopen($testfile, 'r');
    try {
       $parser = new \JsonStreamingParser\Parser($stream, $listener);
       $parser->parse();

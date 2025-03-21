@@ -6,9 +6,9 @@
       
    $json = getPostedData();
    
-   $email = $json['email'];
    $token = $json['token'];
-
+   $email = $json['email'];
+  
    $lostSecret = lostSecret(
       $connection,
       $token,
@@ -36,7 +36,7 @@
 </head>
 <body>
   <h1>Reset password</h1>
-  <p><a href=\"https://bee.fish/logon.php?lostSecret=$lostSecret&email=$email\">Set your password by clicking this link</a></p>
+  <p><a href=\"https://bee.fish/client/authentication/resetSecret.php?lostSecret=" . urlencode($lostSecret) . "&email=" . urlencode($email) . "\">Reset your password by clicking this link</a></p>
 </body>
 </html>
 ";

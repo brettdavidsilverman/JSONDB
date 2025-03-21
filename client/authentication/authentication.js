@@ -34,7 +34,7 @@ class Authentication
       }
 
       var promise =  
-         fetch(this.url + "/server/logon.php", parameters)
+         fetch(this.url + "/server/authentication/logon.php", parameters)
          .then(
             function(response) {
                if (response.ok) {
@@ -89,7 +89,7 @@ class Authentication
       var _this = this;
 
       var promise =
-         fetch(this.url + "/server/authenticate.php", parameters)
+         fetch(this.url + "/server/authentication/authenticate.php", parameters)
          .then(
             function(response) {
                if (response.ok) {
@@ -115,7 +115,7 @@ class Authentication
       }
          
       var promise =
-         fetch(this.url + "/server/userEmailExists.php", parameters)
+         fetch(this.url + "/server/authentication/userEmailExists.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -144,7 +144,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/createUser.php", parameters)
+         fetch(this.url + "/server/authentication/createUser.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -172,7 +172,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/validateUserEmail.php", parameters)
+         fetch(this.url + "/server/authentication/validateUserEmail.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -200,7 +200,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/lostSecret.php", parameters)
+         fetch(this.url + "/server/authentication/lostSecret.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -229,7 +229,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/resetSecret.php", parameters)
+         fetch(this.url + "/server/authentication/resetSecret.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -246,6 +246,8 @@ class Authentication
    
    changeSecret(email, oldSecret, newSecret) {
 
+      this.authenticated = false;
+      
       var parameters = {
          method: "POST",
          body: JSON.stringify(
@@ -258,7 +260,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/changeSecret.php", parameters)
+         fetch(this.url + "/server/authentication/changeSecret.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -285,10 +287,10 @@ class Authentication
       }
          
       var promise =
-         fetch(this.url + "/server/logoff.php", parameters)
+         fetch(this.url + "/server/authentication/logoff.php", parameters)
          .then(
             function(response) {
-               response.json();
+               return response.json();
             }
          );
          
@@ -341,7 +343,7 @@ function authenticate() {
    if (authentication.authenticated)
       return true;
    var currentPage = document.location.href;
-   var newPage = authentication.authenticationServer + "/logon.php";
+   var newPage = "/client/authentication/logon.php";
    var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
   
    document.location.href = url;
@@ -350,4 +352,5 @@ function authenticate() {
    return false;
 
 }
+
 

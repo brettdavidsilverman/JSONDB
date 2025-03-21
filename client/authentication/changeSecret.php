@@ -1,6 +1,3 @@
-<?php
-   require_once "server/functions.php";
-?>
 <!DOCTYPE html>
 <html lang="en">
    <head>
@@ -10,11 +7,11 @@
       <script src="https://www.google.com/recaptcha/api.js"></script>
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>
-      <script src="/client/authentication/sha512.js"></script>
-      <script src="/client/authentication/thumbnailSecret.js"></script>
-      <script src="/client/authentication/authentication.js?v=6"></script>
+      <script src="sha512.js"></script>
+      <script src="thumbnailSecret.js"></script>
+      <script src="authentication.js?v=9"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
-      <link rel="stylesheet" type="text/css" href="/logon-style.css?v=4" />
+      <link rel="stylesheet" type="text/css" href="style.css" />
       <title>Change Secret</title>
       <style>
 
@@ -25,7 +22,7 @@
       <h2>Existing users</h2>
       <p>Please provide your email address and your existing secret file, then select your new secret. Finally click Change Secret.</p>
   
-      <a href="/client/authentication/authentication.js">authentication.js</a>
+      <a href="authentication.js">authentication.js</a>
            
       <form id="form" onsubmit="return false;">
          <label for="email">
@@ -39,20 +36,20 @@
          <div id="secretContainer">
             <div id="secretDiv">
                <label for="secretFile">
-                  Secret
+                  Current Secret
                   <br />
-                  <img id="existingThumbnail" width="100" height="100"></img>
+                  <img id="oldThumbnail" width="100" height="100"></img>
                </label>
-               <input type="file" id="secretFile" onchange="onExistingSecret(this);" accept="image/*" style="display:none;" ></input>
+               <input type="file" id="secretFile" onchange="onOldSecret(this);" accept="image/*" style="display:none;" ></input>
             </div>
             
             <div id="changeSecretDiv">
                <label for="changeSecretFile">
-                  Change Secret
+                  New Secret
                   <br />
-                  <img id="changeThumbnail" width="100" height="100"></img>
+                  <img id="newThumbnail" width="100" height="100"></img>
                </label>
-               <input type="file" id="changeSecretFile" onchange="onChangeSecret(this);" accept="image/*" style="display:none;" ></input>
+               <input type="file" id="changeSecretFile" onchange="onNewSecret(this);" accept="image/*" style="display:none;" ></input>
             </div>
          </div>
         
@@ -77,13 +74,13 @@ var canvas =
    document
    .getElementById("canvas");
    
-var existingThumbnail =
+var oldThumbnail =
    document
-   .getElementById("existingThumbnail");
+   .getElementById("oldThumbnail");
    
-var changeThumbnail =
+var newThumbnail =
    document
-   .getElementById("changeThumbnail");
+   .getElementById("newThumbnail");
 
 var email =
    document.getElementById("email");
@@ -92,20 +89,20 @@ var changeSecretButton =
    document.getElementById("changeSecretButton");
    
 
-function onExistingSecret(input) {
+function onOldSecret(input) {
     createThumbnail(
        input.files[0],
-       existingThumbnail,
+       oldThumbnail,
        function() {
           updateForm();
        }
     );
 }
 
-function onChangeSecret(input) {
+function onNewSecret(input) {
     createThumbnail(
        input.files[0],
-       changeThumbnail,
+       newThumbnail,
        function() {
           updateForm();
        }
@@ -117,27 +114,31 @@ function onEmailInput() {
 }
 
 function changeSecret() {
-   authentication.changeSecret(
-      email.value,
-      existingThumbnail.secret,
-      changeThumbnail.secret
+    
+   authentication.logoff().
+   then(
+      function(response) {
+         var promise =
+            authentication.changeSecret(
+               email.value,
+               oldThumbnail.secret,
+               newThumbnail.secret
+            );
+         return promise;
+      }
    ).then(
       function (result) {
          if (result) {
             localStorage.setItem(
-               email.value + ".authentication.existingThumbnail",
-               changeThumbnail.src
+               email.value + ".authentication.thumbnail",
+               newThumbnail.src
             );
             localStorage.setItem(
                "authentication.email",
                email.value
             );
-           // existingThumbnail.secret = changeThumbnail.secret;
             alert("Secret changed");
-            var redirect = getRedirect();
-            document.location.href =
-               "logon.php?redirect=" +
-               encodeURIComponent(redirect);
+            redirect("logon.php");
             return Promise.resolve(true);
          }
          else {
@@ -156,18 +157,18 @@ function updateForm()
    
    var thumbnailSrc =
       localStorage.getItem(
-         email.value + ".authentication.existingThumbnail"
+         email.value + ".authentication.thumbnail"
       );
    
    if (thumbnailSrc)
-      existingThumbnail.src = thumbnailSrc;
+      oldThumbnail.src = thumbnailSrc;
    else
-      existingThumbnail.src = "";
+      oldThumbnail.src = "";
    
    var enabled =
       email.value &&
-      existingThumbnail.secret &&
-      changeThumbnail.secret;
+      oldThumbnail.secret &&
+      newThumbnail.secret;
       
    changeSecretButton.disabled =
       !enabled;

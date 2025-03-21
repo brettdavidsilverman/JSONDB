@@ -134,7 +134,7 @@ function validateReCaptchaToken($token)
 function lostSecret($connection, $token, $email)
 {
    
-   if (!validateReCaptchaToken(token))
+   if (!validateReCaptchaToken($token))
       return NULL;
       
    $statement = $connection->prepare(
@@ -389,7 +389,7 @@ function authenticate()
    setCredentialsCookie($credentials);
    
    if (is_null($credentials)) {
-      $url = '/logon.php';
+      $url = '/client/authentication/logon.php';
       $redirect = $_SERVER['REQUEST_URI'];
       $url = $url . '?redirect=' . urlencode($redirect);
       redirect($url);

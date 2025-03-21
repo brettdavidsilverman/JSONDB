@@ -1,5 +1,5 @@
 <?php
-   require_once "server/functions.php";
+   require_once "../../server/authentication/functions.php";
    http_response_code(401);
 ?>
 <!DOCTYPE html>
@@ -11,11 +11,11 @@
       <script src="https://www.google.com/recaptcha/api.js"></script>
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>
-      <script src="/client/authentication/sha512.js"></script>
-       <script src="/client/authentication/thumbnailSecret.js"></script>
-      <script src="/client/authentication/authentication.js?v=6"></script>
+      <script src="sha512.js"></script>
+      <script src="thumbnailSecret.js"></script>
+      <script src="authentication.js?v=1"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
-      <link rel="stylesheet" type="text/css" href="/logon-style.css?v=3" />
+      <link rel="stylesheet" type="text/css" href="style.css" />
       <title>Logon</title>
       <style>
 
@@ -23,13 +23,12 @@
    </head>
    <body>
       <h1>Logon</h1>
-      <h2>New users</h2>
-      <a href="createUser.php">Register new user<a>
+      <h2><a href="createUser.php">New users<a></h2>
       
       <h2>Existing users</h2>
       <p>Please provide your email address and your secret file, then click logon.</p>
-      <a href="changeSecret.php">Change logon secret</a>
       <br/>
+      
       <a href="/client/authentication/authentication.js">authentication.js</a>
            
       <form id="form" onsubmit="return false;">
@@ -51,8 +50,11 @@
                <input type="file" id="secretFile" onchange="return onSecretFile();" accept="image/*" style="display:none;" ></input>
             </div>
          </div>
-        
+         <br />
          <a href="lostSecret.php">Lost Secret?</a>
+         <br />
+         <a href="changeSecret.php">Change secret</a>
+         
          <br/>
  
          <div id="logonDiv">
@@ -207,6 +209,7 @@ function logoff(check = true)
       
    thumbnail.secret = null;
    thumbnail.classList.remove("pressed");
+
    authentication.logoff().then(
       function(response) {
          updateForm();
@@ -255,6 +258,7 @@ function updateForm(setFields = true)
        thumbnail.src = "";
    
    logonButton.disabled = true;
+   logoffButton.disabled = true;
    
    if (authentication.authenticated)
    {
@@ -292,8 +296,7 @@ function saveFields() {
 
 function update()
 {
-   form.reset();
-
+ 
    if (authentication.authenticated)
       updateForm();
    else

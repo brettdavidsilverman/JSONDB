@@ -1,5 +1,5 @@
 <?php
-   require_once "server/functions.php";
+   require_once "../../server/authentication/functions.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -10,11 +10,11 @@
       <script src="https://www.google.com/recaptcha/api.js"></script>
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>
-      <script src="/client/authentication/sha512.js"></script>
-      <script src="/client/authentication/thumbnailSecret.js?v=1"></script>
-      <script src="/client/authentication/authentication.js?v=7"></script>
+      <script src="sha512.js"></script>
+      <script src="thumbnailSecret.js?v=2"></script>
+      <script src="authentication.js?v=1"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
-      <link rel="stylesheet" type="text/css" href="/logon-style.css?v=4" />
+      <link rel="stylesheet" type="text/css" href="style.css" />
       <title>Register user</title>
       <style>
 
@@ -24,7 +24,7 @@
       <h1>Register new user</h1>
       <p>Please provide your email address and select your secret file. Then click Register</p>
       
-      <a href="/client/authentication/authentication.js">authentication.js</a>
+      <a href="authentication.js">authentication.js</a>
            
       <form id="form" onsubmit="return false;">
                   
@@ -107,10 +107,7 @@ function createUser(token)
       function(response) {
          if (response) {
             alert("Please check your inbox for the link to validate your email");
-            var redirect = getRedirect();
-            document.location.href = 
-               "logon.php?redirect=" +
-               encodeURIComponent(redirect);
+            redirect("logon.php");
          }
          else
             alert("Error sending email");

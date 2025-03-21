@@ -1,5 +1,5 @@
 <?php
-   require_once "server/functions.php";
+   require_once "../../server/authentication/functions.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -10,10 +10,11 @@
       <script src="https://www.google.com/recaptcha/api.js"></script>
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>
-      <script src="/client/authentication/sha512.js"></script>
-      <script src="/client/authentication/authentication.js?v=6"></script>
+      <script src="sha512.js"></script>
+      <script src="authentication.js?v=11"></script>
+      <script src="thumbnailSecret.js"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
-      <link rel="stylesheet" type="text/css" href="/logon-style.css?v=3" />
+      <link rel="stylesheet" type="text/css" href="style.css" />
       <title>Lost Secret</title>
       <style>
       </style>
@@ -56,13 +57,24 @@ function lostSecret(token)
    if (!confirm("This will send a link to reset your password to your email inbox. Continue?"))
       return;
    
-   authentication.lostSecret(
-      token,
-      email.value
+   authentication.logoff().
+   then(
+      function(status) {
+         var promise =
+            authentication.lostSecret(
+               token,
+               email.value
+            );
+         return promise;
+      }
    ).then(
       function(response) {
          if (response) {
+            localStorage.removeItem(
+               email.value + ".authentication.thumbnail"
+            );
             alert("Please check your inbox for the link to reset your password");
+            redirect("logon.php");
          }
          else
             alert("Error sending email");
@@ -71,6 +83,11 @@ function lostSecret(token)
 
    
 }
+
+email.value =
+   localStorage.getItem(
+      "authentication.email"
+   );
 
          </script>
 

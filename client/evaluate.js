@@ -111,16 +111,16 @@ function postJSON(url, json) {
       then(
          function (response) {
             status = response.status;
-            return response.json();
+            return response.text();
          }
       ).
       then(
-         function (json) {
+         function (text) {
              
             if (status != "200")
-               throw json;
+               throw text;
                
-            return json;
+            return text;
          }
       );
 

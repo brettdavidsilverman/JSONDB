@@ -52,8 +52,12 @@ function userEmailExists($connection, $email)
    return $exists;
 }
 
-function createUser($connection, $email, $secret)
+function createUser($connection, $token, $email, $secret)
 {
+   
+   if (!validateReCaptchaToken($token))
+      return NULL;
+      
    $statement = $connection->prepare(
      "CALL createUser(?, ?);"
    );
@@ -86,10 +90,8 @@ function encodeQueryString ($data) {
    return $req;
 }
 
-function lostSecret($connection, $token, $email)
+function validateReCaptchaToken($token)
 {
-   $url = 'https://www.google.com/recaptcha/api/siteverify';
-       
    $settings = getConfig();
 
    $secretKey =
@@ -111,17 +113,30 @@ function lostSecret($connection, $token, $email)
       ]
    ];
 
+   $url = 'https://www.google.com/recaptcha/api/siteverify';
+    
    $context = stream_context_create($options);
    $result = file_get_contents($url, false, $context);
    if ($result === false) {
-      return null;
+      return false;
    }
 
-   $result = json_decode($result);
+   $result = json_decode($result, true);
    
-   if ($result->{"success"} == false)
-      return null;
+   if ($result["success"] == false)
+      return false;
 
+
+   return true;
+   
+}
+
+function lostSecret($connection, $token, $email)
+{
+   
+   if (!validateReCaptchaToken(token))
+      return NULL;
+      
    $statement = $connection->prepare(
      "CALL lostSecret(?);"
    );

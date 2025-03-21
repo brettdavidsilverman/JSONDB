@@ -2,23 +2,24 @@
    declare(strict_types=1);
    require_once 'functions.php';
    
-   //authenticate();
-   $_SESSION['userId'] = 79;
+   authenticate();
+   //$_SESSION['userId'] = 79;
    
    header('Content-Type: text/plain');
    //header('Content-Encoding: gzip');
-   http_response_code(200);
+   http_response_code(500);
+   
+   exit();
    
    //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
    //echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
-   
    
    
    require_once 'jsonstreamingparser/vendor/autoload.php';
 
    $testfile = __DIR__.'/jsonstreamingparser/tests/data/example.json';
    $testfile = __DIR__.'/../tests/test.json';
-   //$testfile = __DIR__.'/../tests/large.json';
+   $testfile = __DIR__.'/../tests/large.json';
    
 function escape($value) {
    return $value;
@@ -76,7 +77,8 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         $this->stack = [];
         $this->keys = [];
         
-        $this->connection->execute_query("DELETE FROM Object WHERE type = 'root';");
+        $this->connection->execute_query("TRUNCATE Value;");
+        $this->connection->execute_query("DELETE FROM Object;");
         
         $this->startComplexValue('root');
         
@@ -183,6 +185,7 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     
     protected function createObject($parentId, $type)
     {
+        set_time_limit(30);
    
         $statement = $this->connection->prepare(
               "CALL createObject(?, ?, ?);"
@@ -229,8 +232,10 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
        $numericValue,
        $boolValue,
        $idValue
-    )
+    ) : void
     {
+       set_time_limit(30);
+   
        $valueId = null;
        
         // Echo results for debug
@@ -263,18 +268,7 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
    
         $statement->execute();
         
-        $statement->bind_result($valueId);
-            
-        $valueId = NULL;
-       
-   
-        if (!$statement->fetch()) {
-           return NULL;
-        }
-   
-        $statement->close();
-        
-        return $valueId;
+        $statement->close();
         
     }
 
@@ -318,26 +312,25 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     }
     
     public function printLine($line) : void {
-       echo $line . "\r\n";
+       //echo $line . "\r\n";
        return ;
        $this->lines[] = $line;
        
-       $length = count($this->lines);
        
-       if ($length > $this->pageSize) {
+       if (count($this->lines) > $this->pageSize) {
           echo join("\r\n", $this->lines);
           $this->lines = [];
        }
        
     }
     
-    public function sendEnd() : void {
+    public function sendEnd($line) : void {
        
        if (!empty($this->lines)) {
           echo join("\r\n", $this->lines);
           $this->lines = [];
        }
-       echo "\r\n";
+       echo $line . "\r\n";
 
     }
     
@@ -351,6 +344,11 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
    $connection = getConnection();
    
    $listener = new JSONDBListener($connection);
+   
+   date_default_timezone_set('Australia/Brisbane');
+   
+   echo "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
+   flush();
    
    $stream = fopen($testfile, 'r');
    try {
@@ -366,9 +364,8 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
 
    $connection->close();
    
-   $listener->printLine("⏰" . $listener->nextId);
+   $listener->sendEnd("⏰ End   " . date('Y-m-d H:i:s'));
    
-   $listener->sendEnd();
    
    flush();
  

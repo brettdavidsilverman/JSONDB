@@ -60,7 +60,9 @@
       <br />
       <br />
      
-      <a href="/logon.php" id="logon">Logon/Logoff</a>
+      <a href="logon.php" id="logon">Logon/Logoff</a>
+      <br />
+      <a href="changeSecret.php">Change logon secret</a>
       <br />
       <a href="/client">Javascript client library</a>
       <br />

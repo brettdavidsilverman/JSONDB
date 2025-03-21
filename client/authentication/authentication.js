@@ -130,12 +130,13 @@ class Authentication
       return promise;
    }
    
-   createUser(email, secret) {
+   createUser(token, email, secret) {
 
       var parameters = {
          method: "POST",
          body: JSON.stringify(
             {
+               token: token,
                email: email,
                secret: secret
             }

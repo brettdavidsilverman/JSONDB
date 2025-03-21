@@ -5,11 +5,13 @@
    
    $json = getPostedData();
    
+   $token = $json['token'];
    $email = $json['email'];
    $secret = $json['secret'];
    
    $newUserSecret = createUser(
       $connection,
+      $token,
       $email,
       $secret
    );

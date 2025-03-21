@@ -60,11 +60,14 @@ _form {
 
 #changeSecretDiv {
    position: absolute;
-   display: none;
    left: 150px;
 }
 
 #logonDiv {
    position: relative;
    top: 10px;
+}
+
+.error {
+   color: red;
 }

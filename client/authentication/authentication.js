@@ -71,7 +71,8 @@ class Authentication
    set authenticated(value) {
 
       if (!value) {
-         document.cookie = "sessionId=;path=/;max-age=0;"
+         // document.cookie = "sessionId=;path=/;max-age=0;"
+         document.cookie = "path=/;max-age=0;"
       }
    }
    

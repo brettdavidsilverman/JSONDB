@@ -31,7 +31,7 @@
 
    $secret = urlencode($newUserSecret);
    $email = urlencode($email);
-   
+  
    // Message
    $message = "
 <html>
@@ -40,7 +40,7 @@
 </head>
 <body>
   <h1>Validate email</h1>
-  <p><a href=\"https://bee.fish/server/authentication/api/validateUserEmail.php?newUserSecret=$secret&email=$email\">Please validate your email address by clicking this link</a></p>
+  <p><a href=\"https://bee.fish/server/authentication/validateUserEmail.php?newUserSecret=$secret&email=$email\">Please validate your email address by clicking this link</a></p>
 </body>
 </html>
 ";

@@ -189,7 +189,7 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
            $boolValue,
            $idValue
         );
- 
+        
         $this->stack[] = $currentItem;
 
         return $valueId;
@@ -295,7 +295,8 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     }
     
     public function printLine($line) : void {
- 
+       return;
+       
        $this->lines[] = $line;
        
        if (count($this->lines) > $this->pageSize) {

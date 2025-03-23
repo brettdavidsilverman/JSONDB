@@ -9,6 +9,19 @@ class Authentication
 
    }
    
+   authenticate() {
+      if (this.authenticated)
+         return true;
+      var currentPage = document.location.href;
+      var newPage = "/client/authentication/logon.php";
+      var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
+  
+      document.location.href = url;
+   
+      return false;
+
+   }
+   
    logon(email, secret)
    {
 
@@ -334,24 +347,6 @@ class Authentication
 
 }
 
-function authenticate() {
 
-   var authentication =
-      new Authentication(
-         document.location.origin
-      );
-      
-   if (authentication.authenticated)
-      return true;
-   var currentPage = document.location.href;
-   var newPage = "/client/authentication/logon.php";
-   var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
-  
-   document.location.href = url;
-   
-      
-   return false;
-
-}
 
 

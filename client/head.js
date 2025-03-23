@@ -59,6 +59,22 @@ Object.prototype.toString = function() {
    return JSON.stringify(this, null, "   ");
 }
 
+function Error(error, f)
+{
+    var where;
+    if (typeof f == "string")
+       where = f
+    else if (typeof f == "function")
+       where = f.name;
+    else if (f)
+       where = f;
+    else
+       where = "Unknown function";
+       
+    alert(error + "\r\n   " + where);
+    
+}
+
 class CheckError extends Error
 {   
    constructor(label)

@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+//session_start();
+session_start(
+   [
+      'cookie_lifetime' => 1800
+   ]
+);
 
 function getConfig() {
    $config = file_get_contents('/home/bee/config.json'); 
@@ -227,8 +232,7 @@ function logon($connection, $email, $secret, $ipAddress)
    
    if (!is_null($sessionId))
    {
-      
-      
+    
       $credentials = array(
          "userId" => $userId, 
          "expiryDate" => $expiryDate,

@@ -9,11 +9,11 @@
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
       <title id="title">bee.fish</title>
       <base href="/">
-      <script src="/client/head.js"></script>
+      <script src="/client/head.js?v=1"></script>
       <script src="/client/stream/stream.js"></script>
       <script src="/client/power-encoding/power-encoding.js"></script>
       <script src="/client/id/id.js"></script>
-      <script src="/client/evaluate.js?v=1"></script>      <script src="/client/authentication/authentication.js"></script>
+      <script src="/client/evaluate.js?v=1"></script>      <script src="/client/authentication/authentication.js?v=2"></script>
       <script src="/client/punycode.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
       <script>
@@ -69,6 +69,7 @@
       <a href="https://github.com/brettdavidsilverman/JSONDB">JSONDB on Git Hub</a>
       
       <script>
+var authentication = new Authentication();
 
 const defaultURL = 
    "Type the path of your document";
@@ -93,8 +94,9 @@ title.innerText = origin;
 fetchButton.disabled = true;
 saveButton.disabled = true;
 
-authenticate();
-function loadJSON() {
+//authentication.authenticate();
+function loadJSON() {
+    
    var url = pathInput.value;
    
    if (url == defaultURL ||
@@ -106,20 +108,20 @@ function loadJSON() {
    fetchButton.disabled = true;
    
    localStorage.setItem("path", url);
+
+   authentication.authenticate();
    
    var promise =
    fetch(url).
       then(
          function (response) {
             status = response.status;
-            return response.json();
+            return response.text();
          }
       ).
       then(
          function (json) {
             if (status != "200") {
-               if (json.error)
-                  throw json.error;
                throw json;
             }
             return json;
@@ -127,24 +129,15 @@ function loadJSON() {
       ).
       then(
          function(json) {
-            if (json == undefined) {
-               jsonEditor.value = "undefined";
-               return undefined;
-            }
-         
-            if (json.error) {
-               Error(json.error, loadJSON);
-            }
-         
-            jsonEditor.value =
-               JSON.stringify(json, null, "   ");
+            jsonEditor.value = json;
             
             fetchButton.disabled = false;
             saveButton.disabled = false;
+        /*
             switchFunctions(
                functionCheckbox.checked
             );
-            
+            */
             return json;
          }
       )
@@ -200,7 +193,11 @@ saveButton.onclick =
       catch (error) {
          Error(error, "saveButton.onclick");
          return;
-      }
+      }
+      
+      saveButton.disabled = true;
+      
+      authentication.authenticate();
       postJSON(
          pathInput.value,
          json
@@ -215,6 +212,11 @@ saveButton.onclick =
          {
             Error(error, "saveButton.onclick");
          }
+      ).
+      finally(
+        function() {
+           saveButton.disabled = false;
+        }
       );
    }
 

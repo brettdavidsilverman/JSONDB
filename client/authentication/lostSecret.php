@@ -4,9 +4,9 @@
 <!DOCTYPE html>
 <html lang="en">
    <head>
-      <script src="/client/head.js"></script>
       <meta charset="utf-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <script src="/client/head.js?v=2"></script>
       <script src="https://www.google.com/recaptcha/api.js"></script>
       <script src="/client/fetch.js"></script>
       <script src="/client/console/console.js"></script>

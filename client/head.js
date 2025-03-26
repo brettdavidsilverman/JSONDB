@@ -59,7 +59,7 @@ Object.prototype.toString = function() {
    return JSON.stringify(this, null, "   ");
 }
 
-function Error(error, f)
+function DisplayError(error, f)
 {
     var where;
     if (typeof f == "string")

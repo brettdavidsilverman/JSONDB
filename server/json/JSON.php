@@ -53,7 +53,9 @@
       }
       header('Content-Type: text/plain');
       
-      $listener->sendEnd("⏰ End  #" . $listener->rootObjectId . " " . date('Y-m-d H:i:s'));
+      //$path_only = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)
+
+      $listener->sendEnd("⏰ End  " . $_SERVER['REQUEST_URI']  . " #" . $listener->rootObjectId . " " . date('Y-m-d H:i:s'));
    
    }
    

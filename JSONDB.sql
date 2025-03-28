@@ -33,7 +33,7 @@ CREATE TABLE `Object` (
   KEY `I_Object_type` (`type`) USING BTREE,
   CONSTRAINT `FK_Object_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Object_parentId` FOREIGN KEY (`parentId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=138642 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=138985 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -140,7 +140,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=91 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=92 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -179,7 +179,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_objectId` FOREIGN KEY (`objectId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=676427 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=676785 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -559,22 +559,24 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getObjectValues`(
+   valueId BIGINT,
    objectId BIGINT
 )
 BEGIN
-   SET @objectId = objectId;
-   
+   SET @valueId = valueId,
+            @objectId = objectId;
+    
    SET @maxIndex = (
-      SELECT   MAX(ObjectValue.objectIndex)
-      FROM      ObjectValue
-      WHERE   ObjectValue.objectId =
-                         @objectId
+         SELECT   MAX(ObjectValue.objectIndex)
+         FROM      ObjectValue
+         WHERE   ObjectValue.objectId =
+                            @objectId
    );
    
    IF (ISNULL(@maxIndex)) THEN
-      SET @maxIndex = 0;
+         SET @maxIndex = 1;
    END IF;
-   
+      
    SELECT         ObjectValue.*,
                             IF(
                                ISNULL(ObjectValue.objectIndex),
@@ -586,8 +588,11 @@ BEGIN
                                 )
                              ) AS isLast
    FROM            ObjectValue
-   WHERE         ObjectValue.objectId = 
-                            @objectId
+   WHERE         (@objectId IS NULL OR
+                            ObjectValue.objectId = 
+                               @objectId)
+   AND               (@valueId IS NULL OR
+                            ObjectValue.valueId = @valueId)
    ORDER BY   ObjectValue.objectIndex;
    
 END ;;
@@ -607,17 +612,68 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getRootObjectId`(
+   userId BIGINT,
    ownerId BIGINT
 )
 BEGIN
 
-   SET @ownerId = ownerId;
+   SET @userId = userId,
+          @ownerId = ownerId;
    
    SELECT objectId
    FROM   Object
-   WHERE ownerId = @ownerId
+   WHERE Object.ownerId = @ownerId
+   AND       Object.ownerId = @userId
    AND       type = 'root';
    
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `getValueByPath` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `getValueByPath`(
+   userId BIGINT,
+   ownerId BIGINT,
+   parentObjectId BIGINT,
+   objectIndex BIGINT,
+   objectKey BLOB
+)
+BEGIN
+   SET           @userId = userId,
+                      @ownerId = ownerId,
+                      @parentObjectId = parentObjectId,
+                      @objectIndex = objectIndex,
+                      @objectKey = objectKey;
+                      
+   SELECT      Object.objectId,
+                         Value.valueId
+   FROM         Object
+   LEFT JOIN Value
+   ON               Object.objectId = Value.objectId
+   WHERE      Object.ownerId = @ownerId
+   -- THIS SECURITY CHECK WILL COME LATET
+   AND           @ownerId = @userId
+   AND           ( (@parentObjectId IS NULL AND
+                        Object.parentId IS NULL) OR
+                     (Object.parentId = @parentObjectId))
+   AND            (@objectIndex IS NULL
+                         OR
+                          Value.objectIndex = @objectIndex)
+   AND            (@objectKey IS NULL
+                          OR
+                         Value.objectKey =
+                           @objectKey);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -885,4 +941,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-23 14:42:31
+-- Dump completed on 2025-03-29  2:26:59

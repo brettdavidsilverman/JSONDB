@@ -1,6 +1,6 @@
 <?php
    
-   require_once 'server/functions.php';
+   require_once "server/authentication/functions.php";
    
    authenticate();
 ?>

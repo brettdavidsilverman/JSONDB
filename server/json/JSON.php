@@ -1,5 +1,6 @@
 <?php
    declare(strict_types=1);
+   require_once '../functions.php';
    require_once '../authentication/functions.php';
    require_once 'functions.php';
    require_once 'JSONDBListener.php';
@@ -10,7 +11,6 @@
    //header('Content-Encoding: gzip');
    //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
    //echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
-   
    
    
    $testfile = __DIR__.'/jsonstreamingparser/tests/data/example.json';
@@ -32,14 +32,15 @@
    $connection->close();
       flush();
 
+ 
    function handlePost($connection)
    {
       
       //$stream = fopen($testfile, 'r');
       $stream = fopen('php://input', 'r');
    
-      //echo "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
-         
+      $start = "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
+
       $listener = new JSONDBListener($connection);
 
       try {
@@ -52,48 +53,55 @@
          throw $e;
       }
       header('Content-Type: text/plain');
-      
-      //$path_only = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)
 
-      $listener->sendEnd("⏰ End  " . $_SERVER['REQUEST_URI']  . " #" . $listener->rootObjectId . " " . date('Y-m-d H:i:s'));
-   
+      echo $start .
+          "⏰ End   " . date("Y-m-d H:i:s");
+         
    }
    
    function handleGet($connection)
    {
-      header('Content-Type: text/plain');
+      
+      $objectId = null;
+      $valueId = null;
+      
+      $path = getPath();
+      if (substr($path, 0, 1) === "/")
+         $path = substr($path, 1);
+  
+      $paths = explode('/', $path);
       
       $rootObjectId = getRootObjectId($connection);
       
+      if (count($paths) > 1) {
+         $valueId = getValueByPath($connection, $rootObjectId);
+
+         if (is_null($valueId)) {
+            http_response_code(404);
+            header('Content-Type: text/plain');
+            echo "🛑 Path not found\r\n";
+            exit();
+         }
+         $objectId = null;
+      }
+      else
+         $objectId = $rootObjectId;
+      
+      header('Content-Type: application/json');
+      
       $statement = $connection->prepare(
-          "CALL getObjectValues(?);"
+          "CALL getObjectValues(?, ?);"
       );
 
       $statement->bind_param(
-         'i', 
+         'ii', 
+         $valueId,
          $objectId
       );
       
-      $objectId = $rootObjectId;
-      
+
       $statement->execute();
-          /*
-      $statement->bind_result(
-         $_objectId,
-         $parentId,
-         $type,
-         $ownerId,
-         $valueId,
-         $objectIndex,
-         $objectKey,
-         $numericValue,
-         $stringValue,
-         $idValue,
-         $boolValue,
-         $isNull
-      );
       
-            */
       $values = loadObjectValues($statement);
       $trailers = [];
       $first = true;
@@ -111,30 +119,38 @@
          $idValue = $value['idValue'];
          $isLast = $value['isLast'];
          
-         if (is_null($objectIndex))
-            $objectIndex = 0;
+         $headerAndFooter =
+            is_null($valueId);
             
-         if ($objectIndex === 0)
-         {
-            if ($type === 'object') {
-               echo '{';
-               array_unshift($trailers, '}');
+         if ($headerAndFooter) {
+            // Write object or array header
+            
+            if (is_null($objectIndex))
+               $objectIndex = 0;
+            
+            if ($objectIndex === 0)
+            {
+               if ($type === 'object') {
+                  echo '{';
+                  array_unshift($trailers, '}');
+               }
+               else if ($type === 'array') {
+                  echo '[';
+                  array_unshift($trailers, ']');
+               }
             }
-            else if ($type === 'array') {
-               echo '[';
-               array_unshift($trailers, ']');
-            }
-         }
-         else if ($objectIndex > 0)
-            echo ',';
+            else if ($objectIndex > 0)
+               echo ',';
                
             
-         if ($type === 'object' &&
-             !is_null($objectKey))
-         {
-            echo '"' . escape($objectKey) . '": ';
+            if ($type === 'object' &&
+                !is_null($objectKey))
+            {
+               echo '"' . escape($objectKey) . '": ';
+            }
          }
-            
+         
+         // Write value
             
          if ($isNull)
             echo 'null';
@@ -150,7 +166,7 @@
          }
          else if (!is_null($idValue)) {
             $objectId = $idValue;
-      
+            $valueId = null;
             $statement->execute();
                 
             $children = loadObjectValues($statement);
@@ -161,7 +177,7 @@
 
          }
          
-         if ($isLast) {
+         if ($isLast && $headerAndFooter) {
             echo array_shift($trailers);
          }
         
@@ -180,7 +196,6 @@
 
    function loadObjectValues($statement) {
       $values = [];
-      $objectId;
     
       $result = $statement->get_result();
     

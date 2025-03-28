@@ -1,5 +1,6 @@
 <?php
-   require_once 'server/authentication/functions.php';
+   require_once "server/authentication/functions.php";
+   
    authenticate();
 ?>
 <!DOCTYPE html>
@@ -105,6 +106,9 @@ function loadJSON() {
       return Promise.resolve(undefined);
    }
       
+   url = getURL();
+   pathInput.value = url;
+   
    fetchButton.disabled = true;
    
    localStorage.setItem("path", url);
@@ -144,7 +148,7 @@ function loadJSON() {
       .catch(
          function (error) {
             fetchButton.disabled = false;
-            Error(error, loadJSON);
+            DisplayError(error, loadJSON);
          }
       );
    
@@ -191,15 +195,18 @@ saveButton.onclick =
          json = formatJSON(jsonEditor.value);
       }
       catch (error) {
-         Error(error, "saveButton.onclick");
+         DisplayError(error, "saveButton.onclick");
          return;
       }
       
       saveButton.disabled = true;
       
       authentication.authenticate();
+      var url = getURL();
+      pathInput.value = url;
+      
       postJSON(
-         pathInput.value,
+         url,
          json
       ).
       then(
@@ -210,7 +217,7 @@ saveButton.onclick =
       catch(
          function (error)
          {
-            Error(error, "saveButton.onclick");
+            DisplayError(error, "saveButton.onclick");
          }
       ).
       finally(
@@ -242,6 +249,38 @@ function switchFunctions(showFunctions)
    }
    jsonEditor.value = json;
 }
+function getURL() {
+   var url = pathInput.value;
+   
+   if (url == "")
+      return "/my";
+      
+   if (url.startsWith("/"))
+      url = url.substr(1);
+
+   var first = url.split("/")[0];
+   
+   if (first != "my" && !isInteger(first))
+   {
+      if (url)
+         url = "/my/" + url;
+      else
+         url = "/my";
+   }
+   
+   if (!url.startsWith("/"))
+      url = "/" + url;
+      
+   if (url.endsWith("/"))
+      url = url.substr(0, url.length - 1);
+      
+   return url;
+}
+
+function isInteger(value) {
+   var n = parseFloat(value);
+   return !isNaN(n) && Number.isInteger(n);
+}
 
 function getJSON()
 {

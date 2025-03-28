@@ -64,22 +64,22 @@
       
       $objectId = null;
       $valueId = null;
-      
-      $path = getPath();
-      if (substr($path, 0, 1) === "/")
-         $path = substr($path, 1);
-  
-      $paths = explode('/', $path);
-      
       $rootObjectId = getRootObjectId($connection);
       
+      $path = getPath();
+      
+      
+      
+      $paths = explode("/", $path);
+      
+
       if (count($paths) > 1) {
          $valueId = getValueByPath($connection, $rootObjectId);
 
          if (is_null($valueId)) {
             http_response_code(404);
             header('Content-Type: text/plain');
-            echo "🛑 Path not found\r\n";
+            echo "🛑 Path " . $path . " not found\r\n";
             exit();
          }
          $objectId = null;

@@ -5,9 +5,6 @@ function getRootObjectId($connection)
 {
    $path = getPath();
    
-   if (substr($path, 0, 1) === '/')
-      $path = substr($path, 1);
-      
    $paths = explode('/', $path);
 
    $userId = $_SESSION["userId"];
@@ -54,8 +51,7 @@ function getValueByPath($connection, $parentObjectId)
      "CALL getValueByPath(?,?,?,?,?);"
    );
    
-   $userId = $_SESSION['userId'];
-   
+
    $statement->bind_param(
       'iiiis', 
       $userId,
@@ -65,11 +61,10 @@ function getValueByPath($connection, $parentObjectId)
       $pathKey
    );
    
+   $userId = $_SESSION['userId'];
+   
    $path = getPath();
    
-   if (substr($path, 0, 1) === "/")
-      $path = substr($path, 1);
-      
    $paths = explode('/', $path);
       
    if (empty($paths))
@@ -80,10 +75,11 @@ function getValueByPath($connection, $parentObjectId)
       $ownerId = $userId;
    else if (is_numeric($first))
       $ownerId = (int)($first);
-      
+    
+   $valueId = null;
+   
    foreach ($paths as $path) {
        
-
       if ($path === "")
          continue;
          

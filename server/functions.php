@@ -111,10 +111,18 @@ function nullable($value) {
 }
 
 function getPath() {
-   return parse_url(
-     $_SERVER['REQUEST_URI'],
-     PHP_URL_PATH
+   $path = parse_url(
+      $_SERVER['REQUEST_URI'],
+      PHP_URL_PATH
    );
+   
+   if (substr($path, 0, 1) === "/")
+      $path = substr($path, 1);
+
+   if (substr($path, - 1) === "/")
+      $path = substr($path, 0, - 1);
+
+   return $path;
 }
 
 function getQuery() {

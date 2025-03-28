@@ -74,12 +74,12 @@
       
 
       if (count($paths) > 1) {
-         $valueId = getValueByPath($connection, $rootObjectId);
+         $valueId = getValueByPath($connection, $rootObjectId, $paths);
 
          if (is_null($valueId)) {
             http_response_code(404);
             header('Content-Type: text/plain');
-            echo "🛑 Path " . $path . " not found\r\n";
+            echo "🛑 Path " . join("/", $paths) . " not found\r\n";
             exit();
          }
          $objectId = null;

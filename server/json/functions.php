@@ -44,7 +44,7 @@ function getRootObjectId($connection)
    return $objectId;
 }
 
-function getValueByPath($connection, $parentObjectId)
+function getValueByPath($connection, $parentObjectId, & $paths)
 {
     
    $statement = $connection->prepare(
@@ -63,10 +63,6 @@ function getValueByPath($connection, $parentObjectId)
    
    $userId = $_SESSION['userId'];
    
-   $path = getPath();
-   
-   $paths = explode('/', $path);
-      
    if (empty($paths))
       return null;
 
@@ -77,9 +73,12 @@ function getValueByPath($connection, $parentObjectId)
       $ownerId = (int)($first);
     
    $valueId = null;
+   $count = 0;
    
    foreach ($paths as $path) {
        
+      $count++;
+      
       if ($path === "")
          continue;
          
@@ -102,6 +101,8 @@ function getValueByPath($connection, $parentObjectId)
       );
    
       if (!$statement->fetch()) {
+         array_unshift($paths, $first);
+         $paths[$count] = "{" . $path . "}";
          $objectId = null;
          $valueId = null;
          break;

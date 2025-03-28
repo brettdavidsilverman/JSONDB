@@ -167,6 +167,16 @@ function updateForm()
    else
       oldThumbnail.src = "";
    
+   if (oldThumbnail.secret)
+      oldThumbnail.classList.add("pressed");
+   else
+      oldThumbnail.classList.remove("pressed");
+
+   if (newThumbnail.secret)
+      newThumbnail.classList.add("pressed");
+   else
+      newThumbnail.classList.remove("pressed");
+      
    var enabled =
       email.value &&
       oldThumbnail.secret &&

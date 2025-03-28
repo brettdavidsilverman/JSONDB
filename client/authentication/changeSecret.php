@@ -154,18 +154,20 @@ function changeSecret() {
 
 
 
-function updateForm()
+function updateForm(loadValues = false)
 {
    
-   var thumbnailSrc =
-      localStorage.getItem(
-         email.value + ".authentication.thumbnail"
-      );
+   if (loadValues) {
+      var thumbnailSrc =
+         localStorage.getItem(
+            email.value + ".authentication.thumbnail"
+         );
    
-   if (thumbnailSrc)
-      oldThumbnail.src = thumbnailSrc;
-   else
-      oldThumbnail.src = "";
+      if (thumbnailSrc)
+         oldThumbnail.src = thumbnailSrc;
+      else
+         oldThumbnail.src = "";
+   }
    
    if (oldThumbnail.secret)
       oldThumbnail.classList.add("pressed");
@@ -193,7 +195,7 @@ email.value =
    );
 
 
-updateForm();
+updateForm(true);
 
          </script>
 

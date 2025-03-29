@@ -73,7 +73,7 @@
 var authentication = new Authentication();
 
 const defaultURL = 
-   "Type the path of your document";
+   "/my";
    var logon = document.getElementById("logon");
 logon.href += "?redirect=" + encodeURIComponent(window.location.href);
 
@@ -98,15 +98,7 @@ saveButton.disabled = true;
 //authentication.authenticate();
 function loadJSON() {
     
-   var url = pathInput.value;
-   
-   if (url == defaultURL ||
-       url == "")
-   {
-      return Promise.resolve(undefined);
-   }
-      
-   url = getURL();
+   var url = getURL();
    pathInput.value = url;
    
    fetchButton.disabled = true;
@@ -162,8 +154,6 @@ if (!pathInput.value)
    
 pathInput.onfocus = 
    function() {
-      if (pathInput.value == defaultURL)
-         pathInput.value = "";
       fetchButton.disabled = false;
       saveButton.disabled = false;
    };
@@ -171,17 +161,8 @@ pathInput.onfocus =
    
 pathInput.onblur =
    function() {
-      if (pathInput.value == "" ||
-          pathInput.value == defaultURL)
-      {
-         fetchButton.disabled = true;
-         saveButton.disabled = true;
-         pathInput.value = defaultURL;
-      }
-      else {
-         fetchButton.disabled = false;
-         saveButton.disabled = false;
-      }
+      fetchButton.disabled = false;
+      saveButton.disabled = false;
       setLinks();
    }
 
@@ -274,6 +255,8 @@ function getURL() {
    if (url.endsWith("/"))
       url = url.substr(0, url.length - 1);
       
+   pathInput.value = url;
+   
    return url;
 }
 
@@ -296,16 +279,9 @@ function getJSON()
    return json;
 }
 function setLinks() {
-   if (pathInput.value == "" ||
-       pathInput.value == defaultURL)
-   {
-      goLink.href = "";
-      dataLink.href = "";
-   }
-   else {
-      goLink.href = "/go.php?" + encodeURIComponent(pathInput.value);
-      dataLink.href = pathInput.value;
-   }
+   var url = getURL();
+   goLink.href = "/go.php?" + encodeURIComponent(url);
+   dataLink.href = url;
 }
 if (localStorage.getItem("path")) {
 

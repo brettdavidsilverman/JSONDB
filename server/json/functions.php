@@ -78,6 +78,7 @@ function getValueByPath($connection, $parentObjectId, & $paths)
    foreach ($paths as $path) {
        
       $count++;
+      $path = urldecode($path);
       
       if ($path === "")
          continue;
@@ -102,7 +103,7 @@ function getValueByPath($connection, $parentObjectId, & $paths)
    
       if (!$statement->fetch()) {
          array_unshift($paths, $first);
-         $paths[$count] = "{" . $path . "}";
+         $paths[$count] = "🛑{" . $path . "}";
          $objectId = null;
          $valueId = null;
          break;

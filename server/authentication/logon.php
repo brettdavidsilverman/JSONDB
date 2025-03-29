@@ -22,4 +22,8 @@ $connection->close();
    
 setCredentialsCookie($credentials);
 
+if (is_null($credentials))
+   echo "false";
+else
+   echo "true";
 ?>

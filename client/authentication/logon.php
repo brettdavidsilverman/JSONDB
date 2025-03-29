@@ -151,6 +151,7 @@ function logon()
    
    thumbnail.classList.add("pressed");
    
+   //prompt("secret: ", thumbnail.secret);
    
    var redirect = getRedirect();
           

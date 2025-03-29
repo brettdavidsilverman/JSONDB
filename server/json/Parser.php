@@ -3,6 +3,13 @@
 declare(strict_types=1);
 
 namespace JsonStreamingParser;
+require_once "ParserHelper.php";
+require_once "Exception/ParsingException.php";
+require_once "Listener/ListenerInterface.php";
+//require_once "Listener/IdleListener.php";
+require_once "Listener/ParserAwareInterface.php";
+require_once "Listener/PositionAwareInterface.php";
+
 
 use JsonStreamingParser\Exception\ParsingException;
 use JsonStreamingParser\Listener\ListenerInterface;
@@ -179,6 +186,9 @@ class Parser
 // BEGIN MOD BDS
         if ($this->state === self::STATE_IN_NUMBER)
            $this->endNumber();
+           
+        if (empty($this->stack))
+           $this->endDocument();
 // END MOD
     }
 
@@ -464,10 +474,11 @@ class Parser
         }
         $this->listener->endArray();
         $this->state = self::STATE_AFTER_VALUE;
-
-        if (empty($this->stack)) {
-            $this->endDocument();
-        }
+// BEGIN MOD BDS
+//        if (empty($this->stack)) {
+//            $this->endDocument();
+//        }
+// END MOD
     }
 
     private function startObject(): void
@@ -486,9 +497,11 @@ class Parser
         $this->listener->endObject();
         $this->state = self::STATE_AFTER_VALUE;
 
-        if (empty($this->stack)) {
-            $this->endDocument();
-        }
+// BEGIN MOD BDS
+//        if (empty($this->stack)) {
+//            $this->endDocument();
+//        }
+// END MOD
     }
 
     private function startString(): void

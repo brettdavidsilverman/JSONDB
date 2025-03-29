@@ -1,7 +1,8 @@
 <?php
-require_once 'jsonstreamingparser/vendor/autoload.php';
+//require_once 'jsonstreamingparser/vendor/autoload.php';
+require_once "Parser.php";
 
-class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
+class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 {
     
     protected $result;
@@ -18,29 +19,15 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
     protected $keys;
     
     protected $connection;
-    protected $createObjectStatement;
-    protected $createValueStatement;
-    
-    protected $lines;
-    protected $pageSize = 80;
     public $nextId = 0;
-    public $rootObjectId = null;
+    public $tempObjectId = null;
     
     public function __construct($connection) {
         
         $this->connection = $connection;
-        $this->lines = [];
-        /*
-        $this->createObjectStatement =
-           $connection->prepare(
-              "CALL createObject(?, ?, ?);"
-           );
-        $this->createValueStatement =
-           $connection->prepare(
-              "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?);"
-           );
-        */
     }
+    
+    
 
     public function getJson()
     {
@@ -52,12 +39,49 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         $this->stack = [];
         $this->keys = [];
         
-        $this->connection->execute_query("DELETE FROM Object WHERE ownerId = " . $_SESSION["userId"]);
+        $userId = $_SESSION['userId'];
         
-        $this->rootObjectId =
-           $this->startComplexValue('root');
+        $statement = $this->connection->prepare(
+              "CALL deleteTempObjects(?);"
+           );
+          
+        $statement->bind_param(
+           'i',
+           $userId
+        );
+   
+        $statement->execute();
+   
+        $statement->close();
+        
+        $this->tempObjectId =
+           $this->startComplexValue('temp');
+           
+        
         
     }
+    
+    public function endDocument() : void
+    {
+        set_time_limit(30);
+        
+        $userId = $_SESSION['userId'];
+        
+        $statement = $this->connection->prepare(
+              "CALL upgradeTempObjects(?);"
+           );
+          
+        $statement->bind_param(
+           'i',
+           $userId
+        );
+   
+        $statement->execute();
+   
+        $statement->close();
+        
+    }
+    
 
     public function startObject(): void
     {
@@ -136,6 +160,10 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         } else {
             $this->insertValue($obj['value'], $obj['id']);
         }
+    }
+    
+    public function whitespace(string $whitespace): void
+    {
     }
 
     // Inserts the given value into the top value on the stack in the appropriate way,
@@ -220,18 +248,7 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         $fetched = $statement->fetch();
    
         $statement->close();
-        
-        // Echo results for debug
-        if (!$fetched)
-           $line = 'Error';
-        else
-           $line = 'Object #' . 
-              nullable($objectId) . ': ' .
-              nullable($parentId) . ', ' .
-              nullable($type);
-           
-        $this->printLine($line);
-        
+    
         return $objectId;
     }
 
@@ -273,57 +290,12 @@ class JSONDBListener extends \JsonStreamingParser\Listener\IdleListener
         $fetched = $statement->fetch();
         
         $statement->close();
-        
-        // Echo results for debug
-        if (!$fetched)
-           $line = 'Error';        else
-           $line = 'Value #: ' .
-              nullable($valueId) . ', ' .
-              nullable($objectId) . ', ' .
-              nullable($objectIndex) . ', ' .
-              nullable($objectKey) . ', ' .
-              ($isNull ? 'true' : 'false') . ', ' .
-              nullable($stringValue) . ', ' .
-              nullable($numericValue) . ', ' .
-              nullable($boolValue) . ', ' .
-              nullable($idValue);
-          
-       $this->printLine($line);
-       
+
        return $valueId;
        
     }
     
-    public function printLine($line) : void {
-       return;
-       
-       $this->lines[] = $line;
-       
-       if (count($this->lines) > $this->pageSize) {
-          echo join("\r\n", $this->lines);
-          $this->lines = [];
-       }
-       
-    }
     
-    public function sendEnd($line) : void {
-       
-       $this->lines[] = $line;
-       
-       echo join("\r\n", $this->lines);
-       
-       $this->lines = [];
-     
-       echo "\r\n";
-
-    }
-    
-    protected function sendChunk($chunk) : void 
-    {
-       // The chunk must fill the output buffer or php won't send it
-       //$chunk = str_pad($chunk, 4096);
-       printf("%x\r\n%s\r\n", strlen($chunk), $chunk);
-    }
 }
 
 ?>

@@ -46,6 +46,7 @@
       try {
          $parser = new \JsonStreamingParser\Parser($stream, $listener);
          $parser->parse();
+         //$listener->endDocumemt();
          fclose($stream);
       }
       catch (Exception $e) {
@@ -55,7 +56,7 @@
       header('Content-Type: text/plain');
 
       echo $start .
-          "⏰ End   " . date("Y-m-d H:i:s");
+          "⏰ End   " . date("Y-m-d H:i:s") . "\r\n";
          
    }
    
@@ -67,9 +68,6 @@
       $rootObjectId = getRootObjectId($connection);
       
       $path = getPath();
-      
-      
-      
       $paths = explode("/", $path);
       
 
@@ -79,7 +77,7 @@
          if (is_null($valueId)) {
             http_response_code(404);
             header('Content-Type: text/plain');
-            echo "🛑 Path " . join("/", $paths) . " not found\r\n";
+            echo "Path " . join("/", $paths) . " not found\r\n";
             exit();
          }
          $objectId = null;

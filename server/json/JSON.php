@@ -97,7 +97,7 @@
       
    }
    
-   function printValues(& $statement, $objectId, $valueId) {
+   function printValues(& $statement, $objectId, $valueId, $tabCount = -1) {
 
       $statement->bind_param(
          'ii', 
@@ -108,10 +108,19 @@
       $statement->execute();
       
       $values = loadObjectValues($statement);
+      
+      // Print opening bracket
+      // and store the corresponding
+      // closure trailer
       $objectType = $values[0]["type"];
+      $isEmpty = is_null($values[0]["objectIndex"]);
       $trailer = null;
-      if (is_null($valueId))
+      
+      $isSingleValue = !is_null($valueId);
+      
+      if (!$isSingleValue)
       {
+         //echo tabs($tabCount);
          if ($objectType === 'object') {
             echo "{";
             $trailer = "}";
@@ -120,8 +129,12 @@
             echo "[";
             $trailer = "]";
          }
+         if (!$isEmpty) {
+            echo "\r\n";
+            echo tabs($tabCount + 1);
+         }
       }
-        
+
       foreach ($values as $value)
       {
          
@@ -136,27 +149,22 @@
          $idValue = $value['idValue'];
          $isLast = $value['isLast'];
          
-
-         
-            // Write object or array header
-        //
-         if (is_null($objectIndex))
-            $objectIndex = 0;
-            
-         
-         if ($objectIndex > 0 && is_null($valueId))
-            echo ', ';
-               
-            
-         if ($type === 'object' &&
-            !is_null($objectKey) && is_null($valueId))
+         if (!$isSingleValue)
          {
-            echo encodeString($objectKey) . ': ';
+           // echo tabs($tabCount + 1);
+         }
+         
+         // Write object key
+         if ($type === 'object' &&
+            !is_null($objectKey) &&
+            !$isSingleValue)
+         {
+            echo encodeString($objectKey) . 
+                 ': ';
          }
       
          
          // Write value
-            
          if ($isNull)
             echo 'null';
          else if (!is_null($numericValue))
@@ -170,28 +178,53 @@
                  echo 'false';
          }
          else if (!is_null($idValue)) {
-            printValues($statement, $idValue, null);
+            // Print this child
+            printValues(
+               $statement,
+               $idValue,
+               null,
+               $tabCount + 1
+            );
 
          }
          
+         // Write array or key seperator
+         if (!$isLast &&
+             !$isSingleValue)
+         {
+            echo ",";
+            echo "\r\n";
+            echo tabs($tabCount + 1);
+         }
+            
          
       }
       
-      if ($trailer)
+      // Print final closure
+      if ($trailer) {
+         if (!$isEmpty) {
+            echo "\r\n";
+            echo tabs($tabCount);
+         }
          echo $trailer;
-  }
+         
+      }
+   }
   
-  function loadObjectValues(& $statement) {
-     $values = [];
+   function loadObjectValues(& $statement) {
+      $values = [];
     
-     $result = $statement->get_result();
+      $result = $statement->get_result();
     
-     while ($row = $result->fetch_assoc()) {
-        $values[] = $row;
-     }
+      while ($row = $result->fetch_assoc()) {
+         $values[] = $row;
+      }
     
-     return $values;
- }
+      return $values;
+   }
 
+   function tabs($tabCount) {
+       return str_repeat("   ", $tabCount);
+   }
    
 ?>

@@ -33,7 +33,7 @@ CREATE TABLE `Object` (
   KEY `I_Object_type` (`type`) USING BTREE,
   CONSTRAINT `FK_Object_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Object_parentId` FOREIGN KEY (`parentId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=294891 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=315714 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -140,7 +140,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=93 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=94 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -179,7 +179,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_objectId` FOREIGN KEY (`objectId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3195508 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3533557 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1000,4 +1000,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-30 13:06:43
+-- Dump completed on 2025-03-30 14:36:17

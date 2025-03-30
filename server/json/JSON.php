@@ -46,7 +46,6 @@
       try {
          $parser = new \JsonStreamingParser\Parser($stream, $listener);
          $parser->parse();
-         //$listener->endDocumemt();
          fclose($stream);
       }
       catch (Exception $e) {
@@ -91,20 +90,40 @@
           "CALL getObjectValues(?, ?);"
       );
 
+
+
+      printValues($statement, $objectId, $valueId);
+      
+      
+   }
+   
+   function printValues(& $statement, $objectId, $valueId) {
+
       $statement->bind_param(
          'ii', 
-         $valueId,
-         $objectId
+         $objectId,
+         $valueId
       );
       
-
       $statement->execute();
       
       $values = loadObjectValues($statement);
-      $trailers = [];
-      $first = true;
-      while (!empty($values)) {
-         $value = array_shift($values);
+      $objectType = $values[0]["type"];
+      $trailer = null;
+      if (is_null($valueId))
+      {
+         if ($objectType === 'object') {
+            echo "{";
+            $trailer = "}";
+         }
+         else if ($objectType === 'array') {
+            echo "[";
+            $trailer = "]";
+         }
+      }
+        
+      foreach ($values as $value)
+      {
          
          $objectId = $value['objectId'];
          $type = $value['type'];
@@ -117,36 +136,24 @@
          $idValue = $value['idValue'];
          $isLast = $value['isLast'];
          
-         $headerAndFooter =
-            is_null($valueId);
-            
-         if ($headerAndFooter) {
+
+         
             // Write object or array header
+        //
+         if (is_null($objectIndex))
+            $objectIndex = 0;
             
-            if (is_null($objectIndex))
-               $objectIndex = 0;
-            
-            if ($objectIndex === 0)
-            {
-               if ($type === 'object') {
-                  echo '{';
-                  array_unshift($trailers, '}');
-               }
-               else if ($type === 'array') {
-                  echo '[';
-                  array_unshift($trailers, ']');
-               }
-            }
-            else if ($objectIndex > 0)
-               echo ',';
+         
+         if ($objectIndex > 0 && is_null($valueId))
+            echo ', ';
                
             
-            if ($type === 'object' &&
-                !is_null($objectKey))
-            {
-               echo '"' . escape($objectKey) . '": ';
-            }
+         if ($type === 'object' &&
+            !is_null($objectKey) && is_null($valueId))
+         {
+            echo encodeString($objectKey) . ': ';
          }
+      
          
          // Write value
             
@@ -155,52 +162,36 @@
          else if (!is_null($numericValue))
             echo $numericValue;
          else if (!is_null($stringValue))
-            echo '"' . escape($stringValue) . '"';
+             echo encodeString($stringValue);
          else if (!is_null($boolValue)) {
-            if ($boolValue)
-               echo 'true';
-            else
-               echo 'false';
+             if ($boolValue)
+                echo 'true';
+             else
+                 echo 'false';
          }
          else if (!is_null($idValue)) {
-            $objectId = $idValue;
-            $valueId = null;
-            $statement->execute();
-                
-            $children = loadObjectValues($statement);
-            
-            $values = array_merge($children, $values);
-
-            continue;
+            printValues($statement, $idValue, null);
 
          }
          
-         if ($isLast && $headerAndFooter) {
-            echo array_shift($trailers);
-         }
-        
+         
       }
       
-      echo join("", $trailers);
+      if ($trailer)
+         echo $trailer;
+  }
+  
+  function loadObjectValues(& $statement) {
+     $values = [];
+    
+     $result = $statement->get_result();
+    
+     while ($row = $result->fetch_assoc()) {
+        $values[] = $row;
+     }
+    
+     return $values;
+ }
+
    
-   }
-
-   function escape($string) {
-      return addcslashes(
-         $string,
-         "\"\f\n\r\t\v\0\\"
-      );
-   }
-
-   function loadObjectValues($statement) {
-      $values = [];
-    
-      $result = $statement->get_result();
-    
-      while ($row = $result->fetch_assoc()) {
-         $values[] = $row;
-      }
-    
-      return $values;
-   }
 ?>

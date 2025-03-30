@@ -119,5 +119,16 @@ function getValueByPath($connection, $parentObjectId, & $paths)
    return $valueId;
 }
 
-
+function encodeString($string) {
+   //return json_encode($string);
+      
+   return
+      '"' .
+      addcslashes(
+         $string,
+         "\"\f\n\r\t\v\0\\"
+      ) .
+      '"';
+}
+   
 ?>

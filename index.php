@@ -1,7 +1,14 @@
 <?php
    require_once "server/authentication/functions.php";
    
-   authenticate();
+   $credentials = authenticate();
+   
+   http_response_code(200);
+   
+   header("content-type: text/html");
+   
+   setCredentialsCookie($credentials);
+   
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -9,12 +16,11 @@
       <meta charset="utf-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
       <title id="title">bee.fish</title>
-      <base href="/">
       <script src="/client/head.js?v=1"></script>
       <script src="/client/stream/stream.js"></script>
       <script src="/client/power-encoding/power-encoding.js"></script>
       <script src="/client/id/id.js"></script>
-      <script src="/client/evaluate.js?v=1"></script>      <script src="/client/authentication/authentication.js?v=2"></script>
+      <script src="/client/evaluate.js?v=1"></script>      <script src="/client/authentication/authentication.js?v=21"></script>
       <script src="/client/punycode.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
       <script>
@@ -70,6 +76,7 @@
       <a href="https://github.com/brettdavidsilverman/JSONDB">JSONDB on Git Hub</a>
       
       <script>
+
 var authentication = new Authentication();
 
 const defaultURL = 
@@ -140,7 +147,7 @@ function loadJSON() {
       .catch(
          function (error) {
             fetchButton.disabled = false;
-            DisplayError(error, loadJSON);
+            displayError(error, loadJSON);
          }
       );
    
@@ -176,7 +183,7 @@ saveButton.onclick =
          json = formatJSON(jsonEditor.value);
       }
       catch (error) {
-         DisplayError(error, "saveButton.onclick");
+         displayError(error, "saveButton.onclick");
          return;
       }
       
@@ -184,7 +191,6 @@ saveButton.onclick =
       
       authentication.authenticate();
       var url = getURL();
-      pathInput.value = url;
       
       postJSON(
          url,
@@ -198,7 +204,7 @@ saveButton.onclick =
       catch(
          function (error)
          {
-            DisplayError(error, "saveButton.onclick");
+            displayError(error, "saveButton.onclick");
          }
       ).
       finally(
@@ -230,7 +236,7 @@ function switchFunctions(showFunctions)
    }
    jsonEditor.value = json;
 }
-function getURL() {
+function getURL(publish = false) {
    var url = pathInput.value;
    
    if (url == "")
@@ -257,6 +263,12 @@ function getURL() {
       
    pathInput.value = url;
    
+   if (publish && authentication.userId && !isInteger(first)) {
+      url = "/" + authentication.userId +
+            "/" + url.substr(4);
+            
+   }
+   
    return url;
 }
 
@@ -279,7 +291,7 @@ function getJSON()
    return json;
 }
 function setLinks() {
-   var url = getURL();
+   var url = getURL(true);
    goLink.href = "/go.php?" + encodeURIComponent(url);
    dataLink.href = url;
 }

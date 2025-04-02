@@ -5,8 +5,12 @@
    require_once 'functions.php';
    require_once 'JSONDBListener.php';
    
-   authenticate();
    
+   $credentials = authenticate();
+   
+   http_response_code(200);
+   
+   setCredentialsCookie($credentials);
    
    //header('Content-Encoding: gzip');
    //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
@@ -19,8 +23,6 @@
    
 
    $connection = getConnection();
-   
-   date_default_timezone_set('Australia/Brisbane');
    
    $method = $_SERVER['REQUEST_METHOD'];
 
@@ -76,21 +78,21 @@
          if (is_null($valueId)) {
             http_response_code(404);
             header('Content-Type: text/plain');
-            echo "Path " . join("/", $paths) . " not found\r\n";
+            echo "🛑 Path " . join("/", $paths) . " not found\r\n";
             exit();
          }
          $objectId = null;
       }
       else
          $objectId = $rootObjectId;
+         
+      http_response_code(200);
       
       header('Content-Type: application/json');
       
       $statement = $connection->prepare(
           "CALL getObjectValues(?, ?);"
       );
-
-
 
       printValues($statement, $objectId, $valueId);
       

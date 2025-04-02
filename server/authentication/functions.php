@@ -148,7 +148,7 @@ function logon($connection, $email, $secret, $ipAddress)
    $statement->bind_result(
       $userId,
       $sessionId,
-      $expiryDate
+      $expires
    );
    
    if (!$statement->fetch())
@@ -158,21 +158,20 @@ function logon($connection, $email, $secret, $ipAddress)
    
    if (!is_null($sessionId))
    {
-    
       $credentials = array(
          "userId" => $userId, 
-         "expiryDate" => $expiryDate,
-         "authenticated" => true
+         "expires" => $expires,
+         "authenticated" => true,
+         "sessionId" => $sessionId
       );
-      
-      $_SESSION["sessionId"] = $sessionId;
       
    }
    else
    {
-      $credentials = null;
+      $credentials = getEmptyCredentials();
       session_unset();
    }
+   
    
    return $credentials;
 }
@@ -183,11 +182,13 @@ function logoff($connection, $ipAddress)
      "CALL logoff(?, ?);"
    );
    
-   if (array_key_exists("sessionId", $_SESSION))
+   $credentials = getCredentialsCookie();
+   
+   if ($credentials["sessionId"])
    {
       $statement->bind_param(
          'ss',
-         $_SESSION["sessionId"],
+         $credentials["sessionId"],
          $ipAddress
       );
    
@@ -195,8 +196,7 @@ function logoff($connection, $ipAddress)
 
    }
    
-   setCredentialsCookie(null);
-   
+
    session_unset();
  
    
@@ -228,43 +228,95 @@ function changeSecret($connection, $email, $oldSecret, $newSecret)
 
 function setCredentialsCookie($credentials)
 {
-   $expiryTime = null;
-   
-   if (!is_null($credentials)) {
+    
+   if (is_null($credentials)) {
 
-      $expiryTime =
-         strtotime($credentials['expiryDate']);
-      
-   }
-   else {
-      $credentials = array(
-         "authenticated" => false
-      );
+      $credentials = getEmptyCredentials();
      
    }
-   
-   if (is_null($expiryTime))
-      $expiryTime = time();
-   
+
+   $expires = $credentials["expires"];
+   if (is_null($expires))
+      $expires = time() - 1;
+   else
+      $expires = strtotime($expires);
+      
+   $credentialsString =
+         json_encode($credentials);
+      
    setcookie(
       "credentials",
-      json_encode($credentials),
-      $expiryTime,
+      $credentialsString,
+      $expires,
       "/"
    );
+   
+   header("x-auth-token: " . urlencode($credentialsString));
+   $_SESSION["sessionId"] = $credentials["sessionId"];
+   $_SESSION["userId"] = $credentials["userId"];
+}
+
+function getEmptyCredentials()
+{
+   $credentials = array(
+      "userId" => null, 
+      "expires" => null,
+      "authenticated" => false,
+      "sessionId" => null
+   );
+   
+   return $credentials;
+   
+}
+
+function getCredentialsCookie()
+{
+   $headers = getallheaders();
+   $credentialsString = null;
+   
+   if (array_key_exists("x-auth-token", $headers))
+   {
+      $credentialsString =
+         urldecode($headers["x-auth-token"]);
+   }
+   else if (array_key_exists("credentials", $_COOKIE))
+   {
+      $credentialsString =
+         $_COOKIE['credentials'];
+   }
+   
+   if (!is_null($credentialsString)) {
+      $credentials = json_decode(
+         $credentialsString,
+         true
+      );
+   
+      return $credentials;
+   }
+   
+   $credentials = getEmptyCredentials();
+   
+   return $credentials;
 }
 
 
-function _authenticate($connection)
+function getCredentials($connection)
 {
- 
+    
+   $credentials = getCredentialsCookie();
+
+   if (is_null($credentials["sessionId"]))
+   {
+      return getEmptyCredentials();
+   }
+   
    $statement = $connection->prepare(
      'CALL authenticate(?, ?);'
    );
    
    $statement->bind_param(
       'ss',
-      $_SESSION["sessionId"],
+      $credentials["sessionId"],
       $_SERVER['REMOTE_ADDR']
    );
    
@@ -273,51 +325,91 @@ function _authenticate($connection)
    $statement->bind_result(
       $sessionId,
       $userId,
-      $expiryDate
+      $expires
    );
    
 
    if ($statement->fetch()) {
       $credentials = array(
          "userId" => $userId, 
-         "expiryDate" => $expiryDate,
-         "authenticated" => true
+         "expires" => $expires,
+         "authenticated" => true,
+         "sessionId" => $sessionId
       );
-      $_SESSION["sessionId"] = $sessionId;
-      $_SESSION["userId"] = $userId;
    }
    else {
-      $credentials = null;
-      session_unset();
+      $credentials = getEmptyCredentials();
    }
       
    $statement->close();
    
+  
    return $credentials;
 }
 
 
 function authenticate()
 {
+    
    $connection = getConnection();
    
-   $credentials = _authenticate(
+   $credentials = getCredentials(
       $connection
    );
-      
+
    $connection->close();
    
-   setCredentialsCookie($credentials);
-   
-   if (is_null($credentials)) {
-      $url = '/client/authentication/logon.php';
-      $redirect = $_SERVER['REQUEST_URI'];
-      $url = $url . '?redirect=' . urlencode($redirect);
-      redirect($url);
+   $isFetchClient =
+      !is_null(
+         getHeader("x-auth-token")
+      );
+
+      
+   if ($credentials["authenticated"] == false) {
+       
+
+      if (!$isFetchClient) {
+         $url = '/client/authentication/logon.php';
+         $redirect = $_SERVER['REQUEST_URI'];
+         $url = $url . '?redirect=' . urlencode($redirect);
+      }
+      else
+         $url = '#logon';
+         
+      // authentication fetch client
+      // uses x-auth-token header to cope
+      // with logon redirects
+      // (note that any response code
+      // except 200 throw failed to
+      // fetch error)
+      
+      http_response_code(200);
+      
+      header("x-auth-token: logon");
+      header("content-type: text/html");
+      
+      echo '<script>document.location.href=' . encodeString($url) . ';</script>';
+      
+      exit();
+
    }
-   else
-      return true;
+   
+   
+   return $credentials;
+
 }
+
+
+function refresh() {
+
+   $connection = getConnection();
+   $credentials = getCredentials($connection);
+   $connection->close();
+
+   return $credentials;
+
+}
+
 
 
 

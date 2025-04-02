@@ -11,6 +11,10 @@ logoff(
 
 $connection->close();
    
+http_response_code(200);
+
+setCredentialsCookie(null);
+
 echo 'true';
 
 ?>

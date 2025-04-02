@@ -2,6 +2,7 @@ class Authentication
 {
    constructor(authenticationServer = document.location.origin) {
       var creds = this.getCredentials();
+      
       Object.assign(this, creds);
       this.authenticationServer =
          authenticationServer;
@@ -13,7 +14,7 @@ class Authentication
       if (this.authenticated)
          return true;
       var currentPage = document.location.href;
-      var newPage = "/client/authentication/logon.php";
+      var newPage = this.url + "/client/authentication/logon.php";
       var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
   
       document.location.href = url;
@@ -36,8 +37,8 @@ class Authentication
          throw new Error("Missing secret");
       
       var parameters = {
+         mode: "cors",
          method: "POST",
-         credentials: "include",
          body: JSON.stringify(
                 {
                    email: email,
@@ -46,20 +47,20 @@ class Authentication
              )
       }
 
-      var promise =  
-         fetch(this.url + "/server/authentication/logon.php", parameters)
+      var promise =
+         this.fetch(this.url + "/server/authentication/logon.php", parameters)
          .then(
             function(response) {
-               if (response.ok) {
-                  var creds =
-                     _this.getCredentials();
-                  Object.assign(_this, creds);
-               }
-               else {
-                  _this.authenticated = false;
-               }
-               
-               return _this.authenticated;
+               return response.json();
+            }
+         )
+         .then(
+            function(authenticated) {
+                
+               _this.authenticated =
+                  authenticated;
+                  
+               return authenticated;
             }
          );
          
@@ -70,11 +71,13 @@ class Authentication
       var credentials = this.getCredentials();
 
       if (credentials != null) {
-         var expiryDate = new Date(credentials.expiryDate);
          var authed =
-            (expiryDate > new Date()) &&
-            (credentials.authenticated);
-         return authed;
+            credentials.authenticated;
+         
+         return authed && (
+            !credentials.expires ||
+            (credentials.expires > Date.now())
+         );
       }
      
      return false;
@@ -85,35 +88,23 @@ class Authentication
 
       if (!value) {
          // document.cookie = "sessionId=;path=/;max-age=0;"
-         document.cookie = "path=/;max-age=0;"
+         document.cookie = "credentials=;path=/;max-age=0;"
       }
    }
-   
-   getStatus()
-   {
-      var _this = this;
-      
-      this.authenticated = false;
-      
-      var parameters = {
-         method: "GET",
-         credentials: "include"
-      }
-         
-      var _this = this;
 
+   refresh()
+   {
+      var _this = this;
+
       var promise =
-         fetch(this.url + "/server/authentication/authenticate.php", parameters)
+         this.fetch(this.url + "/server/authentication/refresh.php")
          .then(
             function(response) {
-               if (response.ok) {
-                  var creds =
-                     _this.getCredentials();
-                  Object.assign(_this, creds);
-               }
-               else
-                  _this.authenticated = false;
-                  
+               return response.text();
+            }
+         )
+         .then(
+            function(text) {
                return _this.authenticated;
             }
          );
@@ -129,7 +120,7 @@ class Authentication
       }
          
       var promise =
-         fetch(this.url + "/server/authentication/userEmailExists.php", parameters)
+         this.fetch(this.url + "/server/authentication/userEmailExists.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -158,7 +149,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/authentication/createUser.php", parameters)
+         this.fetch(this.url + "/server/authentication/createUser.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -186,7 +177,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/authentication/validateUserEmail.php", parameters)
+         this.fetch(this.url + "/server/authentication/validateUserEmail.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -214,7 +205,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/authentication/lostSecret.php", parameters)
+         this.fetch(this.url + "/server/authentication/lostSecret.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -243,7 +234,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/authentication/resetSecret.php", parameters)
+         this.fetch(this.url + "/server/authentication/resetSecret.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -274,7 +265,7 @@ class Authentication
       }
 
       var promise =
-         fetch(this.url + "/server/authentication/changeSecret.php", parameters)
+         this.fetch(this.url + "/server/authentication/changeSecret.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -294,14 +285,9 @@ class Authentication
    
    logoff()
    {
-      
-      var parameters = {
-         method: "POST",
-         credentials: "include"
-      }
-         
+
       var promise =
-         fetch(this.url + "/server/authentication/logoff.php", parameters)
+         this.fetch(this.url + "/server/authentication/logoff.php")
          .then(
             function(response) {
                return response.json();
@@ -335,18 +321,164 @@ class Authentication
       
    }
    
-   getCredentials() {
-      var cookie = this.getCookie("credentials");
-      if (cookie) {
-         cookie = decodeURIComponent(cookie);
-         return JSON.parse(cookie);
+   saveCredentials(response) {
+      var cookie =
+         "credentials=;" +
+         "path=/;";
+      
+      if (response.ok) {
+         var credentialsString =
+         response.headers.get("x-auth-token");
+         
+         if (credentialsString == "logon") {
+            throw "Please logon";
+         }
+         
+         var credentials = null;
+         if (credentialsString) {
+            credentials = JSON.parse(
+               decodeURIComponent(credentialsString)
+            );
+         }
+         
+         var expires = null;
+         if (credentials && credentials.expires) {
+    
+            credentials.expires =
+               this.mysqlDateToJavascript(
+                  credentials.expires
+               );
+    
+            credentialsString =
+               encodeURIComponent(
+                  JSON.stringify(credentials)
+               );
+               
+            expires =
+               credentials.expires.toUTCString();
+         }
+            
+         if (credentials && credentials.authenticated) {
+             
+            cookie =
+               "credentials=" +
+               credentialsString + ";" +
+               "path=/" + ";";
+               
+            if (expires)
+               cookie += "expires=" + expires + ";"
+         }
+    
       }
-      return null;
+      
+      document.cookie = cookie;
+      
+   }
+   
+   
+   getCredentials() {
+      var credentialsString =
+         this.getCookie(
+            "credentials"
+         );
+      
+      if (credentialsString)
+         credentialsString =
+            decodeURIComponent(
+               credentialsString
+            );
+            
+      
+         
+      var credentials = null;
+      
+      if (credentialsString) {
+         credentials = JSON.parse(credentialsString);
+      }
+      
+      if (credentials && credentials.expires) {
+         credentials.expires =
+            this.mysqlDateToJavascript(
+               credentials.expires
+            );
+      }
+      
+      return credentials;
+   }
+
+   // Returns a base64 encode SHA-512 hash
+   // of the file
+   getFileHash(file) {
+      const sha = new jsSHA("SHA-512", "ARRAYBUFFER");
+      var fileReader = new FileReader();
+      const promise = new Promise(
+         function(resolve, reject) {
+            fileReader.onloadend = function(event) {
+               const fileReader = event.target;
+               var result = fileReader.result;
+               var arrayBuffer = result;
+               var view = new Uint8Array(arrayBuffer);
+               sha.update(view);
+               var hash = sha.getHash("B64");
+               resolve(hash);
+               
+            }
+            fileReader.readAsArrayBuffer(file);
+         }
+      );
+
+      return promise;
+
+   }
+   
+   fetch(url, parameters) {
+      var _this = this;
+      
+      var defaultParameters = {
+         mode: "cors",
+         method: "GET",
+         //credentials: "include",
+         headers: {
+            "x-auth-token":
+               this.getCookie(
+                  "credentials"
+               )
+         }
+      }
+    
+      if (parameters)
+         Object.assign(defaultParameters, parameters);
+
+      var promise =
+         fetch(url, defaultParameters)
+         .then(
+            (response) => {
+               _this.saveCredentials(response);
+               return response;
+            }
+         );
+
+      return promise;
+   }
+   
+   mysqlDateToJavascript(mysqlDate) {
+      if (mysqlDate && 
+          mysqlDate.constructor.name == "Date")
+         return mysqlDate;
+          
+      if (mysqlDate.length == 19) {
+         mysqlDate = mysqlDate.replace( /[-]/g, '/' );
+         mysqlDate = mysqlDate.replace( /[+]/g, ' ' ) + " GMT";
+         // parse the proper date string from the formatted string.
+         mysqlDate = Date.parse( mysqlDate );
+         
+      }
+      mysqlDate = new Date(mysqlDate);
+      return mysqlDate;
+         
    }
 
 
 }
-
-
 
 

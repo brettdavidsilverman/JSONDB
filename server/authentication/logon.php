@@ -20,10 +20,15 @@ $credentials =
    
 $connection->close();
    
+http_response_code(200);
+
 setCredentialsCookie($credentials);
 
-if (is_null($credentials))
-   echo "false";
-else
+//var_dump($credentials);
+header("content-type: application/json");
+
+if ($credentials["authenticated"])
    echo "true";
+else
+   echo "false";// json_encode($credentials);
 ?>

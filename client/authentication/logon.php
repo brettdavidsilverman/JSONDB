@@ -1,5 +1,6 @@
 <?php
-   require_once "../../server/authentication/functions.php";
+  // require_once '../../server/authentication/functions.php';
+   
    http_response_code(401);
 ?>
 <!DOCTYPE html>
@@ -16,7 +17,7 @@
       <script src="/client/console/console.js"></script>
       <script src="sha512.js"></script>
       <script src="thumbnailSecret.js"></script>
-      <script src="authentication.js?v=1"></script>
+      <script src="authentication.js?v=9"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
       <link rel="stylesheet" type="text/css" href="style.css" />
       <title>Logon</title>
@@ -185,6 +186,11 @@ function logon()
                         }
                      }
                   }
+               )
+               .catch(
+                  (error) => {
+                     alert(error);
+                  }
                );
             }
          }
@@ -282,6 +288,8 @@ function updateForm(setFields = true)
          logonButton.disabled = (thumbnail.secret == null || !exists);
       }
    );
+   
+   secretFile.value = null;
 
 }
 
@@ -303,7 +311,7 @@ function update()
    if (authentication.authenticated)
       updateForm();
    else
-      authentication.getStatus().then(
+      authentication.refresh().then(
          function(auth){
             updateForm();
          }

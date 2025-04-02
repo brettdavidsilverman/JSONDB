@@ -103,7 +103,7 @@ function getValueByPath($connection, $parentObjectId, & $paths)
    
       if (!$statement->fetch()) {
          array_unshift($paths, $first);
-         $paths[$count] = "🛑{" . $path . "}";
+         $paths[$count] = "{" . $path . "}";
          $objectId = null;
          $valueId = null;
          break;
@@ -119,16 +119,5 @@ function getValueByPath($connection, $parentObjectId, & $paths)
    return $valueId;
 }
 
-function encodeString($string) {
-   //return json_encode($string);
-      
-   return
-      '"' .
-      addcslashes(
-         $string,
-         "\"\f\n\r\t\v\0\\"
-      ) .
-      '"';
-}
-   
+
 ?>

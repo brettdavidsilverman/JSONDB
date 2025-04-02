@@ -82,7 +82,8 @@ function redirect($url)
 {
     if (headers_sent() === false)
     {
-        header('Location: ' . $url, true, 307);
+        http_response_code(302);
+        header('location: ' . $url);
     }
 
     exit();
@@ -129,4 +130,26 @@ function getQuery() {
    return $_SERVER['QUERY_STRING'];
 }
 
+function encodeString($string) {
+   //return json_encode($string);
+      
+   return
+      '"' .
+      addcslashes(
+         $string,
+         "\"\f\n\r\t\v\0\\"
+      ) .
+      '"';
+}
+   
+function getHeader($name) {
+    
+   $headers = getallheaders();
+   
+   if (array_key_exists($name, $headers))
+      return $headers[$name];
+   
+   return null;
+   
+}
 ?>

@@ -11,7 +11,7 @@
       <script src="/client/console/console.js"></script>
       <script src="sha512.js"></script>
       <script src="thumbnailSecret.js"></script>
-      <script src="authentication.js?v=9"></script>
+      <script src="authentication.js?v=21"></script>
       <link rel="stylesheet" type="text/css" href="/style.css" />
       <link rel="stylesheet" type="text/css" href="style.css" />
       <title>Change Secret</title>
@@ -96,9 +96,11 @@ function onOldSecret(input) {
        input.files[0],
        oldThumbnail,
        function() {
+          input.value = null;
           updateForm();
        }
     );
+    
 }
 
 function onNewSecret(input) {
@@ -106,9 +108,11 @@ function onNewSecret(input) {
        input.files[0],
        newThumbnail,
        function() {
+          input.value = null;
           updateForm();
        }
     );
+   
 }
 
 function onEmailInput() {
@@ -116,18 +120,11 @@ function onEmailInput() {
 }
 
 function changeSecret() {
-    
-   authentication.logoff().
-   then(
-      function(response) {
-         var promise =
-            authentication.changeSecret(
-               email.value,
-               oldThumbnail.secret,
-               newThumbnail.secret
-            );
-         return promise;
-      }
+
+   authentication.changeSecret(
+      email.value,
+      oldThumbnail.secret,
+      newThumbnail.secret
    ).then(
       function (result) {
          if (result) {
@@ -141,12 +138,12 @@ function changeSecret() {
             );
             alert("Secret changed");
             redirect("logon.php");
-            return Promise.resolve(true);
+            return true;
          }
          else {
             alert("Invalid email or secret");
             updateForm(false);
-            return Promise.resolve(false);
+            return false;
          }
       }
    );

@@ -12,6 +12,8 @@
    
    setCredentialsCookie($credentials);
    
+   $userId = $credentials["userId"];
+   
    //header('Content-Encoding: gzip');
    //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
    //echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
@@ -27,15 +29,15 @@
    $method = $_SERVER['REQUEST_METHOD'];
 
    if ($method === "POST")
-      handlePost($connection);
+      handlePost($connection, $userId);
    else if ($method === "GET")
-      handleGet($connection);
+      handleGet($connection, $userId);
       
    $connection->close();
       flush();
 
  
-   function handlePost($connection)
+   function handlePost($connection, $userId)
    {
       
       //$stream = fopen($testfile, 'r');
@@ -61,19 +63,19 @@
          
    }
    
-   function handleGet($connection)
+   function handleGet($connection, $userId)
    {
       
       $objectId = null;
       $valueId = null;
-      $rootObjectId = getRootObjectId($connection);
+      $rootObjectId = getRootObjectId($connection, $userId);
       
       $path = getPath();
       $paths = explode("/", $path);
       
 
       if (count($paths) > 1) {
-         $valueId = getValueByPath($connection, $rootObjectId, $paths);
+         $valueId = getValueByPath($connection, $userId, $rootObjectId, $paths);
 
          if (is_null($valueId)) {
             http_response_code(404);
@@ -85,8 +87,6 @@
       }
       else
          $objectId = $rootObjectId;
-         
-      http_response_code(200);
       
       header('Content-Type: application/json');
       

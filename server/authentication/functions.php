@@ -1,13 +1,14 @@
 <?php
 
 require_once __DIR__ . "/../functions.php";
-
+/*
 session_start(
    [
       'cookie_lifetime' => 1800
    ]
 );
 
+*/
 
 function userEmailExists($connection, $email)
 {
@@ -169,7 +170,6 @@ function logon($connection, $email, $secret, $ipAddress)
    else
    {
       $credentials = getEmptyCredentials();
-      session_unset();
    }
    
    
@@ -197,7 +197,7 @@ function logoff($connection, $ipAddress)
    }
    
 
-   session_unset();
+   
  
    
 }
@@ -236,11 +236,17 @@ function setCredentialsCookie($credentials)
    }
 
    $expires = $credentials["expires"];
-   if (is_null($expires))
-      $expires = time() - 1;
-   else
-      $expires = strtotime($expires);
-      
+   
+   if (is_null($expires)) {
+      // Set expires to 1/2 hour ago
+      $expires = time() - 30 * 60;
+   }
+   else {
+      // Conver milliseconds
+      // to seconds
+      $expires = $expires / 1000;
+   }
+   
    $credentialsString =
          json_encode($credentials);
       
@@ -250,10 +256,9 @@ function setCredentialsCookie($credentials)
       $expires,
       "/"
    );
-   
+
    header("x-auth-token: " . urlencode($credentialsString));
-   $_SESSION["sessionId"] = $credentials["sessionId"];
-   $_SESSION["userId"] = $credentials["userId"];
+
 }
 
 function getEmptyCredentials()
@@ -284,6 +289,7 @@ function getCredentialsCookie()
       $credentialsString =
          $_COOKIE['credentials'];
    }
+
    
    if (!is_null($credentialsString)) {
       $credentials = json_decode(
@@ -305,7 +311,8 @@ function getCredentials($connection)
     
    $credentials = getCredentialsCookie();
 
-   if (is_null($credentials["sessionId"]))
+   if (is_null($credentials) ||
+       is_null($credentials["sessionId"]))
    {
       return getEmptyCredentials();
    }
@@ -365,7 +372,7 @@ function authenticate()
       );
 
       
-   if ($credentials["authenticated"] == false) {
+   if ($credentials["authenticated"] === false) {
        
 
       if (!$isFetchClient) {
@@ -386,8 +393,10 @@ function authenticate()
       http_response_code(200);
       
       header("x-auth-token: logon");
-      header("content-type: text/html");
       
+      // Other clients can redirect
+      // via this html script
+      header("content-type: text/html");
       echo '<script>document.location.href=' . encodeString($url) . ';</script>';
       
       exit();

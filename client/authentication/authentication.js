@@ -56,7 +56,6 @@ class Authentication
          )
          .then(
             function(authenticated) {
-                
                _this.authenticated =
                   authenticated;
                   
@@ -73,11 +72,13 @@ class Authentication
       if (credentials != null) {
          var authed =
             credentials.authenticated;
-         
-         return authed && (
-            !credentials.expires ||
-            (credentials.expires > Date.now())
+         var now = new Date().getTime();
+
+         authed = authed && (
+            credentials.expires > now
          );
+    
+         return authed;
       }
      
      return false;
@@ -100,11 +101,12 @@ class Authentication
          this.fetch(this.url + "/server/authentication/refresh.php")
          .then(
             function(response) {
-               return response.text();
+               return response.json();
             }
          )
          .then(
-            function(text) {
+            function(authenticated) {
+               _this.authenticated = authenticated;
                return _this.authenticated;
             }
          );
@@ -115,12 +117,13 @@ class Authentication
    getUserEmailExists(email) {
 
       var parameters = {
+         mode: "cors",
          method: "POST",
          body: JSON.stringify(email)
       }
          
       var promise =
-         this.fetch(this.url + "/server/authentication/userEmailExists.php", parameters)
+         fetch(this.url + "/server/authentication/userEmailExists.php", parameters)
          .then(
             function(response) {
                return response.json();
@@ -285,16 +288,18 @@ class Authentication
    
    logoff()
    {
-
+      var _this = this;
+      
       var promise =
          this.fetch(this.url + "/server/authentication/logoff.php")
          .then(
             function(response) {
+               _this.authenticated = false;
                return response.json();
             }
          );
          
-      this.authenticated = false;
+      
       return promise;
    }
    
@@ -341,24 +346,20 @@ class Authentication
             );
          }
          
-         var expires = null;
+         var expires = "0";
          if (credentials && credentials.expires) {
     
-            credentials.expires =
-               this.mysqlDateToJavascript(
-                  credentials.expires
-               );
+            expires = 
+               new Date(credentials.expires);
     
-            credentialsString =
-               encodeURIComponent(
-                  JSON.stringify(credentials)
-               );
-               
             expires =
-               credentials.expires.toUTCString();
+               expires.toUTCString();
+               
          }
-            
-         if (credentials && credentials.authenticated) {
+
+         if (credentials &&
+             credentials.authenticated)
+         {
              
             cookie =
                "credentials=" +
@@ -367,12 +368,13 @@ class Authentication
                
             if (expires)
                cookie += "expires=" + expires + ";"
+
          }
     
       }
       
       document.cookie = cookie;
-      
+
    }
    
    
@@ -394,13 +396,6 @@ class Authentication
       
       if (credentialsString) {
          credentials = JSON.parse(credentialsString);
-      }
-      
-      if (credentials && credentials.expires) {
-         credentials.expires =
-            this.mysqlDateToJavascript(
-               credentials.expires
-            );
       }
       
       return credentials;
@@ -437,7 +432,6 @@ class Authentication
       var defaultParameters = {
          mode: "cors",
          method: "GET",
-         //credentials: "include",
          headers: {
             "x-auth-token":
                this.getCookie(
@@ -462,23 +456,30 @@ class Authentication
    }
    
    mysqlDateToJavascript(mysqlDate) {
-      if (mysqlDate && 
-          mysqlDate.constructor.name == "Date")
-         return mysqlDate;
-          
-      if (mysqlDate.length == 19) {
-         mysqlDate = mysqlDate.replace( /[-]/g, '/' );
-         mysqlDate = mysqlDate.replace( /[+]/g, ' ' ) + " GMT";
-         // parse the proper date string from the formatted string.
-         mysqlDate = Date.parse( mysqlDate );
+       
+      if (!mysqlDate)
+         return null;
          
+      if (typeof mysqlDate == "object")
+         return mysqlDate;
+    
+      if (typeof mysqlDate == "string") {
+         if (mysqlDate.length == 19) {
+            mysqlDate = mysqlDate.replace( /[-]/g, '/' );
+            mysqlDate = mysqlDate.replace( /[+]/g, ' ' ) + " GMT";
+            // parse the proper date string from the formatted string.
+            
+         }
+         mysqlDate = Date.parse( mysqlDate );
+         mysqlDate = new Date(mysqlDate);
       }
-      mysqlDate = new Date(mysqlDate);
+      else if (typeof mysqlDate == "number")
+         mysqlDate = new Date(mysqlDate);
+
+
       return mysqlDate;
          
    }
 
 
 }
-
-

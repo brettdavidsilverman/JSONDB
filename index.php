@@ -9,6 +9,8 @@
    
    setCredentialsCookie($credentials);
    
+   $userId = $credentials["userId"];
+   
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,6 +31,8 @@
    </head>
    <body>
       <h1 id="h1">bee.fish</h1>
+      
+      <div id="expires"></div>
       
       <div>
          <form onsubmit="return false;">
@@ -115,7 +119,7 @@ function loadJSON() {
    authentication.authenticate();
    
    var promise =
-   fetch(url).
+   authentication.fetch(url).
       then(
          function (response) {
             status = response.status;
@@ -145,9 +149,18 @@ function loadJSON() {
          }
       )
       .catch(
-         function (error) {
+         (error) => {
             fetchButton.disabled = false;
+            if (!error)
+               error = "Invalid status " + status;
             displayError(error, loadJSON);
+         }
+      )
+      .finally(
+         () => {
+             var expires = authentication.getCredentials().expires;
+             document.getElementById("expires").innerText = new Date(expires);
+             
          }
       );
    

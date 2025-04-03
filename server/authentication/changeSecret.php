@@ -20,6 +20,12 @@ $result =
    
 $connection->close();
    
+http_response_code(200);
+
+header("content-type: application/json");
+
+setCredentialsCookie(null);
+
 if ($result === true)
    echo 'true';
 else

@@ -308,10 +308,7 @@ function saveFields() {
 function update()
 {
  
-   if (authentication.authenticated)
-      updateForm();
-   else
-      authentication.refresh().then(
+   authentication.refresh().then(
          function(auth){
             updateForm();
          }

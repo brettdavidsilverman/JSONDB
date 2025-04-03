@@ -1,13 +1,13 @@
 <?php
 require_once __DIR__ . "/../functions.php";
 
-function getRootObjectId($connection)
+function getRootObjectId($connection, $userId)
 {
    $path = getPath();
    
    $paths = explode('/', $path);
 
-   $userId = $_SESSION["userId"];
+   $ownerId = null;
    
    if (!empty($paths))
    {
@@ -44,7 +44,7 @@ function getRootObjectId($connection)
    return $objectId;
 }
 
-function getValueByPath($connection, $parentObjectId, & $paths)
+function getValueByPath($connection, $userId, $parentObjectId, & $paths)
 {
     
    $statement = $connection->prepare(
@@ -61,7 +61,7 @@ function getValueByPath($connection, $parentObjectId, & $paths)
       $pathKey
    );
    
-   $userId = $_SESSION['userId'];
+   //$userId = $_SESSION['userId'];
    
    if (empty($paths))
       return null;

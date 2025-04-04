@@ -172,10 +172,7 @@ function loadJSON() {
                
             displayError(error, loadJSON);
             
-            if (error instanceof LogonError) {
-               document.location.href = logon.href;
-               return;
-            }
+            
             
          }
       )
@@ -212,20 +209,12 @@ pathInput.onblur =
 saveButton.onclick =
    function() {
     
-      var json;
-   
-      try {
-         localStorage.setItem("json", jsonEditor.value);
-         json = formatJSON(jsonEditor.value);
-      }
-      catch (error) {
-         displayError(error, "saveButton.onclick");
-         return;
-      }
-      
       saveButton.disabled = true;
       
-      authentication.authenticate();
+      authentication.authenticate();
+      
+      var json = jsonEditor.value;
+      
       var url = getURL();
     
       authentication.postJSON(url, json)
@@ -240,8 +229,6 @@ saveButton.onclick =
          function (error)
          {
             displayError(error, "saveButton.onclick");
-            if (error instanceof LogonError)
-               document.location.href = logon.href;
          }
       ).
       finally(
@@ -341,12 +328,7 @@ function setLinks() {
    fetchButton.disabled = false;
    saveButton.disabled = false;
 }
-
-if (localStorage.getItem("json")) {
-
-   jsonEditor.value =
-      localStorage.getItem("json");
-}setLinks();
+setLinks();
 
 function displayExpires() {
    var div = document.getElementById("expires");

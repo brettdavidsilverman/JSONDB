@@ -117,29 +117,5 @@ function getFileHash(file) {
 
 }
 
-function getRedirect() {
-   const params = new URL(document.location.href).searchParams;
-   
-   var redirect;
-   
-   if (params.has("redirect"))
-      redirect = params.get("redirect");
-   else
-      redirect = "/";
-      
-   return redirect;
-               
-}
 
-function redirect(page) {
-    
-   var redirect = getRedirect();
-   
-   if (!page)
-      document.location.href = redirect;
-   else
-      document.location.href = 
-         page + "?redirect=" +
-         encodeURIComponent(redirect);
-}
 

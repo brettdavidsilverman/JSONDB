@@ -366,38 +366,9 @@ function authenticate()
 
    $connection->close();
    
-   $isFetchClient =
-      !is_null(
-         getHeader("x-auth-token")
-      );
-
-      
    if ($credentials["authenticated"] === false) {
        
-
-      if (!$isFetchClient) {
-         $url = '/client/authentication/logon.php';
-         $redirect = $_SERVER['REQUEST_URI'];
-         $url = $url . '?redirect=' . urlencode($redirect);
-      }
-      else
-         $url = '#logon';
-         
-      // authentication fetch client
-      // uses x-auth-token header to cope
-      // with logon redirects
-      // (note that any response code
-      // except 200 throw failed to
-      // fetch error)
-      
-      http_response_code(200);
-      
-      header("x-auth-token: logon");
-      
-      // Other clients can redirect
-      // via this html script
-      header("content-type: text/html");
-      echo '<script>document.location.href=' . encodeString($url) . ';</script>';
+      http_response_code(401);
       
       exit();
 

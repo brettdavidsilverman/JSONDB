@@ -6,14 +6,6 @@
    require_once 'JSONDBListener.php';
    
    
-   $credentials = authenticate();
-   
-   http_response_code(200);
-   
-   setCredentialsCookie($credentials);
-   
-   $userId = $credentials["userId"];
-   
    //header('Content-Encoding: gzip');
    //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
    //echo "Query💜\t" . $_SERVER['QUERY_STRING'] . "\r\n";
@@ -29,42 +21,54 @@
    $method = $_SERVER['REQUEST_METHOD'];
 
    if ($method === "POST")
-      handlePost($connection, $credentials);
+      handlePost($connection);
    else if ($method === "GET")
-      handleGet($connection, $credentials);
+      handleGet($connection);
       
    $connection->close();
       flush();
 
  
-   function handlePost($connection, $credentials)
+   function handlePost($connection)
    {
-      
-      //$stream = fopen($testfile, 'r');
+
+      $credentials = authenticate();
+   
       $stream = fopen('php://input', 'r');
    
-      $start = "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
+      $start = "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
 
-      $listener = new JSONDBListener($connection, $credentials);
+      $listener = new JSONDBListener($connection);
 
       try {
          $parser = new \JsonStreamingParser\Parser($stream, $listener);
          $parser->parse();
-         fclose($stream);
       }
       catch (Exception $e) {
-         fclose($stream);
          throw $e;
       }
-      header('Content-Type: text/plain');
+      finally {
+          fclose($stream);
+      }
+      
 
+      http_response_code(200);
+   
+      header('Content-Type: text/plain');
+      
+      $credentials = refresh($credentials);
+      
+      setCredentialsCookie($credentials);
+      
       echo $start .
           "⏰ End   " . date("Y-m-d H:i:s") . "\r\n";
          
    }
    
-   function handleGet($connection, $credentials)
+   function handleGet($connection)
    {
+      $credentials = authenticate();
+   
       $userId = $credentials["userId"];
       $objectId = null;
       $valueId = null;
@@ -88,8 +92,13 @@
       else
          $objectId = $rootObjectId;
       
+      http_response_code(200);
+   
+   
       header('Content-Type: application/json');
-      
+     
+      setCredentialsCookie($credentials);
+
       $statement = $connection->prepare(
           "CALL getObjectValues(?, ?);"
       );
@@ -227,6 +236,24 @@
 
    function tabs($tabCount) {
        return str_repeat("   ", $tabCount);
+   }
+   
+   function uploadJSONFile() {
+      $credentials = getCredentialsCookie();
+      if (is_null($credentials) ||
+          is_null($credentials["sessionId"]))
+      {
+         http_response_code(401);
+      }
+      
+      $stream = fopen('php://input', 'r');
+   
+      http_response_code(200);
+      
+      header("content-type: text/plain");
+      
+      echo $credentials["sessionId"];
+      
    }
    
 ?>

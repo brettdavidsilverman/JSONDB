@@ -20,6 +20,10 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
     protected $connection;
     protected $credentials;
+    
+    protected $valueCount;
+    protected $refreshValueCount = 100;
+    
     public $nextId = 0;
     public $tempObjectId = null;
     
@@ -222,13 +226,22 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $this->stack[] = $currentItem;
 
+        $this->valueCount++;
+        
+        if (($this->valueCount %
+             $this->refreshValueCount)
+                === 0)
+        {
+           set_time_limit(30);
+           $this->credentials =
+              refresh($this->credentials);
+        }
+        
         return $valueId;
     }
     
     protected function createObject($parentId, $type)
     {
-        set_time_limit(30);
-   
         $userId = $this->credentials['userId'];
         
         $statement = $this->connection->prepare(
@@ -266,8 +279,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
        $idValue
     )
     {
-        set_time_limit(30);
-   
+        
         $statement = $this->connection->prepare(
               "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?);"
            );

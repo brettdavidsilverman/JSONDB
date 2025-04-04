@@ -165,7 +165,7 @@ function logon()
          function(response) {
             if (response) {
                saveFields();
-               document.location.href = redirect;
+               document.location.replace(redirect);
                return;
             }
             else {
@@ -230,6 +230,19 @@ function logoff(check = true)
    
 }
 
+function getRedirect() {
+   const params = new URL(document.location.href).searchParams;
+   
+   var redirect;
+   
+   if (params.has("redirect"))
+      redirect = params.get("redirect");
+   else
+      redirect = "/";
+      
+   return redirect;
+               
+}
 
 
 

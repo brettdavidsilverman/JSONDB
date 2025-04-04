@@ -12,20 +12,22 @@ class Authentication
    authenticate() {
       if (this.authenticated)
          return true;
-      return this.onHandleLogon();
+      this.onHandleLogon();
 
    }
    
    onHandleLogon() {
-       redirect();
+       this.redirect();
    }
    
    redirect() {
       var currentPage = document.location.href;
       var newPage = this.url + "/client/authentication/logon.php";
-      var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
+      if (currentPage != newPage) {
+         var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
   
-      document.location.href = url;
+         document.location.href = url;
+      }
    }
    
    fetch(url, parameters) {
@@ -62,7 +64,7 @@ class Authentication
 
       var parameters = {
          method: "POST",
-         body: JSON.stringify(json)
+         body: json
       }
   
       var promise =
@@ -394,14 +396,19 @@ class Authentication
    }
    
    saveCredentials(response) {
-      var cookie;
-      var credentialsString =
-         response.headers.get("x-auth-token");
-         
-       if (credentialsString == "logon") {
+
+       if (response.status == 401) {
+          // clear cookie
+          document.cookie =
+             "credentials=;" +
+             "path=/;";
           this.onHandleLogon();
           throw new LogonError();
        }
+       
+       var cookie;
+       var credentialsString =
+         response.headers.get("x-auth-token");
          
        var credentials = null;
        if (credentialsString) {
@@ -409,7 +416,7 @@ class Authentication
              decodeURIComponent(credentialsString)
           );
        }
-         
+        
        var expires = "0";
        if (credentials && credentials.expires) {
     

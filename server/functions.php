@@ -2,7 +2,7 @@
 
 
 function getConfig() {
-   $config = file_get_contents('/home/bee/config.json'); 
+   $config = file_get_contents(__DIR__ . '/../../config.json'); 
    $json = json_decode($config);
    return $json;
 }

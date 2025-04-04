@@ -19,12 +19,14 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $keys;
     
     protected $connection;
+    protected $credentials;
     public $nextId = 0;
     public $tempObjectId = null;
     
-    public function __construct($connection) {
+    public function __construct($connection, $credentials) {
         
         $this->connection = $connection;
+        $this->credentials = $credentials;
     }
     
     
@@ -39,7 +41,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->stack = [];
         $this->keys = [];
         
-        $userId = $_SESSION['userId'];
+        $userId = $this->credentials['userId'];
         
         $statement = $this->connection->prepare(
               "CALL deleteTempObjects(?);"
@@ -65,7 +67,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     {
         set_time_limit(30);
         
-        $userId = $_SESSION['userId'];
+        $userId = $this->credentials['userId'];
         
         $statement = $this->connection->prepare(
               "CALL upgradeTempObjects(?);"
@@ -227,7 +229,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     {
         set_time_limit(30);
    
-        $userId = $_SESSION['userId'];
+        $userId = $this->credentials['userId'];
         
         $statement = $this->connection->prepare(
               "CALL createObject(?, ?, ?);"

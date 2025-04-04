@@ -29,15 +29,15 @@
    $method = $_SERVER['REQUEST_METHOD'];
 
    if ($method === "POST")
-      handlePost($connection, $userId);
+      handlePost($connection, $credentials);
    else if ($method === "GET")
-      handleGet($connection, $userId);
+      handleGet($connection, $credentials);
       
    $connection->close();
       flush();
 
  
-   function handlePost($connection, $userId)
+   function handlePost($connection, $credentials)
    {
       
       //$stream = fopen($testfile, 'r');
@@ -45,7 +45,7 @@
    
       $start = "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
 
-      $listener = new JSONDBListener($connection);
+      $listener = new JSONDBListener($connection, $credentials);
 
       try {
          $parser = new \JsonStreamingParser\Parser($stream, $listener);
@@ -63,9 +63,9 @@
          
    }
    
-   function handleGet($connection, $userId)
+   function handleGet($connection, $credentials)
    {
-      
+      $userId = $credentials["userId"];
       $objectId = null;
       $valueId = null;
       $rootObjectId = getRootObjectId($connection, $userId);
@@ -131,7 +131,7 @@
             echo "[";
             $trailer = "]";
          }
-         if (!$isEmpty) {
+         if (!$isEmpty && $objectType != 'root') {
             echo "\r\n";
             echo tabs($tabCount + 1);
          }

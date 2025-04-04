@@ -95,38 +95,6 @@ function fetchJSON(url) {
 
 }
 
-function postJSON(url, json) {
-   var status;
-
-   var parameters = {
-      method: "POST",
-      body: JSON.stringify(json)
-   }
-  
-   var promise =
-      fetch(
-         url,
-         parameters
-      ).
-      then(
-         function (response) {
-            status = response.status;
-            return response.text();
-         }
-      ).
-      then(
-         function (text) {
-             
-            if (status != "200")
-               throw text;
-               
-            return text;
-         }
-      );
-
-   return promise;
-}
-
 function hideFunctions(json)
 {
 

@@ -7,21 +7,88 @@ class Authentication
       this.authenticationServer =
          authenticationServer;
       this.url = this.authenticationServer;
-
    }
    
    authenticate() {
       if (this.authenticated)
          return true;
+      return this.onHandleLogon();
+
+   }
+   
+   onHandleLogon() {
+       redirect();
+   }
+   
+   redirect() {
       var currentPage = document.location.href;
       var newPage = this.url + "/client/authentication/logon.php";
       var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
   
       document.location.href = url;
-   
-      return false;
-
    }
+   
+   fetch(url, parameters) {
+      var _this = this;
+      
+      var defaultParameters = {
+         mode: "cors",
+         method: "GET",
+         headers: {
+            "x-auth-token":
+               this.getCookie(
+                  "credentials"
+               )
+         }
+      }
+    
+      if (parameters)
+         Object.assign(defaultParameters, parameters);
+
+      var promise =
+         fetch(url, defaultParameters)
+         .then(
+            (response) => {
+               _this.saveCredentials(response);
+               return response;
+            }
+         );
+
+      return promise;
+   }
+   
+   postJSON(url, json) {
+      var status;
+
+      var parameters = {
+         method: "POST",
+         body: JSON.stringify(json)
+      }
+  
+      var promise =
+         this.fetch(
+            url,
+            parameters
+         ).
+         then(
+            function (response) {
+               status = response.status;
+               return response.text();
+            }
+         ).
+         then(
+            function (text) {
+             
+               if (status != "200")
+                  throw text;
+               
+               return text;
+            }
+         );
+
+      return promise;
+   }
+   
    
    logon(email, secret)
    {
@@ -327,53 +394,56 @@ class Authentication
    }
    
    saveCredentials(response) {
-      var cookie =
-         "credentials=;" +
-         "path=/;";
-      
-      if (response.ok) {
-         var credentialsString =
+      var cookie;
+      var credentialsString =
          response.headers.get("x-auth-token");
          
-         if (credentialsString == "logon") {
-            throw "Please logon";
-         }
+       if (credentialsString == "logon") {
+          this.onHandleLogon();
+          throw new LogonError();
+       }
          
-         var credentials = null;
-         if (credentialsString) {
-            credentials = JSON.parse(
-               decodeURIComponent(credentialsString)
-            );
-         }
+       var credentials = null;
+       if (credentialsString) {
+          credentials = JSON.parse(
+             decodeURIComponent(credentialsString)
+          );
+       }
          
-         var expires = "0";
-         if (credentials && credentials.expires) {
+       var expires = "0";
+       if (credentials && credentials.expires) {
     
-            expires = 
-               new Date(credentials.expires);
+          expires = 
+             new Date(credentials.expires);
     
-            expires =
-               expires.toUTCString();
+          expires =
+             expires.toUTCString();
                
-         }
+       }
 
-         if (credentials &&
-             credentials.authenticated)
-         {
+       if (credentials &&
+           credentials.authenticated)
+       {
              
-            cookie =
-               "credentials=" +
-               credentialsString + ";" +
-               "path=/" + ";";
+          cookie =
+             "credentials=" +
+                credentialsString + ";" +
+                "path=/" + ";";
                
-            if (expires)
-               cookie += "expires=" + expires + ";"
+          if (expires)
+             cookie += "expires=" + expires + ";"
 
-         }
-    
-      }
-      
-      document.cookie = cookie;
+            
+       }
+       else if (credentials &&
+                !credentials.authenticated)
+       {
+          cookie =
+             "credentials=;" +
+             "path=/;";
+       }
+       
+       document.cookie = cookie;
 
    }
    
@@ -426,34 +496,6 @@ class Authentication
 
    }
    
-   fetch(url, parameters) {
-      var _this = this;
-      
-      var defaultParameters = {
-         mode: "cors",
-         method: "GET",
-         headers: {
-            "x-auth-token":
-               this.getCookie(
-                  "credentials"
-               )
-         }
-      }
-    
-      if (parameters)
-         Object.assign(defaultParameters, parameters);
-
-      var promise =
-         fetch(url, defaultParameters)
-         .then(
-            (response) => {
-               _this.saveCredentials(response);
-               return response;
-            }
-         );
-
-      return promise;
-   }
    
    mysqlDateToJavascript(mysqlDate) {
        
@@ -482,4 +524,10 @@ class Authentication
    }
 
 
+}
+
+class LogonError extends Error {
+    constructor() {
+        super("Please logon");
+    }
 }

@@ -10,6 +10,13 @@
    setCredentialsCookie($credentials);
    
    $userId = $credentials["userId"];
+   /*
+   $expires = $credentials["expires"];
+   $date = new DateTime();
+   $date->setTimezone(new DateTimeZone('Australia/Brisbane'));
+   $date->setTimestamp($expires / 1000);
+   echo $date->format("D jS F Y H:i:s A T e");
+   */
    
 ?>
 <!DOCTYPE html>
@@ -106,6 +113,14 @@ title.innerText = origin;
 fetchButton.disabled = true;
 saveButton.disabled = true;
 
+authentication.onHandleLogon =
+   function() {
+      authentication.redirect();
+      
+      return false;
+   }
+   
+   
 //authentication.authenticate();
 function loadJSON() {
     
@@ -151,16 +166,24 @@ function loadJSON() {
       .catch(
          (error) => {
             fetchButton.disabled = false;
+            
             if (!error)
                error = "Invalid status " + status;
+               
             displayError(error, loadJSON);
+            
+            if (error instanceof LogonError) {
+               document.location.href = logon.href;
+               return;
+            }
+            
          }
       )
       .finally(
          () => {
-             var expires = authentication.getCredentials().expires;
-             document.getElementById("expires").innerText = new Date(expires);
              
+            displayExpires();
+            
          }
       );
    
@@ -204,25 +227,27 @@ saveButton.onclick =
       
       authentication.authenticate();
       var url = getURL();
-      
-      postJSON(
-         url,
-         json
-      ).
-      then(
+    
+      authentication.postJSON(url, json)
+      .then(
          function (json) {
+            
             alert(json);
+            return json;
          }
-      ).
-      catch(
+      )
+      .catch(
          function (error)
          {
             displayError(error, "saveButton.onclick");
+            if (error instanceof LogonError)
+               document.location.href = logon.href;
          }
       ).
       finally(
         function() {
            saveButton.disabled = false;
+           displayExpires();
         }
       );
    }
@@ -322,6 +347,24 @@ if (localStorage.getItem("json")) {
    jsonEditor.value =
       localStorage.getItem("json");
 }setLinks();
+
+function displayExpires() {
+   var div = document.getElementById("expires");
+   
+   var credentials =
+      authentication.getCredentials();
+      
+   if (credentials) {
+      var expires = credentials.expires;
+      div.innerText = new Date(expires);
+   }
+   else
+      div.innerText = "No credentials";
+   
+ 
+}
+
+displayExpires();
 
       </script>
 

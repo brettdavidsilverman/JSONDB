@@ -242,7 +242,7 @@ function setCredentialsCookie($credentials)
       $expires = time() - 30 * 60;
    }
    else {
-      // Conver milliseconds
+      // Convert milliseconds
       // to seconds
       $expires = $expires / 1000;
    }

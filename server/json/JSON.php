@@ -290,7 +290,7 @@
    function uploadJSONFile() {
       $credentials = getCredentialsCookie();
       if (is_null($credentials) ||
-          is_null($credentials["sessionId"]))
+          is_null($credentials["sessionKey"]))
       {
          http_response_code(401);
       }
@@ -301,7 +301,7 @@
       
       header("content-type: text/plain");
       
-      echo $credentials["sessionId"];
+      echo $credentials["sessionKey"];
       
    }
    

@@ -148,22 +148,22 @@ function logon($connection, $email, $secret, $ipAddress)
    
    $statement->bind_result(
       $userId,
-      $sessionId,
+      $sessionKey,
       $expires
    );
    
    if (!$statement->fetch())
-      $sessionId = NULL;
+      $sessionKey = NULL;
       
    $statement->close();
    
-   if (!is_null($sessionId))
+   if (!is_null($sessionKey))
    {
       $credentials = array(
          "userId" => $userId, 
          "expires" => $expires,
          "authenticated" => true,
-         "sessionId" => $sessionId
+         "sessionKey" => $sessionKey
       );
       
    }
@@ -185,11 +185,11 @@ function logoff($connection, $ipAddress)
    $credentials = getCredentialsCookie();
    
    if (!is_null($credentials) &&
-       $credentials["sessionId"])
+       $credentials["sessionKey"])
    {
       $statement->bind_param(
          'ss',
-         $credentials["sessionId"],
+         $credentials["sessionKey"],
          $ipAddress
       );
    
@@ -268,7 +268,7 @@ function getEmptyCredentials()
       "userId" => null, 
       "expires" => null,
       "authenticated" => false,
-      "sessionId" => null
+      "sessionKey" => null
    );
    
    return $credentials;
@@ -313,7 +313,7 @@ function getCredentials($connection, $ignoreExpires = false)
    $credentials = getCredentialsCookie();
 
    if (is_null($credentials) ||
-       is_null($credentials["sessionId"]))
+       is_null($credentials["sessionKey"]))
    {
       return getEmptyCredentials();
    }
@@ -324,7 +324,7 @@ function getCredentials($connection, $ignoreExpires = false)
    
    $statement->bind_param(
       'ssi',
-      $credentials["sessionId"],
+      $credentials["sessionKey"],
       $_SERVER['REMOTE_ADDR'],
       $ignoreExpires
    );
@@ -332,7 +332,7 @@ function getCredentials($connection, $ignoreExpires = false)
    $statement->execute();
 
    $statement->bind_result(
-      $sessionId,
+      $sessionKey,
       $userId,
       $expires
    );
@@ -343,7 +343,7 @@ function getCredentials($connection, $ignoreExpires = false)
          "userId" => $userId, 
          "expires" => $expires,
          "authenticated" => true,
-         "sessionId" => $sessionId
+         "sessionKey" => $sessionKey
       );
    }
    else {
@@ -409,7 +409,7 @@ function getSessionStatus($connection, $credentials)
 {
 
    if (is_null($credentials) ||
-       is_null($credentials["sessionId"]))
+       is_null($credentials["sessionKey"]))
    {
       return null;
    }
@@ -420,7 +420,7 @@ function getSessionStatus($connection, $credentials)
    
    $statement->bind_param(
       's',
-      $credentials["sessionId"]
+      $credentials["sessionKey"]
    );
    
    $statement->execute();
@@ -457,7 +457,7 @@ function setSessionStatus($credentials, $label, $percentage, $done)
 {
     
    if (is_null($credentials) ||
-       is_null($credentials["sessionId"]))
+       is_null($credentials["sessionKey"]))
    {
       return false;
    }
@@ -470,7 +470,7 @@ function setSessionStatus($credentials, $label, $percentage, $done)
    
    $statement->bind_param(
       'ssdi',
-      $credentials["sessionId"],
+      $credentials["sessionKey"],
       $label,
       $percentage,
       $done

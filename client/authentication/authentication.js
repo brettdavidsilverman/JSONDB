@@ -156,7 +156,6 @@ class Authentication
    set authenticated(value) {
 
       if (!value) {
-         // document.cookie = "sessionId=;path=/;max-age=0;"
          document.cookie = "credentials=;path=/;max-age=0;"
       }
    }
@@ -190,11 +189,6 @@ class Authentication
          .then(
             function(response) {
                return response.json();
-            }
-         )
-         .then(
-            function(status) {
-               return status;
             }
          );
 
@@ -230,11 +224,6 @@ class Authentication
             function(response) {
                return response.json();
             }
-         )
-         .then(
-            function(exists) {
-               return exists;
-            }
          );
 
       return promise;
@@ -259,11 +248,6 @@ class Authentication
             function(response) {
                return response.json();
             }
-         )
-         .then(
-            function(status) {
-               return status;
-            }
          );
 
       return promise;
@@ -286,11 +270,6 @@ class Authentication
          .then(
             function(response) {
                return response.json();
-            }
-         )
-         .then(
-            function(status) {
-               return status;
             }
          );
 
@@ -315,11 +294,6 @@ class Authentication
             function(response) {
                return response.json();
             }
-         )
-         .then(
-            function(status) {
-               return status;
-            }
          );
 
       return promise;
@@ -343,11 +317,6 @@ class Authentication
          .then(
             function(response) {
                return response.json();
-            }
-         )
-         .then(
-            function(status) {
-               return status;
             }
          );
 
@@ -374,11 +343,6 @@ class Authentication
          .then(
             function(response) {
                return response.json();
-            }
-         )
-         .then(
-            function(status) {
-               return status;
             }
          );
 

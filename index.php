@@ -32,9 +32,8 @@
       <script src="/client/evaluate.js?v=1"></script>      <script src="/client/authentication/authentication.js?v=21"></script>
       <script src="/client/punycode.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
-      <script>
-
-      </script>
+      <style>
+      </style>
    </head>
    <body>
       <h1 id="h1">bee.fish</h1>
@@ -66,6 +65,11 @@
                />            </div>
             <textarea id="jsonEditor"></textarea>
             <button id="saveButton">Save</button>
+            <br/>
+            <br/>
+            
+            <label for="progress"><div id="progressLabel"></div></label>
+            <progress id="progress" value="0" max="100"></progress>
          </form>
          
       </div>
@@ -101,6 +105,8 @@ var jsonEditor = document.getElementById("jsonEditor");var html = document.getE
 var dataLink = document.getElementById("dataLink");
 var header = document.getElementById("h1");
 var title = document.getElementById("title");
+var progress = document.getElementById("progress");
+var progressLabel = document.getElementById("progressLabel");
 
 var origin =
    punycode.toUnicode(
@@ -154,7 +160,6 @@ function loadJSON() {
             jsonEditor.value = json;
             
             fetchButton.disabled = false;
-            saveButton.disabled = false;
         /*
             switchFunctions(
                functionCheckbox.checked
@@ -195,14 +200,12 @@ if (!pathInput.value)
 pathInput.onfocus = 
    function() {
       fetchButton.disabled = false;
-      saveButton.disabled = false;
    };
    
    
 pathInput.onblur =
    function() {
       fetchButton.disabled = false;
-      saveButton.disabled = false;
       setLinks();
    }
 
@@ -216,13 +219,19 @@ saveButton.onclick =
       var json = jsonEditor.value;
       
       var url = getURL();
-    
-      authentication.postJSON(url, json)
+      
+      authentication.postJSON(
+         url,
+         json
+      )
       .then(
-         function (json) {
-            
-            alert(json);
-            return json;
+         (uploaded) => {
+            if (!uploaded) {
+               displayError(
+                  "Unknown error uploading data",
+                  "saveButton.onclick"
+               );
+            }
          }
       )
       .catch(
@@ -232,10 +241,9 @@ saveButton.onclick =
          }
       ).
       finally(
-        function() {
-           saveButton.disabled = false;
-           displayExpires();
-        }
+         () => {
+            updateStatus();
+         }
       );
    }
 
@@ -326,7 +334,6 @@ function setLinks() {
       localStorage.getItem("path");
       
    fetchButton.disabled = false;
-   saveButton.disabled = false;
 }
 setLinks();
 
@@ -346,7 +353,42 @@ function displayExpires() {
  
 }
 
-displayExpires();
+function updateStatus(status) {
+
+   if (!status) {
+      authentication.getSessionStatus()
+      .then(
+         (status) => {
+            updateStatus(status);
+         }
+      )
+      .catch(
+         (error) => {
+            window.clearInterval(intervalId);
+            alert(error);
+         }
+      );
+      return;
+   }
+   
+   saveButton.disabled = !status.done;
+
+   progress.value = status.percentage;
+  
+   progressLabel.innerText = status.label;
+   
+   displayExpires();
+}
+      
+var intervalId =
+   window.setInterval(
+      function() {
+         updateStatus();
+      },
+      1000 * 5
+   );
+      
+updateStatus();
 
       </script>
 

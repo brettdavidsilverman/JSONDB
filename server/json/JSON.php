@@ -4,7 +4,7 @@
    require_once '../authentication/functions.php';
    require_once 'functions.php';
    require_once 'JSONDBListener.php';
-   
+   require_once 'ValueCountListener.php';
    
    //header('Content-Encoding: gzip');
    //echo "URI❤️\t" . $_SERVER['REQUEST_URI'] . "\r\n";
@@ -32,15 +32,59 @@
    function handlePost($connection)
    {
 
-      $credentials = authenticate();
+      $start = time();
+      
+      $credentials = getCredentials($connection, true);
+      http_response_code(200);
+      setCredentialsCookie($credentials);
+      
    
+      header('Content-Type: application/json');
+    
       $stream = fopen('php://input', 'r');
    
-      $start = "⏰ Start " . date('Y-m-d H:i:s') . "\r\n";
 
-      $listener = new JSONDBListener($connection);
-
+      $totalValueCount = null;
+     
+      setSessionStatus($credentials, "Validating...", 4.0, false);
+      
       try {
+         $listener = new ValueCountListener();
+         $parser = new \JsonStreamingParser\Parser($stream, $listener);
+         $parser->parse();
+         if (!$listener->getResult())
+            throw new Exception(
+               "Unexpected end of data"
+            );
+            
+         $totalValueCount =
+            $listener->valueCount;
+      }
+      catch (Exception $e) {
+          
+         setSessionStatus(
+            $credentials,
+            $e->getMessage(),
+            0,
+            true
+         );
+         
+         echo "false";
+         
+         exit();
+         
+      }
+      
+      rewind($stream);
+      setSessionStatus(
+         $credentials,
+         "Indexing...",
+         0,
+         false
+      );
+      
+      try {
+         $listener = new JSONDBListener($connection, $credentials, $totalValueCount);
          $parser = new \JsonStreamingParser\Parser($stream, $listener);
          $parser->parse();
       }
@@ -48,20 +92,24 @@
          throw $e;
       }
       finally {
-          fclose($stream);
+         fclose($stream);
       }
       
 
-      http_response_code(200);
-   
-      header('Content-Type: text/plain');
+      $end = time();
       
-      $credentials = refresh($credentials);
+      $timeTaken = $end - $start;
       
-      setCredentialsCookie($credentials);
+    
       
-      echo $start .
-          "⏰ End   " . date("Y-m-d H:i:s") . "\r\n";
+      setSessionStatus(
+         $credentials,
+         "⏰ Finished in " . $timeTaken . " seconds",
+         0,
+         true
+      );
+      
+      echo "true";
          
    }
    

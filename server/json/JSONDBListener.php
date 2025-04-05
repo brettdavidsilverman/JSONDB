@@ -21,16 +21,20 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $connection;
     protected $credentials;
     
-    protected $valueCount;
-    protected $refreshValueCount = 100;
+    public $valueCount = 0;
+    protected $totalValueCount;
+    protected $startTime;
     
     public $nextId = 0;
     public $tempObjectId = null;
     
-    public function __construct($connection, $credentials) {
+    public function __construct($connection, $credentials, $totalValueCount) {
         
         $this->connection = $connection;
         $this->credentials = $credentials;
+        $this->totalValueCount =
+           $totalValueCount;
+        $this->startTime = time();
     }
     
     
@@ -70,6 +74,13 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     public function endDocument() : void
     {
         set_time_limit(30);
+        
+        setSessionStatus(
+           $this->credentials,
+           "Finalizing...",
+           100,
+           false
+        );
         
         $userId = $this->credentials['userId'];
         
@@ -118,6 +129,37 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     public function value($value): void
     {
         $this->insertValue($value, null);
+        
+        $endTime = time();
+        $elapsed =
+           $endTime - $this->startTime;
+           
+        $this->valueCount++;
+        
+        if ($elapsed >= 5)
+        {
+           set_time_limit(30);
+           //$this->credentials = refresh();
+           $percentage = (
+             $this->valueCount /
+             $this->totalValueCount *
+             100.0
+           );
+           
+           setSessionStatus(
+              $this->credentials,
+              "Indexing...",
+              $percentage,
+              false
+           );
+
+           $this->startTime = time();
+           
+           //echo str_pad('',4096)."\r\n";
+           
+           //flush();
+        }
+        
     }
     
     
@@ -226,16 +268,8 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $this->stack[] = $currentItem;
 
-        $this->valueCount++;
+       
         
-        if (($this->valueCount %
-             $this->refreshValueCount)
-                === 0)
-        {
-           set_time_limit(30);
-           $this->credentials =
-              refresh($this->credentials);
-        }
         
         return $valueId;
     }

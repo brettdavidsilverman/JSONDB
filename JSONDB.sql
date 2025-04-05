@@ -33,7 +33,7 @@ CREATE TABLE `Object` (
   KEY `I_Object_type` (`type`) USING BTREE,
   CONSTRAINT `FK_Object_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Object_parentId` FOREIGN KEY (`parentId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=357368 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=766872 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,7 @@ CREATE TABLE `Object` (
 
 LOCK TABLES `Object` WRITE;
 /*!40000 ALTER TABLE `Object` DISABLE KEYS */;
-INSERT INTO `Object` VALUES (357366,NULL,'root',94),(357367,357366,'object',94);
+INSERT INTO `Object` VALUES (766870,NULL,'root',94),(766871,766870,'object',94);
 /*!40000 ALTER TABLE `Object` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -82,6 +82,9 @@ CREATE TABLE `Session` (
   `createdDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ipAddress` varchar(15) NOT NULL,
   `lastAccessedDate` datetime NOT NULL,
+  `label` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `percentage` float DEFAULT NULL,
+  `done` tinyint DEFAULT NULL,
   PRIMARY KEY (`sessionId`),
   UNIQUE KEY `UI_Session_userId` (`userId`) USING BTREE,
   UNIQUE KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
@@ -95,7 +98,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES ('1118017d-10fd-11f0-98ec-42010a98000f',94,'2025-04-04 12:32:34','211.30.175.65','2025-04-04 12:32:42');
+INSERT INTO `Session` VALUES ('ec6ea960-11de-11f0-98ec-42010a98000f',94,'2025-04-05 15:29:19','211.30.175.65','2025-04-05 15:30:40',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -122,8 +125,30 @@ CREATE TABLE `Setting` (
 
 LOCK TABLES `Setting` WRITE;
 /*!40000 ALTER TABLE `Setting` DISABLE KEYS */;
-INSERT INTO `Setting` VALUES (1,'SESSION_TIMEOUT','60','Session timeout in seconds');
+INSERT INTO `Setting` VALUES (1,'SESSION_TIMEOUT','1800','Session timeout in seconds');
 /*!40000 ALTER TABLE `Setting` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `UploadFile`
+--
+
+DROP TABLE IF EXISTS `UploadFile`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `UploadFile` (
+  `uploadFileId` bigint NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`uploadFileId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `UploadFile`
+--
+
+LOCK TABLES `UploadFile` WRITE;
+/*!40000 ALTER TABLE `UploadFile` DISABLE KEYS */;
+/*!40000 ALTER TABLE `UploadFile` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -151,7 +176,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (94,'brettdavidsilverman@gmail.com',_binary 'eAJ7TQGWYGIegpmW14Sf9RkoytS/YBKhvm6Gi1H+3T64TGc3C8ZLs5digJhc44KI40DU1MqO/RQTSLqp1RgikA==',NULL,NULL,1);
+INSERT INTO `User` VALUES (94,'brettdavidsilverman@gmail.com',_binary 'HrjUWouqXoZDhJO4kw0aiYOI82D9Cs7qpYvVMLk5xjsePrCjsbpuL/W67P9KLIwnAb1FsaXQr0VqnEuIGwzAWg==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -182,7 +207,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_objectId` FOREIGN KEY (`objectId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4209663 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10711677 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -191,7 +216,7 @@ CREATE TABLE `Value` (
 
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (4209661,357367,0,_binary 'hello',NULL,_binary '🌎',NULL,NULL,0),(4209662,357366,0,NULL,NULL,NULL,357367,NULL,0);
+INSERT INTO `Value` VALUES (10711676,766870,0,NULL,NULL,NULL,766871,NULL,0);
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -273,7 +298,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `authenticate`(
    sessionId VARCHAR(36),
-   ipAddress VARCHAR(16)
+   ipAddress VARCHAR(16),
+   ignoreExpires TINYINT
 )
 BEGIN
 
@@ -281,6 +307,7 @@ BEGIN
   
    SET @sessionId = sessionId,
            @ipAddress = ipAddress,
+           @ignoreExpires = ignoreExpires,
            @timeout = CAST(
                  getSetting(N'SESSION_TIMEOUT')
                  AS UNSIGNED
@@ -298,12 +325,12 @@ BEGIN
           WHERE   Session. sessionId = @sessionId
        );
        
-       SET @expiry = DATE_ADD(
+       SET @expires = DATE_ADD(
           @lastAccessedDate,
           INTERVAL @timeout SECOND
        );
        
-       IF @expiry > NOW() THEN
+       IF @ignoreExpires = 1 OR @expires > NOW() THEN
           UPDATE   Session
           SET            lastAccessedDate = NOW()
           WHERE   Session.sessionId =  @sessionId;
@@ -674,6 +701,34 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `getSessionStatus` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `getSessionStatus`(
+   sessionId VARCHAR(36)
+)
+BEGIN
+   SET @sessionId = sessionId;
+   
+   SELECT  IF( label IS NULL, "", label) AS label,
+                      IF(percentage IS NULL, 0, percentage) AS percentage,
+                     IF( done IS NULL, 1, done) AS done
+   FROM      Session
+   WHERE   sessionId = @sessionId;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `getValueByPath` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -924,6 +979,44 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `setSessionStatus` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `setSessionStatus`(
+   sessionId VARCHAR(36),
+   label VARCHAR(100),
+   percentage FLOAT,
+   done TINYINT
+)
+BEGIN
+   START TRANSACTION;
+   
+   SET @sessionId = sessionId,
+            @label = label,
+            @percentage = percentage,
+            @done = done;
+            
+   UPDATE Session
+   SET           label = @label,
+                      percentage = @percentage,
+                      done = @done
+   WHERE   sessionId = @sessionId;
+   
+   COMMIT;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `upgradeTempObjects` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1029,4 +1122,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-04 12:33:46
+-- Dump completed on 2025-04-05 15:31:14

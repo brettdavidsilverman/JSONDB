@@ -137,7 +137,7 @@ function changeSecret() {
                email.value
             );
             alert("Secret changed");
-            redirect("logon.php");
+            document.location.href = "logon.php";
             return true;
          }
          else {
@@ -146,7 +146,13 @@ function changeSecret() {
             return false;
          }
       }
+   )
+   .catch(
+      (error) => {
+         displayError(error, "changeSecret");
+      }
    );
+   
 }
 
 

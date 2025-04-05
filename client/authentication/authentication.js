@@ -59,14 +59,20 @@ class Authentication
       return promise;
    }
    
-   postJSON(url, json) {
-      var status;
-
+   postJSON(url, json, callback) {
       var parameters = {
          method: "POST",
          body: json
       }
-  
+      
+      if (callback)
+         callback(
+            {
+               label: "Uploading...",
+               percentage: 1
+            }
+         );
+         
       var promise =
          this.fetch(
             url,
@@ -74,20 +80,16 @@ class Authentication
          ).
          then(
             function (response) {
-               status = response.status;
-               return response.text();
-            }
-         ).
-         then(
-            function (text) {
-             
-               if (status != "200")
-                  throw text;
-               
-               return text;
+               if (!response.ok)
+                  throw new Error(
+                     "Invalid status " +
+                     response.status
+                  );
+               return response.json();
             }
          );
 
+         
       return promise;
    }
    
@@ -177,6 +179,25 @@ class Authentication
             function(authenticated) {
                _this.authenticated = authenticated;
                return _this.authenticated;
+            }
+         );
+
+      return promise;
+   }
+   
+   getSessionStatus() {
+
+         
+      var promise =
+         this.fetch(this.url + "/server/authentication/getSessionStatus.php")
+         .then(
+            function(response) {
+               return response.json();
+            }
+         )
+         .then(
+            function(status) {
+               return status;
             }
          );
 

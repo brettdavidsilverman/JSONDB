@@ -46,12 +46,14 @@ form {
 }
 
 
-input, textarea {
+input, textarea, progress {
    width: calc(100% - 10px);
-   border: inset 2px;
    margin-bottom: 5px;
 }
 
+input, textarea {
+   border: inset 2px;
+}
 
 textarea {
    height: 120px;

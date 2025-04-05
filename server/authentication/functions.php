@@ -184,7 +184,8 @@ function logoff($connection, $ipAddress)
    
    $credentials = getCredentialsCookie();
    
-   if ($credentials["sessionId"])
+   if (!is_null($credentials) &&
+       $credentials["sessionId"])
    {
       $statement->bind_param(
          'ss',
@@ -306,7 +307,7 @@ function getCredentialsCookie()
 }
 
 
-function getCredentials($connection)
+function getCredentials($connection, $ignoreExpires = false)
 {
     
    $credentials = getCredentialsCookie();
@@ -318,13 +319,14 @@ function getCredentials($connection)
    }
    
    $statement = $connection->prepare(
-     'CALL authenticate(?, ?);'
+     'CALL authenticate(?, ?, ?);'
    );
    
    $statement->bind_param(
-      'ss',
+      'ssi',
       $credentials["sessionId"],
-      $_SERVER['REMOTE_ADDR']
+      $_SERVER['REMOTE_ADDR'],
+      $ignoreExpires
    );
    
    $statement->execute();
@@ -366,9 +368,21 @@ function authenticate()
 
    $connection->close();
    
+   $isFetchClient =
+       !is_null(
+          getHeader("x-auth-token")
+       );
+       
    if ($credentials["authenticated"] === false) {
        
       http_response_code(401);
+      
+      if (!$isFetchClient) {
+          $url = '/client/authentication/logon.php';
+          $redirect = $_SERVER['REQUEST_URI'];
+          $url = $url . '?redirect=' . urlencode($redirect);
+          redirect($url);
+      }
       
       exit();
 
@@ -390,6 +404,86 @@ function refresh() {
 
 }
 
+function getSessionStatus($connection, $credentials)
+{
+
+   if (is_null($credentials) ||
+       is_null($credentials["sessionId"]))
+   {
+      return null;
+   }
+   
+   $statement = $connection->prepare(
+     'CALL getSessionStatus(?);'
+   );
+   
+   $statement->bind_param(
+      's',
+      $credentials["sessionId"]
+   );
+   
+   $statement->execute();
+
+   $statement->bind_result(
+      $label,
+      $percentage,
+      $done
+   );
+   
+   $status = null;
+   
+   if ($statement->fetch()) {
+      $status =[
+         "label" => $label,
+         "percentage" => $percentage,
+         "done" => $done
+      ];
+   }
+   else {
+      $status =[
+         "label" => null,
+         "percentage" => null
+      ];
+   }
+      
+   $statement->close();
+   
+  
+   return $status;
+}
+
+function setSessionStatus($credentials, $label, $percentage, $done)
+{
+    
+   if (is_null($credentials) ||
+       is_null($credentials["sessionId"]))
+   {
+      return;
+   }
+   
+   $connection = getConnection();
+   
+   $statement = $connection->prepare(
+     'CALL setSessionStatus(?,?,?,?);'
+   );
+   
+   $statement->bind_param(
+      'ssdi',
+      $credentials["sessionId"],
+      $label,
+      $percentage,
+      $done
+   );
+   
+   $statement->execute();
+
+      
+   $statement->close();
+   
+   $connection->close();
+  
+   return;
+}
 
 
 

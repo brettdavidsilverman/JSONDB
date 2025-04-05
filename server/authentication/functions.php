@@ -357,13 +357,14 @@ function getCredentials($connection, $ignoreExpires = false)
 }
 
 
-function authenticate()
+function authenticate($ignoreExpires = false)
 {
     
    $connection = getConnection();
    
    $credentials = getCredentials(
-      $connection
+      $connection,
+      $ignoreExpires
    );
 
    $connection->close();
@@ -458,7 +459,7 @@ function setSessionStatus($credentials, $label, $percentage, $done)
    if (is_null($credentials) ||
        is_null($credentials["sessionId"]))
    {
-      return;
+      return false;
    }
    
    $connection = getConnection();
@@ -482,7 +483,7 @@ function setSessionStatus($credentials, $label, $percentage, $done)
    
    $connection->close();
   
-   return;
+   return true;
 }
 
 

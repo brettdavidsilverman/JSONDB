@@ -106,7 +106,8 @@ var dataLink = document.getElementById("dataLink");
 var header = document.getElementById("h1");
 var title = document.getElementById("title");
 var progress = document.getElementById("progress");
-var progressLabel = document.getElementById("progressLabel");
+var progressLabel = document.getElementById("progressLabel");
+var uploading = false;
 
 var origin =
    punycode.toUnicode(
@@ -216,13 +217,22 @@ saveButton.onclick =
       
       authentication.authenticate();
       
-      var json = jsonEditor.value;
-      
       var url = getURL();
       
-      authentication.postJSON(
-         url,
-         json
+      
+      authentication.setSessionStatus(
+         "Uploading...",
+         1,
+         false
+      ).then(
+         () => {
+            updateStatus();
+      
+            return authentication.postJSON(
+               url,
+               jsonEditor.value
+            );
+         }
       )
       .then(
          (uploaded) => {
@@ -372,10 +382,10 @@ function updateStatus(status) {
    }
    
    saveButton.disabled = !status.done;
-
    progress.value = status.percentage;
   
    progressLabel.innerText = status.label;
+   uploading = !status.done;
    
    displayExpires();
 }
@@ -383,7 +393,8 @@ function updateStatus(status) {
 var intervalId =
    window.setInterval(
       function() {
-         updateStatus();
+         if (uploading)
+            updateStatus();
       },
       1000 * 5
    );

@@ -34,7 +34,8 @@
 
       $start = time();
       
-      $credentials = getCredentials($connection, true);
+      $credentials = authenticate(true);
+
       http_response_code(200);
       setCredentialsCookie($credentials);
       

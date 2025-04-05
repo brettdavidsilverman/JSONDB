@@ -59,20 +59,12 @@ class Authentication
       return promise;
    }
    
-   postJSON(url, json, callback) {
+   postJSON(url, json) {
       var parameters = {
          method: "POST",
          body: json
       }
-      
-      if (callback)
-         callback(
-            {
-               label: "Uploading...",
-               percentage: 1
-            }
-         );
-         
+    
       var promise =
          this.fetch(
             url,
@@ -118,8 +110,13 @@ class Authentication
              )
       }
 
+      var _this = this;
       var promise =
-         this.fetch(this.url + "/server/authentication/logon.php", parameters)
+         this.logoff().then(
+            () => {
+               return _this.fetch(this.url + "/server/authentication/logon.php", parameters)
+            }
+         )
          .then(
             function(response) {
                return response.json();
@@ -203,6 +200,21 @@ class Authentication
 
       return promise;
    }
+   
+   setSessionStatus(label, percentage, done) {
+
+      var promise =
+         this.postJSON(
+            this.url + "/server/authentication/setSessionStatus.php",
+            JSON.stringify(
+               { label, percentage, done }
+            )
+         );
+
+      return promise;
+   }
+   
+   
    
    getUserEmailExists(email) {
 

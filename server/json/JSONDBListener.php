@@ -49,14 +49,16 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->stack = [];
         $this->keys = [];
         
-        $userId = $this->credentials['userId'];
+        $sessionId = $this->credentials['sessionId'];
+        $userId = $this->credentials["userId"];
         
         $statement = $this->connection->prepare(
-              "CALL deleteTempObjects(?);"
+              "CALL deleteTempObjects(?,?);"
            );
           
         $statement->bind_param(
-           'i',
+           'si',
+           $sessionId,
            $userId
         );
    
@@ -65,7 +67,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->close();
         
         $this->tempObjectId =
-           $this->startComplexValue('temp');
+           $this->startComplexValue($sessionId);
            
         
         
@@ -82,14 +84,16 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            false
         );
         
-        $userId = $this->credentials['userId'];
+        $sessionId = $this->credentials['sessionId'];
+        $userId = $this->credentials["userId"];
         
         $statement = $this->connection->prepare(
-              "CALL upgradeTempObjects(?);"
+              "CALL upgradeTempObjects(?,?);"
            );
           
         $statement->bind_param(
-           'i',
+           'si',
+           $sessionId,
            $userId
         );
    

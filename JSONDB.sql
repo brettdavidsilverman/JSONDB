@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `Object`;
 CREATE TABLE `Object` (
   `objectId` bigint NOT NULL AUTO_INCREMENT,
   `parentId` bigint DEFAULT NULL,
-  `type` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `ownerId` bigint NOT NULL,
   PRIMARY KEY (`objectId`),
   KEY `I_Object_parentId` (`parentId`) USING BTREE,
@@ -33,7 +33,7 @@ CREATE TABLE `Object` (
   KEY `I_Object_type` (`type`) USING BTREE,
   CONSTRAINT `FK_Object_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Object_parentId` FOREIGN KEY (`parentId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1080943 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1080946 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -77,7 +77,7 @@ DROP TABLE IF EXISTS `Session`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Session` (
   `sessionId` bigint NOT NULL AUTO_INCREMENT,
-  `sessionKey` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `sessionKey` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `userId` bigint NOT NULL,
   `createdDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ipAddress` varchar(15) NOT NULL,
@@ -90,7 +90,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -162,12 +162,12 @@ CREATE TABLE `User` (
   `userId` bigint NOT NULL AUTO_INCREMENT,
   `userEmail` varchar(320) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `logonSecret` blob,
-  `newUserSecret` varchar(36) DEFAULT NULL,
-  `lostSecret` varchar(36) DEFAULT NULL,
+  `newUserSecret` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `lostSecret` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=95 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=96 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -176,6 +176,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
+INSERT INTO `User` VALUES (95,'brettdavidsilverman@gmail.com',_binary 'NFoXZjS0vLRKodXnf7o0RAbq0DBtqA7fyo+L0COdRmuZJiSaxKJTiUvwgMOhPBwo8oqmTFu459PUniZKP83OQQ==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -206,7 +207,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_objectId` FOREIGN KEY (`objectId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=15758387 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15758390 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -295,7 +296,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `authenticate`(
-   sessionKey VARCHAR(36),
+   sessionKey VARCHAR(32),
    ipAddress VARCHAR(16),
    ignoreExpires TINYINT
 )
@@ -427,7 +428,7 @@ DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `createObject`(
    ownerId BIGINT,
    parentId BIGINT,
-   type  VARCHAR(36)
+   type  VARCHAR(32)
 )
 BEGIN
 
@@ -494,7 +495,7 @@ BEGIN
          logonSecret,
          newUserSecret,
          validated )
-      VALUES  ( @email, @secret, UUID(), 0 );
+      VALUES  ( @email, @secret, MD5(UUID()), 0 );
      
      SET @userId = LAST_INSERT_ID();
      
@@ -598,7 +599,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `deleteTempObjects`(
-    sessionKey VARCHAR(36),
+    sessionKey VARCHAR(32),
     userId BIGINT
 )
 BEGIN
@@ -712,7 +713,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getSessionStatus`(
-   sessionKey VARCHAR(36)
+   sessionKey VARCHAR(32)
 )
 BEGIN
    SET @sessionKey = sessionKey;
@@ -790,7 +791,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `logoff`(
-   sessionKey VARCHAR(36),
+   sessionKey VARCHAR(32),
    ipAddress VARCHAR(15)
 )
 BEGIN
@@ -843,7 +844,7 @@ BEGIN
       
    );
    
-   SET @sessionKey = uuid();
+   SET @sessionKey = MD5(UUID());
    
    IF @userId IS NOT NULL 
    THEN
@@ -912,7 +913,7 @@ BEGIN
    SET @email = email;
    
    UPDATE   User
-   SET            User. lostSecret = UUID()
+   SET            User. lostSecret = MD5(UUID())
    WHERE    User.userEmail = @email;
    
    SELECT   lostSecret
@@ -938,7 +939,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `resetSecret`(
    email NVARCHAR(320),
-   lostSecret VARCHAR(36),
+   lostSecret VARCHAR(32),
    newSecret BLOB
 )
 BEGIN
@@ -985,7 +986,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `setSessionStatus`(
-   sessionKey VARCHAR(36),
+   sessionKey VARCHAR(32),
    label VARCHAR(100),
    percentage FLOAT,
    done TINYINT
@@ -1023,7 +1024,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempObjects`(
-   sessionKey VARCHAR(36),
+   sessionKey VARCHAR(32),
    userId BIGINT
 )
 BEGIN
@@ -1057,7 +1058,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `validateUserEmail`(
    email NVARCHAR(320),
-   newUserSecret VARCHAR(36)
+   newUserSecret VARCHAR(32)
 )
 BEGIN
 
@@ -1119,4 +1120,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-06  9:09:22
+-- Dump completed on 2025-04-06  9:35:53

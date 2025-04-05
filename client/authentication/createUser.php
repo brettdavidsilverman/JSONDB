@@ -84,6 +84,7 @@ function onSecretFile() {
       secretFile.files[0], 
       thumbnail,
       function(secret) {
+         secretFile.value = null;
          updateForm();
       }
    );
@@ -123,6 +124,11 @@ function onEmailInput() {
 
 function updateForm() {
 
+   if (thumbnail.secret)
+      thumbnail.classList.add("pressed");
+   else
+      thumbnail.classList.remove("pressed");
+   
    authentication.getUserEmailExists(
       email.value
    ).then(

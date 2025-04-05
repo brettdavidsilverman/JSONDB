@@ -169,11 +169,17 @@
       
       $values = loadObjectValues($statement);
       
+      $objectType = null;
+      $isEmpty = true;
+      
       // Print opening bracket
       // and store the corresponding
-      // closure trailer
-      $objectType = $values[0]["type"];
-      $isEmpty = is_null($values[0]["objectIndex"]);
+      // closure trail
+      if (array_key_exists(0, $values)) {
+         $objectType = $values[0]["type"];
+         $isEmpty = is_null($values[0]["objectIndex"]);
+      }
+      
       $trailer = null;
       
       $isSingleValue = !is_null($valueId);

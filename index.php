@@ -219,7 +219,6 @@ saveButton.onclick =
       
       var url = getURL();
       
-      
       authentication.setSessionStatus(
          "Uploading...",
          1,
@@ -227,10 +226,18 @@ saveButton.onclick =
       ).then(
          () => {
             updateStatus();
-      
-            return authentication.postJSON(
+            
+            var file = new Blob(
+               [jsonEditor.value],
+               {
+                  type: "application/json"
+               }
+            );
+            
+            return authentication.postFile(
                url,
-               jsonEditor.value
+               file,
+               updateStatus
             );
          }
       )

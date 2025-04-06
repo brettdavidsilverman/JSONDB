@@ -1,5 +1,8 @@
 class Authentication
 {
+   static _uploadProgressName = null;
+   static _maxFileSize = 8000000;
+   
    constructor(authenticationServer = document.location.origin) {
       var creds = this.getCredentials();
       
@@ -83,6 +86,116 @@ class Authentication
 
          
       return promise;
+   }
+   
+   postFile(url, file, callback) {
+      
+      if (file.size >
+          Authentication._maxFileSize)
+      {
+         return Promise.reject(
+            "Max file size is " +
+            Authentication._maxFileSize
+         );
+      }
+         
+      var _this = this;
+      
+      function getProgress()
+      {
+         _this.fetch(
+            _this.url + "/testprogress.php"
+         )
+         .then(
+            (response) => {
+               return response.json();
+            }
+         )
+         .then(
+             (progress) => {
+                 if (progress)
+                    callback(progress);
+             }
+         )
+         .catch(
+            (error) => {
+               window.clearInterval(intervalId);
+               alert( error);
+            }
+         );
+      }
+      
+      var intervalId;
+      
+      if (callback) {
+         intervalId = window.setInterval(
+           getProgress,
+           5000
+         );
+         callback(
+            {
+               label: "Uploading...",
+               percentage: 1,
+               done: false,
+               error: false
+            }
+         );
+      }
+      
+      var promise =
+         this.getUploadProgressName()
+         .then(
+            (name) => {
+               var formData = new FormData();
+               formData.append(name, "postFile");
+               formData.append("file", file);
+               return _this.fetch(
+                  _this.url + "/testupload.php",
+                  {
+                     method: "POST",
+                     body: formData
+                  }
+               );
+            }
+         )
+         .then(
+            (response) => {
+               if (intervalId) {
+                  window.clearInterval(
+                     intervalId
+                  );
+               }
+               
+               
+               return response.json()
+            }
+         )
+         .then(
+            (ok) => {
+
+               if (callback) {
+                   
+                  var progress = {
+                     label:
+                        ok ?
+                           "Finished uploading" :
+                           "Error uploading",
+                     percentage: 100,
+                     done: true,
+                     error: !ok
+                  }
+                  
+                  callback(
+                     progress
+                  );
+               }
+               return ok;
+               
+            }
+         );
+         
+      return promise;
+      
    }
    
    
@@ -498,6 +611,33 @@ class Authentication
 
       return promise;
 
+   }
+   
+   getUploadProgressName() {
+      if (Authentication._uploadProgressName)
+         return Promise.resolve(
+            Authentication._uploadProgressName
+         );
+         
+      var _this = this;
+      
+      var promise = this.fetch(
+         this.url +
+         "/server/getUploadProgressName.php"
+      )
+      .then(
+         (response) => {
+             return response.text()
+         }
+      )
+      .then(
+         (text) => {
+            Authentication._uploadProgressName = text;
+            return text;
+         }
+      );
+      
+      return promise;
    }
    
    

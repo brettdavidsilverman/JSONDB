@@ -236,8 +236,8 @@ saveButton.onclick =
             
             return authentication.postFile(
                url,
-               file,
-               updateStatus
+               file
+              // updateStatus
             );
          }
       )

@@ -1,12 +1,50 @@
 <?php
+session_start();
 
-require_once 'functions.php';
+require_once "functions.php";
+
+$prefix = ini_get("session.upload_progress.prefix");
+$name = "postFile";
+$key = $prefix . $name;
+
+
+$credentials = authenticate();
 
 $connection = getConnection();
 
-$credentials = getCredentials($connection);
+$progress = null;
+if (array_key_exists($key, $_SESSION) &&
+   !$_SESSION[$key]["done"]) {
+    
+   $upload = $_SESSION[$key];
 
-$status = getSessionStatus($connection, $credentials);
+   $percentage =
+      $upload["bytes_processed"] /
+      $upload["content_length"]  *
+      100.0;
+      
+   $error =
+      $upload["files"][0]["error"] != 0;
+   
+   $label = null;
+   
+   if ($error === false)
+      $label = "Uploading...";
+   else
+      $label = "Error uploading";
+   
+   $progress = [
+      "label" => $label,
+      "percentage" => $percentage,
+      "done" => false,
+      "error" => $error
+   ];
+}
+else {
+   $progress = getSessionStatus($connection, $credentials);
+
+}
+
 
 $connection->close();
 
@@ -16,9 +54,6 @@ setCredentialsCookie($credentials);
 
 header("content-type: application/json");
 
-if (!is_null($status))
-   echo json_encode($status);
-else
-   echo "null";
+echo json_encode($progress);
    
 ?>

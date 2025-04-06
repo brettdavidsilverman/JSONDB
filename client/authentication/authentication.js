@@ -88,7 +88,7 @@ class Authentication
       return promise;
    }
    
-   postFile(url, file, callback) {
+   postFile(url, file) {
       
       if (file.size >
           Authentication._maxFileSize)
@@ -101,46 +101,6 @@ class Authentication
          
       var _this = this;
       
-      function getProgress()
-      {
-         _this.fetch(
-            _this.url + "/testprogress.php"
-         )
-         .then(
-            (response) => {
-               return response.json();
-            }
-         )
-         .then(
-             (progress) => {
-                 if (progress)
-                    callback(progress);
-             }
-         )
-         .catch(
-            (error) => {
-               window.clearInterval(intervalId);
-               alert( error);
-            }
-         );
-      }
-      
-      var intervalId;
-      
-      if (callback) {
-         intervalId = window.setInterval(
-           getProgress,
-           5000
-         );
-         callback(
-            {
-               label: "Uploading...",
-               percentage: 1,
-               done: false,
-               error: false
-            }
-         );
-      }
       
       var promise =
          this.getUploadProgressName()
@@ -150,7 +110,7 @@ class Authentication
                formData.append(name, "postFile");
                formData.append("file", file);
                return _this.fetch(
-                  _this.url + "/testupload.php",
+                  url,
                   {
                      method: "POST",
                      body: formData
@@ -160,37 +120,7 @@ class Authentication
          )
          .then(
             (response) => {
-               if (intervalId) {
-                  window.clearInterval(
-                     intervalId
-                  );
-               }
-               
-               
                return response.json()
-            }
-         )
-         .then(
-            (ok) => {
-
-               if (callback) {
-                   
-                  var progress = {
-                     label:
-                        ok ?
-                           "Finished uploading" :
-                           "Error uploading",
-                     percentage: 100,
-                     done: true,
-                     error: !ok
-                  }
-                  
-                  callback(
-                     progress
-                  );
-               }
-               return ok;
-               
             }
          );
          
@@ -227,7 +157,7 @@ class Authentication
       var promise =
          this.logoff().then(
             () => {
-               return _this.fetch(this.url + "/server/authentication/logon.php", parameters)
+               return _this.fetch(_this.url + "/server/authentication/logon.php", parameters)
             }
          )
          .then(

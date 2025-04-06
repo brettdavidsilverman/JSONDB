@@ -121,7 +121,7 @@ function getValueByPath($connection, $userId, $parentObjectId, & $paths)
    return $valueId;
 }
 
-function handlePost($connection, $file = 'php://input')
+function handlePost($connection, $file = null)
 {
 
    $start = time();
@@ -134,6 +134,9 @@ function handlePost($connection, $file = 'php://input')
    
    header('Content-Type: application/json');
     
+   if (is_null($file))
+      $file = 'php://input';
+      
    $stream = fopen($file, 'r');
    
 

@@ -18,8 +18,15 @@
    
    $method = $_SERVER['REQUEST_METHOD'];
 
-   if ($method === "POST")
-      handlePost($connection);
+   if ($method === "POST") {
+      $file = null;
+      if (array_key_exists("file", $_FILES)) {
+         if ($_FILES["file"]["error"] == 0) {
+            $file = $_FILES["file"]["tmp_name"];
+         }
+      }
+      handlePost($connection, $file);
+   }
    else if ($method === "GET")
       handleGet($connection);
       

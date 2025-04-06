@@ -152,4 +152,86 @@ function getHeader($name) {
    return null;
    
 }
+
+function getSessionStatus($connection, $credentials)
+{
+
+   if (is_null($credentials) ||
+       is_null($credentials["sessionKey"]))
+   {
+      return null;
+   }
+   
+   $statement = $connection->prepare(
+     'CALL getSessionStatus(?);'
+   );
+   
+   $statement->bind_param(
+      's',
+      $credentials["sessionKey"]
+   );
+   
+   $statement->execute();
+
+   $statement->bind_result(
+      $label,
+      $percentage,
+      $done
+   );
+   
+   $status = null;
+   
+   if ($statement->fetch()) {
+      $status =[
+         "label" => $label,
+         "percentage" => $percentage,
+         "done" => $done
+      ];
+   }
+   else {
+      $status =[
+         "label" => null,
+         "percentage" => null
+      ];
+   }
+      
+   $statement->close();
+   
+  
+   return $status;
+}
+
+function setSessionStatus($credentials, $label, $percentage, $done)
+{
+    
+   if (is_null($credentials) ||
+       is_null($credentials["sessionKey"]))
+   {
+      return false;
+   }
+   
+   $connection = getConnection();
+   
+   $statement = $connection->prepare(
+     'CALL setSessionStatus(?,?,?,?);'
+   );
+   
+   $statement->bind_param(
+      'ssdi',
+      $credentials["sessionKey"],
+      $label,
+      $percentage,
+      $done
+   );
+   
+   $statement->execute();
+
+      
+   $statement->close();
+   
+   $connection->close();
+  
+   return true;
+}
+
 ?>

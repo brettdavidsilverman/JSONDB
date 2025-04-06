@@ -176,7 +176,7 @@ function logon()
                      if (exists)
                         alert("Invalid email or secret.");
                      else {
-                        if (confirm("Email does not exist. Do you wish to register as a new user?"))
+                        if (confirm("Email does not exist or has not been validated. Do you wish to register as a new user?"))
                         {
                            document.location.href =
                               "createUser.php?redirect=" +

@@ -74,7 +74,7 @@ function lostSecret(token)
                email.value + ".authentication.thumbnail"
             );
             alert("Please check your inbox for the link to reset your password");
-            redirect("logon.php");
+            document.location.replace("logon.php");
          }
          else
             alert("Error sending email");

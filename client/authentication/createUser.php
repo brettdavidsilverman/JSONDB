@@ -108,7 +108,7 @@ function createUser(token)
       function(response) {
          if (response) {
             alert("Please check your inbox for the link to validate your email");
-            redirect("logon.php");
+            document.location.replace("logon.php");
          }
          else
             alert("Error sending email");

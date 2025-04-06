@@ -27,4 +27,8 @@ while [ "${RUNNING}" == "true" ]; do
    fi
 done
 
+./getsessionstatus.sh
+
+echo ""
+
 ./logoff.sh

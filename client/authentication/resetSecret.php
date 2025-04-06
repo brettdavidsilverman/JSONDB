@@ -87,6 +87,7 @@ function onSecretFile() {
        secretFile.files[0],
        thumbnail,
        function() {
+          secretFile.value = null;
           resetSecret();
        }
     );
@@ -129,7 +130,7 @@ function resetSecret()
          function(response) {
             if (response) {
                saveFields();
-               redirect("logon.php");
+               document.location.replace("logon.php");
             }
             else {
                throw "Error resetting secret";
@@ -168,7 +169,7 @@ if (params.has("email")) {
    email.disabled = true;
 }
 else
-   redirect("logon.php");
+   document.location.replace("logon.php");
 
 
          </script>

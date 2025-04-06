@@ -137,7 +137,7 @@ function changeSecret() {
                email.value
             );
             alert("Secret changed");
-            document.location.href = "logon.php";
+            document.location.replace("logon.php");
             return true;
          }
          else {

@@ -228,7 +228,7 @@ class Authentication
 
          
       var promise =
-         this.fetch(this.url + "/server/authentication/getSessionStatus.php")
+         this.fetch(this.url + "/server/getSessionStatus.php")
          .then(
             function(response) {
                return response.json();
@@ -242,7 +242,7 @@ class Authentication
 
       var promise =
          this.postJSON(
-            this.url + "/server/authentication/setSessionStatus.php",
+            this.url + "/server/setSessionStatus.php",
             JSON.stringify(
                { label, percentage, done }
             )
@@ -435,6 +435,58 @@ class Authentication
       
    }
    
+   setCredentials(credentials) {
+       
+      if (!credentials) {
+          document.cookie =
+             "credentials=;" +
+             "path=/;";
+         return;
+         
+      }
+      
+      var credentialsString =
+         encodeURIComponent(
+            JSON.stringify(
+               credentials
+            )
+         );
+         
+      var expires = "0";
+      if (credentials.expires) {
+    
+         expires = 
+            new Date(credentials.expires);
+    
+         expires =
+            expires.toUTCString();
+               
+      }
+
+      var cookie;
+      
+      if (credentials.authenticated)
+      {
+             
+         cookie =
+            "credentials=" +
+            credentialsString + ";" +
+            "path=/" + ";";
+               
+         if (expires)
+            cookie += "expires=" + expires + ";"
+      }
+      else
+      {
+         cookie =
+            "credentials=;" +
+            "path=/;";
+      }
+       
+      document.cookie = cookie;
+
+   }
+   
    saveCredentials(response) {
 
        if (response.status == 401) {
@@ -457,40 +509,7 @@ class Authentication
           );
        }
         
-       var expires = "0";
-       if (credentials && credentials.expires) {
-    
-          expires = 
-             new Date(credentials.expires);
-    
-          expires =
-             expires.toUTCString();
-               
-       }
-
-       if (credentials &&
-           credentials.authenticated)
-       {
-             
-          cookie =
-             "credentials=" +
-                credentialsString + ";" +
-                "path=/" + ";";
-               
-          if (expires)
-             cookie += "expires=" + expires + ";"
-
-            
-       }
-       else if (credentials &&
-                !credentials.authenticated)
-       {
-          cookie =
-             "credentials=;" +
-             "path=/;";
-       }
-       
-       document.cookie = cookie;
+       this.setCredentials(credentials);
 
    }
    

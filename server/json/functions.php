@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . "/../functions.php";
+
 require_once 'JSONDBListener.php';
 require_once 'ValueCountListener.php';
 

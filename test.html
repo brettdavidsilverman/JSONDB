@@ -3,7 +3,7 @@
    <head>
       <meta charset="utf-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
-      <title id="title">dev.bee.fish</title>
+      <title id="title">bee.fish</title>
       <script src="https://bee.fish/client/head.js?v=3"></script>      <script src="https://bee.fish/client/authentication/authentication.js?v=34"></script>
       <script src="https://bee.fish/client/authentication/sha512.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
@@ -30,7 +30,8 @@
       <br />
       <label for="progress"><div id="progressLabel"></div></label>
       <progress id="progress" value="0" max="100"></progress>
-
+      <iframe src="https://bee.fish/api.html" id="iframe"></iframe>
+      
       <script>
 
 var authentication =
@@ -42,7 +43,16 @@ authentication.onHandleLogon =
 var logon = document.getElementById("logon");
 var uploadFile = document.getElementById("uploadFile");var progress = document.getElementById("progress");
 var progressLabel = document.getElementById("progressLabel");
+var iframe = document.getElementById("iframe");
 
+iframe.onload = function() {
+   iframe.contentWindow.addEventListener(
+      "status",
+      (status) => {
+         alert(status.data);
+      }
+   );
+}
 
 var getDataButton = document.getElementById("getData");
 
@@ -161,9 +171,17 @@ function displayExpires() {
          }
       );
       const file = event.target.files[0];
+      iframe.contentWindow.postMessage(
+         {
+            path: "/my",
+            file: file
+         }
+      );
+      
       event.target.value = null;
+      /*
       authentication.postFile(
-         "https://bee.fish/my",
+         "/my",
          file
       )
      .then(
@@ -174,13 +192,14 @@ function displayExpires() {
      .catch(
         (error) => { alert(error) }
      );
+     */
    }
    
    //alert(self.crypto.randomUUID());
    
 function updateStatus(status) {
 
-   if (!status) {
+   if (!status && authentication.authenticated) {
       authentication.getSessionStatus()
       .then(
          (status) => {
@@ -196,6 +215,9 @@ function updateStatus(status) {
       return;
    }
    
+   if (!status)
+      return;
+      
    progress.value = status.percentage;
   
    progressLabel.innerText = status.label;

@@ -1,5 +1,13 @@
 <?php
 
+session_start(
+   [
+      'cookie_lifetime' => 60*60
+   ]
+);
+
+require_once "authentication/functions.php";
+require_once "json/functions.php";
 
 function getConfig() {
    $config = file_get_contents(__DIR__ . '/../../config.json'); 
@@ -98,8 +106,11 @@ function getPostedData()
       
    fclose($filePointer);
    
-   $json =
-      json_decode($input, true);
+   $json = null;
+   
+   if (!is_null($input))
+      $json =
+         json_decode($input, true);
       
    return $json;
 }
@@ -153,7 +164,7 @@ function getHeader($name) {
    
 }
 
-function getSessionStatus($connection, $credentials)
+function getSessionStatus($credentials)
 {
 
    if (is_null($credentials) ||
@@ -161,6 +172,8 @@ function getSessionStatus($connection, $credentials)
    {
       return null;
    }
+   
+   $connection = getConnection();
    
    $statement = $connection->prepare(
      'CALL getSessionStatus(?);'
@@ -185,18 +198,22 @@ function getSessionStatus($connection, $credentials)
       $status =[
          "label" => $label,
          "percentage" => $percentage,
-         "done" => $done
+         "done" => $done,
+         "error" => false
       ];
    }
    else {
       $status =[
          "label" => null,
-         "percentage" => null
+         "percentage" => null,
+         "done" => true,
+         "error" => true
       ];
    }
       
    $statement->close();
    
+   $connection->close();
   
    return $status;
 }

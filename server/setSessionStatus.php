@@ -1,19 +1,25 @@
 <?php
 
-require_once 'functions.php';
+require_once "functions.php";
 
 $data = getPostedData();
 
+$credentials = authenticate();
+
 http_response_code(200);
+
+setCredentialsCookie($credentials);
 
 header("content-type: application/json");
 
-if (is_null($data)) {
+if (is_null($data) ||
+    !array_key_exists("label", $data) ||
+    !array_key_exists("percentage", $data) ||
+    !array_key_exists("done", $data))
+{
    echo "false";
    exit();
 }
-
-$credentials = authenticate();
 
 $result = setSessionStatus(
    $credentials,
@@ -22,11 +28,6 @@ $result = setSessionStatus(
    $data["done"]
 );
 
-
-
-http_response_code(200);
-
-setCredentialsCookie($credentials);
 
 if ($result === true)
    echo "true";

@@ -1,14 +1,7 @@
 <?php
 
-require_once __DIR__ . "/../functions.php";
-/*
-session_start(
-   [
-      'cookie_lifetime' => 1800
-   ]
-);
+//require_once "../functions.php";
 
-*/
 
 function userEmailExists($connection, $email)
 {

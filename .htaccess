@@ -10,6 +10,8 @@ RewriteEngine on
   </IfModule>
 </FilesMatch>
 
+#Header set Access-Control-Allow-Origin "*"
+
 AddDefaultCharset utf-8
 AddCharset utf-8 .htm .html .js .css .json
 

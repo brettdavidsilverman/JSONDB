@@ -1,6 +1,8 @@
 <?php
 //require_once 'jsonstreamingparser/vendor/autoload.php';
+//require_once "../functions.php";
 require_once "Parser.php";
+
 
 class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 {

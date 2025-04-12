@@ -1,11 +1,11 @@
 <?php
-
+/*
 session_start(
    [
       'cookie_lifetime' => 60*60
    ]
 );
-
+*/
 require_once "authentication/functions.php";
 require_once "json/functions.php";
 
@@ -203,9 +203,9 @@ function getSessionStatus($credentials)
       ];
    }
    else {
-      $status =[
-         "label" => null,
-         "percentage" => null,
+      $status = [
+         "label" => "Error in php",
+         "percentage" => 0,
          "done" => true,
          "error" => true
       ];

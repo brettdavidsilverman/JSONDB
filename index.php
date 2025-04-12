@@ -9,7 +9,6 @@
    
    setCredentialsCookie($credentials);
    
-   $userId = $credentials["userId"];
    /*
    $expires = $credentials["expires"];
    $date = new DateTime();
@@ -33,6 +32,10 @@
       <script src="/client/punycode.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
       <style>
+form > div {
+   text-align: left;
+}
+
       </style>
    </head>
    <body>
@@ -42,7 +45,7 @@
       
       <div>
          <form onsubmit="return false;">
-            <div style="text-align:left;">
+            <div>
                <label for="pathInput">Path</label>
             </div>
             <input type="text" id="pathInput"/>
@@ -51,7 +54,15 @@
          </form>
          <br/>
          <form onsubmit="return false;">
-            <div style="text-align:left;">
+            <div>
+               <label for="fileInput">File</label>
+            </div>
+            <input type="file" id="fileInput" onchange="loadFile()"/>
+            <br/>
+         </form>
+         <br/>
+         <form onsubmit="return false;">
+            <div>
                <label for="jsonEditor">
                   JSON Editor
                </label>
@@ -101,7 +112,8 @@ logon.href += "?redirect=" + encodeURIComponent(window.location.href);
 
 var pathInput = document.getElementById("pathInput");
 var result = document.getElementById("result");
-var jsonEditor = document.getElementById("jsonEditor");var html = document.getElementById("html");var fetchButton = document.getElementById("fetchButton");var saveButton = document.getElementById("saveButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
+var jsonEditor = document.getElementById("jsonEditor");var html = document.getElementById("html");var fetchButton = document.getElementById("fetchButton");
+var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
 var dataLink = document.getElementById("dataLink");
 var header = document.getElementById("h1");
 var title = document.getElementById("title");
@@ -128,7 +140,26 @@ authentication.onHandleLogon =
    }
    
    
-//authentication.authenticate();
+//authentication.authenticate();function loadFile() {
+    fileInput.disabled = true;
+    var file = fileInput.files[0];
+    fileInput.value = null;
+    var fileReader = new FileReader();
+    
+    fileReader.onload =
+       () => {
+           jsonEditor.value =
+               fileReader.result;
+           fileInput.disabled = false;
+       }
+       
+    if (file)
+        fileReader.readAsText(file);
+    else
+        fileInput.disabled = false;
+    
+}
+
 function loadJSON() {
     
    var url = getURL();
@@ -219,14 +250,21 @@ saveButton.onclick =
       
       var url = getURL();
       
+      var status = {
+         label: "Uploading...",
+         percentage: 1,
+         done: false
+      }
+      
+      updateStatus(status);
+      
       authentication.setSessionStatus(
-         "Uploading...",
-         1,
-         false
+         status.label,
+         status.percentage + 1,
+         status.done
       ).then(
          () => {
-            updateStatus();
-            
+
             var file = new Blob(
                [jsonEditor.value],
                {
@@ -370,41 +408,52 @@ function displayExpires() {
  
 }
 
+var timeoutId = null;
+function setStatusTimeout() {
+    
+   if (timeoutId)
+      window.clearTimeout(timeoutId);
+  
+   timeoutId = window.setTimeout(
+      updateStatus,
+      1000 * 5
+   );
+   
+}
+
 function updateStatus(status) {
 
+       
    if (!status) {
       authentication.getSessionStatus()
       .then(
          (status) => {
+            if (!status)
+               throw new Error("Missing status");
             updateStatus(status);
          }
       )
       .catch(
          (error) => {
-            window.clearInterval(intervalId);
-            alert(error);
+            displayError(error, updateStatus);
+            setStatusTimeout();
          }
       );
+      
       return;
    }
-   
+
+
    saveButton.disabled = !status.done;
    progress.value = status.percentage;
   
    progressLabel.innerText = status.label;
-   uploading = !status.done;
    
    displayExpires();
+   
+   setStatusTimeout();
+   
 }
-      
-var intervalId =
-   window.setInterval(
-      function() {
-         if (uploading)
-            updateStatus();
-      },
-      1000 * 5
-   );
       
 updateStatus();
 

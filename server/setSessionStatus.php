@@ -12,10 +12,7 @@ setCredentialsCookie($credentials);
 
 header("content-type: application/json");
 
-if (is_null($data) ||
-    !array_key_exists("label", $data) ||
-    !array_key_exists("percentage", $data) ||
-    !array_key_exists("done", $data))
+if (is_null($data))
 {
    echo "false";
    exit();

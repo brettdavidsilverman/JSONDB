@@ -33,7 +33,7 @@ CREATE TABLE `Object` (
   KEY `I_Object_type` (`type`) USING BTREE,
   CONSTRAINT `FK_Object_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Object_parentId` FOREIGN KEY (`parentId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1101770 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2383389 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -90,7 +90,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=147 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -99,7 +99,6 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (25,'33f29db7319c7f3e4965eb3155f8bc4f',97,'2025-04-06 10:33:51','211.30.175.65','2025-04-06 10:33:52',NULL,NULL,NULL),(26,'d63720a95bc9af4992a083816333ea94',97,'2025-04-06 10:34:38','211.30.175.65','2025-04-06 10:34:56',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -177,7 +176,6 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (97,'brettdavidsilverman@gmail.com',_binary 'HrjUWouqXoZDhJO4kw0aiYOI82D9Cs7qpYvVMLk5xjsePrCjsbpuL/W67P9KLIwnAb1FsaXQr0VqnEuIGwzAWg==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -208,7 +206,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_objectId` FOREIGN KEY (`objectId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=16096440 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=36815462 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -349,6 +347,8 @@ BEGIN
             INTERVAL @timeout SECOND
          )
       )  * 1000;
+   
+    COMMIT;
       
     SELECT Session. sessionKey,
                       Session. userId,
@@ -357,7 +357,7 @@ BEGIN
    FROM      Session
    WHERE  Session. sessionKey = @sessionKey;
    
-   COMMIT;
+  
    
 END ;;
 DELIMITER ;
@@ -407,9 +407,11 @@ BEGIN
       SET @result = 1;
    END IF;
    
+   COMMIT; 
+   
    SELECT @result as result;
                     
-   COMMIT; 
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -453,9 +455,11 @@ BEGIN
    
    SET @objectId = LAST_INSERT_ID();
    
+   COMMIT;
+   
    SELECT @objectId as objectId;
    
-   COMMIT;
+   
    
 END ;;
 DELIMITER ;
@@ -579,9 +583,9 @@ BEGIN
    
    SET @valueId = LAST_INSERT_ID();
    
-   SELECT @valueId AS valueId;
-   
    COMMIT;
+   
+   SELECT @valueId AS valueId;
    
 END ;;
 DELIMITER ;
@@ -876,20 +880,14 @@ BEGIN
             INTERVAL @timeout SECOND
          )
       ) * 1000;
-      
-   /*
    
-   SET @expires =
-      UNIX_TIMESTAMP(NOW()) 
-      * 1000 +
-      @timeout;
-      */
-      
+   COMMIT; 
+    
    SELECT @userId as userId,
                     @sessionKey as sessionKey,
                    @expires  as expires;
                    
-   COMMIT; 
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -917,11 +915,13 @@ BEGIN
    SET            User. lostSecret = MD5(UUID())
    WHERE    User.userEmail = @email;
    
+   COMMIT;
+   
    SELECT   lostSecret
    FROM     User
    WHERE   User.userEmail = @email;
     
-   COMMIT;
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -965,10 +965,10 @@ BEGIN
       WHERE    User.userId = @userId;
    END IF;
    
+   COMMIT;
+   
    SELECT   NOT ISNULL(@userId)
    AS              response;
-   
-   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -993,20 +993,21 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `setSessionStatus`(
    done TINYINT
 )
 BEGIN
-   START TRANSACTION;
    
    SET @sessionKey = sessionKey,
             @label = label,
             @percentage = percentage,
             @done = done;
             
+   START TRANSACTION;
+   
    UPDATE Session
    SET           Session.label = @label,
                       Session.percentage = @percentage,
                       Session.done = @done
    WHERE   Session.sessionKey = @sessionKey;
    
-   COMMIT;
+  COMMIT;
    
 END ;;
 DELIMITER ;
@@ -1031,6 +1032,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempObjects`(
 BEGIN
    SET @userId = userId,
             @sessionKey = sessionKey;
+            
+   START TRANSACTION;
    
    DELETE FROM Object
    WHERE Object.ownerId = @userId
@@ -1040,6 +1043,8 @@ BEGIN
    SET           Object.type = 'root'
    WHERE  Object.ownerId = @userId
    AND         Object.type = @sessionKey;
+   
+   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -1081,11 +1086,10 @@ BEGIN
       WHERE    User.userId = @userId;
    END IF;
    
+   COMMIT;
    
    SELECT NOT ISNULL(@userId)
    AS            validated;
-   
-   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -1121,4 +1125,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-06 10:35:18
+-- Dump completed on 2025-04-12 14:33:29

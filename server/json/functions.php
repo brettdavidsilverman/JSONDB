@@ -167,7 +167,7 @@ function handlePost($connection, $file = null)
          
       echo "false";
          
-      exit();
+      return false;
          
    }
       
@@ -204,6 +204,8 @@ function handlePost($connection, $file = null)
    );
       
    echo "true";
+   
+   return true;
          
 }
    
@@ -225,9 +227,10 @@ function handleGet($connection)
 
       if (is_null($valueId)) {
          http_response_code(404);
+         setCredentialsCookie($credentials);
          header('Content-Type: text/plain');
          echo "🛑 Path " . join("/", $paths) . " not found\r\n";
-         exit();
+         return false;
       }
       $objectId = null;
    }

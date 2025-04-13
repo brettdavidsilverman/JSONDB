@@ -28,7 +28,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $startTime;
     
     public $nextId = 0;
-    public $tempObjectId = null;
+    public $tempValueId = null;
     
     public function __construct($connection, $credentials, $totalValueCount) {
         
@@ -50,28 +50,27 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     {
         $this->stack = [];
         $this->keys = [];
-        
-        $sessionKey = $this->credentials['sessionKey'];
-        $userId = $this->credentials["userId"];
-        
-        $statement = $this->connection->prepare(
-              "CALL deleteTempObjects(?,?);"
-           );
+
+        $sessionKey =
+            $this->credentials["sessionKey"];
+            
+        $statement =
+            $this->connection->prepare(
+                "CALL deleteTempValues(?);"
+            );
           
         $statement->bind_param(
-           'si',
-           $sessionKey,
-           $userId
+           's',
+           $sessionKey
         );
    
         $statement->execute();
    
         $statement->close();
         
-        $this->tempObjectId =
-           $this->startComplexValue($sessionKey);
+       // $this->tempValueId =
+       //    $this->startComplexValue("root");
            
-        
         
     }
     
@@ -85,22 +84,22 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            100,
            false
         );
+    
+        $sessionKey =
+           $this->credentials["sessionKey"];
         
-        $sessionKey = $this->credentials['sessionKey'];
-        $userId = $this->credentials["userId"];
-        
-        $statement = $this->connection->prepare(
-              "CALL upgradeTempObjects(?,?);"
+        $statement =
+           $this->connection->prepare(
+              "CALL upgradeTempValues(?);"
            );
           
         $statement->bind_param(
-           'si',
-           $sessionKey,
-           $userId
+           's',
+           $sessionKey
         );
    
         $statement->execute();
-   
+
         $statement->close();
         
     }
@@ -134,7 +133,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
     public function value($value): void
     {
-        $this->insertValue($value, null);
+        $this->insertValue($value);
         
         $endTime = time();
         $elapsed =
@@ -172,20 +171,40 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
     protected function startComplexValue($type)
     {
-       
-        $parentId = null;
+        $parentValueId = null;
+        $parent = null;
+        $objectKey = null;
+        $objectIndex = null;
         
         if (!empty($this->stack)) {
            $parent = array_pop($this->stack);
-           $parentId = $parent['id'];
-           $this->stack[] = $parent;
+           $parentValueId = $parent['valueId'];
         }
         
-        $objectId =
-           $this->createObject(
-              $parentId,
-              $type
-           );
+        if (!is_null($parent) &&
+            ('object' === $parent['type']))
+        {
+            $objectKey = array_pop($this->keys);
+        }
+        
+        if (is_null($parent))
+           $objectIndex = 0;
+        else
+           $objectIndex = $parent["count"]++;
+        
+        $valueId = $this->createValue(
+           $parentValueId,
+           $this->credentials["userId"],
+           $this->credentials["sessionKey"],
+           $type,
+           $objectIndex,
+           $objectKey,
+           false,
+           null,
+           null,
+           null,
+           null
+        );
         
         // We keep a stack of complex values (i.e. arrays and objects) as we build them,
         // tagged with the type that they are so we know how to add new values.
@@ -193,12 +212,15 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            'type' => $type,
            'value' => [], 
            'count' => 0,
-           'id' => $objectId
+           'valueId' => $valueId
         ];
+        
+        if (!is_null($parent))
+           $this->stack[] = $parent;
         
         $this->stack[] = $currentItem;
         
-        return $objectId;
+        return $valueId;
        
     }
 
@@ -212,7 +234,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         if (empty($this->stack)) {
             $this->result = $obj['value'];
         } else {
-            $this->insertValue($obj['value'], $obj['id']);
+            $this->insertValue($obj['value']);
         }
     }
     
@@ -222,9 +244,10 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
     // Inserts the given value into the top value on the stack in the appropriate way,
     // based on whether that value is an array or an object.
-    protected function insertValue($value, $idValue)
+    protected function insertValue($value)
     {
-         
+        $valueId = null;
+        
         // Grab the top item from the stack that we're currently parsing.
         $currentItem = array_pop($this->stack);
 
@@ -232,56 +255,76 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         //   - if it's an object, associate the newly-parsed value with the most recent key
         //   - if it's an array, push the newly-parsed value to the array
 
-        $objectIndex = $currentItem['count']++;
+        $objectIndex = null;
         $objectKey = null;
+        $parentValueId = null;
         
-        if ('object' === $currentItem['type']) {
-            $objectKey = array_pop($this->keys);
+        if (!is_null($currentItem)) {
+           $objectIndex = $currentItem['count']++;
+           if ('object' === $currentItem['type']) {
+              $objectKey = array_pop($this->keys);
+           }
+           $parentValueId = $currentItem["valueId"];
         }
+        else
+           $objectIndex = 0;
         
-        $objectId = $currentItem["id"];
+       
         $boolValue = null;
         $isNull = null;
         $stringValue = null;
         $numericValue = null;
-       //$idValue
+        $type = null;
        
         if (is_null($value)) {
            $isNull = true;
+           $type = "null";
         }
         else {
            $isNull = false;
-           if (is_numeric($value))
+           if (is_numeric($value)) {
               $numericValue = $value;
-           else if (is_string($value))
+              $type = "number";
+           }
+           else if (is_string($value)) {
               $stringValue = $value;
-           else if (is_bool($value))
+              $type = "string";
+           }
+           else if (is_bool($value)) {
               $boolValue = $value;
-           else if (!is_array($value))
-              $idValue = null;
+              $type = "bool";
+           }
+           else
+              $type = null;
         }
        
-        $valueId = $this->createValue(
-           $objectId,
-           $objectIndex,
-           $objectKey,
-           $isNull,
-           $stringValue,
-           $numericValue,
-           $boolValue,
-           $idValue
-        );
+        if (!is_null($type)) {
+           $valueId = $this->createValue(
+              $parentValueId,
+              $this->credentials["userId"],
+              $this->credentials["sessionKey"],
+              $type,
+              $objectIndex,
+              $objectKey,
+              $isNull,
+              $stringValue,
+              $numericValue,
+              $boolValue,
+              null //idValue
+           );
         
-        $this->stack[] = $currentItem;
-
-       
+        }
         
+        if (!is_null($currentItem)) {
+            $this->stack[] = $currentItem;
+        }
         
         return $valueId;
     }
-    
+    /*
     protected function createObject($parentId, $type)
     {
+        
         $userId = $this->credentials['userId'];
         
         $statement = $this->connection->prepare(
@@ -307,9 +350,12 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         return $objectId;
     }
 
-    
+    */
     protected function createValue(
-       $objectId,
+       $parentValueId,
+       $ownerId,
+       $sessionKey,
+       $type,
        $objectIndex,
        $objectKey,
        $isNull,
@@ -321,12 +367,15 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     {
         
         $statement = $this->connection->prepare(
-              "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?);"
+              "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
            );
         
         $statement->bind_param(
-           'iisisdii',
-           $objectId,
+           'iissisisdii',
+           $parentValueId,
+           $ownerId,
+           $sessionKey,
+           $type,
            $objectIndex,
            $objectKey,
            $isNull,
@@ -345,7 +394,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $statement->close();
 
-       return $valueId;
+        return $valueId;
        
     }
     

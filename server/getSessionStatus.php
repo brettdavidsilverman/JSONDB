@@ -1,6 +1,5 @@
 <?php
-session_start();
-   
+
 require_once "functions.php";
 
 $credentials = authenticate();
@@ -10,13 +9,10 @@ $name = "postFile";
 $key = $prefix . $name;
 
 
-$status = null;
+$status = getSessionStatus($credentials);
 
-if (array_key_exists("userfile", $_FILES))
-{
-   $status = getSessionStatus($credentials);
-}
-else if (array_key_exists($key, $_SESSION))
+if ($status["label"] === "Uploading..." &&
+    array_key_exists($key, $_SESSION))
 {
     
    $upload = $_SESSION[$key];
@@ -49,22 +45,25 @@ else if (array_key_exists($key, $_SESSION))
       $label = "Error uploading";
        
    
-   $status = [
-      "label" => $label,
-      "percentage" => $percentage,
-      "done" => $done,
-      "error" => $error
-   ];
+   if (!$done)
+      $status = [
+         "label" => $label,
+         "percentage" => $percentage,
+         "done" => $done,
+         "error" => $error
+      ];
+   else
+      $status = null;
 }
-else {
+
+if (is_null($status))
    $status = [
       "label" => "Ready...",
       "percentage" => 0.0,
       "done" => true,
       "error" => false
    ];
-}
-
+   
 http_response_code(200);
 
 setCredentialsCookie($credentials);

@@ -2,9 +2,9 @@
 
 require_once "functions.php";
 
-$data = getPostedData();
-
 $credentials = authenticate();
+
+$data = getPostedData();
 
 http_response_code(200);
 

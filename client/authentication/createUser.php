@@ -1,5 +1,5 @@
 <?php
-   require_once "../../server/authentication/functions.php";
+   require_once "../../server/functions.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,7 +33,7 @@
          <label for="email">
             Email
          </label>
-         <input type="email" id="email" oninput="onEmailInput()"></input>
+         <input type="email" id="email" oninput="updateForm()"></input>
          <div id="emailExists" class="error" style="display:none;">This email already exists</div>
          <div id="secretContainer">
             <div id="secretDiv">
@@ -116,10 +116,6 @@ function createUser(token)
    );
 
    
-}
-
-function onEmailInput() {
-   updateForm();
 }
 
 function updateForm() {

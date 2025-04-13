@@ -1,11 +1,11 @@
 <?php
-/*
+
 session_start(
    [
-      'cookie_lifetime' => 60*60
+      'cookie_lifetime' => (60*60 + 10)
    ]
 );
-*/
+
 require_once "authentication/functions.php";
 require_once "json/functions.php";
 

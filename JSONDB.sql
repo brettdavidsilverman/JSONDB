@@ -16,59 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `Object`
---
-
-DROP TABLE IF EXISTS `Object`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Object` (
-  `objectId` bigint NOT NULL AUTO_INCREMENT,
-  `parentId` bigint DEFAULT NULL,
-  `type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `ownerId` bigint NOT NULL,
-  PRIMARY KEY (`objectId`),
-  KEY `I_Object_parentId` (`parentId`) USING BTREE,
-  KEY `I_Object_ownerId` (`ownerId`) USING BTREE,
-  KEY `I_Object_type` (`type`) USING BTREE,
-  CONSTRAINT `FK_Object_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
-  CONSTRAINT `FK_Object_parentId` FOREIGN KEY (`parentId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2383389 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Object`
---
-
-LOCK TABLES `Object` WRITE;
-/*!40000 ALTER TABLE `Object` DISABLE KEYS */;
-/*!40000 ALTER TABLE `Object` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Temporary view structure for view `ObjectValue`
---
-
-DROP TABLE IF EXISTS `ObjectValue`;
-/*!50001 DROP VIEW IF EXISTS `ObjectValue`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `ObjectValue` AS SELECT 
- 1 AS `objectId`,
- 1 AS `parentId`,
- 1 AS `type`,
- 1 AS `ownerId`,
- 1 AS `valueId`,
- 1 AS `objectIndex`,
- 1 AS `objectKey`,
- 1 AS `numericValue`,
- 1 AS `stringValue`,
- 1 AS `idValue`,
- 1 AS `boolValue`,
- 1 AS `isNull`*/;
-SET character_set_client = @saved_cs_client;
-
---
 -- Table structure for table `Session`
 --
 
@@ -90,7 +37,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=147 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=181 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -99,6 +46,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
+INSERT INTO `Session` VALUES (179,'86082850210d1b41acff8565ed8846f1',98,'2025-04-13 18:22:56','49.182.203.197','2025-04-13 19:07:02','⏰ Finished in 466 seconds',0,1),(180,'b69883a7e082e86505ac686e13b63102',98,'2025-04-13 19:07:18','49.182.203.197','2025-04-13 19:07:49',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -167,7 +115,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=98 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=99 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -176,6 +124,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
+INSERT INTO `User` VALUES (98,'brettdavidsilverman@gmail.com',_binary 'LmkauSLLDB8DTfHksW/qdUZLIokAZEH+XSL28cFn5YrwWc8KhJDSHtcUG21BJn5jkpvfceanIjErGCwoOiZ7UQ==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -188,7 +137,10 @@ DROP TABLE IF EXISTS `Value`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Value` (
   `valueId` bigint NOT NULL AUTO_INCREMENT,
-  `objectId` bigint NOT NULL,
+  `parentValueId` bigint DEFAULT NULL,
+  `ownerId` bigint NOT NULL,
+  `sessionId` bigint DEFAULT NULL,
+  `type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `objectIndex` bigint NOT NULL,
   `objectKey` blob,
   `numericValue` double DEFAULT NULL,
@@ -197,16 +149,19 @@ CREATE TABLE `Value` (
   `boolValue` tinyint DEFAULT NULL,
   `isNull` tinyint NOT NULL,
   PRIMARY KEY (`valueId`),
-  UNIQUE KEY `UI_Value_objectId_objectIndex` (`objectId`,`objectIndex`) USING BTREE,
-  KEY `I_Value_objectId` (`objectId`) USING BTREE,
+  UNIQUE KEY `UI_Value_parentValueId_objectIndex` (`parentValueId`,`objectIndex`) USING BTREE,
+  KEY `I_Value_parentValueId` (`parentValueId`) USING BTREE,
   KEY `I_Value_idValue` (`idValue`) USING BTREE,
   KEY `I_Value_objectKey_numericValue` (`objectKey`(100),`numericValue`) USING BTREE,
   KEY `I_Value_objectKey_stringValue` (`objectKey`(100),`stringValue`(100)) USING BTREE,
-  KEY `I_Value_objectId_objectKey` (`objectId`,`objectKey`(100)) USING BTREE,
+  KEY `I_Value_parentValueId_objectKey` (`parentValueId`,`objectKey`(100)) USING BTREE,
   KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
-  CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE,
-  CONSTRAINT `FK_Value_objectId` FOREIGN KEY (`objectId`) REFERENCES `Object` (`objectId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=36815462 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `I_Value_ownerId` (`ownerId`),
+  KEY `I_Value_sessionId` (`sessionId`) USING BTREE,
+  CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
+  CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
+  CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=41137861 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -348,8 +303,6 @@ BEGIN
          )
       )  * 1000;
    
-    COMMIT;
-      
     SELECT Session. sessionKey,
                       Session. userId,
                        @expires
@@ -357,7 +310,8 @@ BEGIN
    FROM      Session
    WHERE  Session. sessionKey = @sessionKey;
    
-  
+  COMMIT;
+      
    
 END ;;
 DELIMITER ;
@@ -407,59 +361,10 @@ BEGIN
       SET @result = 1;
    END IF;
    
-   COMMIT; 
    
    SELECT @result as result;
                     
-   
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `createObject` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `createObject`(
-   ownerId BIGINT,
-   parentId BIGINT,
-   type  VARCHAR(32)
-)
-BEGIN
-
-   SET @ownerId = ownerId,
-            @parentId = parentId,
-            @type = type;
-            
-   START TRANSACTION;
-   
-   INSERT
-   INTO      Object(
-      ownerId,
-      parentId,
-      type
-   )
-   VALUES(
-      @ownerId,
-      @parentId,
-      @type
-   );
-   
-   SET @objectId = LAST_INSERT_ID();
-   
-   COMMIT;
-   
-   SELECT @objectId as objectId;
-   
-   
+   COMMIT; 
    
 END ;;
 DELIMITER ;
@@ -523,13 +428,13 @@ BEGIN
         
    END IF;
    
-   COMMIT;
    
    SELECT   userId,
                       newUserSecret
    FROM     User
    WHERE  User.userId = @userId;
       
+   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -548,7 +453,10 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
-           objectId BIGINT,
+           parentValueId BIGINT,
+           ownerId BIGINT ,
+           sessionKey VARCHAR(32),
+           type VARCHAR(10),
            objectIndex BIGINT,
            objectKey BLOB,
            isNull TINYINT,
@@ -560,8 +468,13 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
 BEGIN
    START TRANSACTION; 
    
+   SET @sessionKey = sessionKey;
+   
    INSERT INTO Value(
-           objectId,
+           parentValueId,
+           ownerId,
+           sessionId,
+           type,
            objectIndex,
            objectKey,
            isNull,
@@ -571,7 +484,15 @@ BEGIN
            idValue
    )
    VALUES(
-           objectId,
+           parentValueId,
+           ownerId,
+           (
+              SELECT Session.sessionId
+              FROM   Session
+              WHERE Session.sessionKey =
+                               @sessionKey
+           ),
+           type,
            objectIndex,
            objectKey,
            isNull,
@@ -583,9 +504,9 @@ BEGIN
    
    SET @valueId = LAST_INSERT_ID();
    
-   COMMIT;
-   
    SELECT @valueId AS valueId;
+   
+   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -593,7 +514,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `deleteTempObjects` */;
+/*!50003 DROP PROCEDURE IF EXISTS `deleteTempValues` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -603,18 +524,25 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `deleteTempObjects`(
-    sessionKey VARCHAR(32),
-    userId BIGINT
+CREATE DEFINER=`brett`@`%` PROCEDURE `deleteTempValues`(
+    sessionKey VARCHAR(32)
 )
 BEGIN
 
-   SET @sessionKey = sessionKey,
-           @userId = userId;
+   SET @sessionKey = sessionKey;
    
-   DELETE FROM Object
-   WHERE Object.type =  @sessionKey
-   AND       Object.ownerId = @userId;
+   START TRANSACTION;
+   
+   DELETE
+   FROM     Value
+   WHERE  Value.sessionId = (
+                           SELECT   Session.sessionId
+                           FROM      Session
+                           WHERE   Session.sessionKey =
+                                               @sessionKey
+                    );
+   
+   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -622,7 +550,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `getObjectValues` */;
+/*!50003 DROP PROCEDURE IF EXISTS `getRootValueId` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -632,61 +560,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `getObjectValues`(
-   objectId BIGINT,
-   valueId BIGINT
-)
-BEGIN
-   SET @objectId = objectId,
-             @valueId = valueId;
-            
-    
-   SET @maxIndex = (
-         SELECT   MAX(ObjectValue.objectIndex)
-         FROM      ObjectValue
-         WHERE   ObjectValue.objectId =
-                            @objectId
-   );
-   
-   IF (ISNULL(@maxIndex)) THEN
-         SET @maxIndex = 0;
-   END IF;
-      
-   SELECT         ObjectValue.*,
-                            IF(
-                               ISNULL(ObjectValue.objectIndex),
-                                1,
-                                IF(
-                                   ObjectValue.objectIndex = 
-                                       @maxIndex,
-                                   1, 0
-                                )
-                             ) AS isLast
-   FROM            ObjectValue
-   WHERE         (@objectId IS NULL OR
-                            ObjectValue.objectId = 
-                               @objectId)
-   AND               (@valueId IS NULL OR
-                            ObjectValue.valueId = @valueId)
-   ORDER BY   ObjectValue.objectIndex;
-   
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `getRootObjectId` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `getRootObjectId`(
+CREATE DEFINER=`brett`@`%` PROCEDURE `getRootValueId`(
    userId BIGINT,
    ownerId BIGINT
 )
@@ -695,12 +569,12 @@ BEGIN
    SET @userId = userId,
           @ownerId = ownerId;
    
-   SELECT objectId
-   FROM   Object
-   WHERE Object.ownerId = @ownerId
-   AND       Object.ownerId = @userId
-   AND       type = 'root';
-   
+   SELECT valueId
+   FROM   Value
+   WHERE Value.ownerId = @ownerId
+   AND       Value.sessionId IS NULL
+   AND       Value.parentValueId IS NULL;
+
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -785,6 +659,77 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `getValuesById` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesById`(
+   valueId BIGINT
+)
+BEGIN
+   SET @valueId = valueId;
+            
+   SELECT         Value.*,
+                            (
+                                  SELECT COUNT(*)
+                                  FROM    Value
+                                  WHERE  
+                                        Value.parentValueId = 
+                                        @valueId
+                            ) as childCount
+   FROM            Value
+   WHERE         Value.valueId = 
+                            @valueId;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `getValuesByParentId` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesByParentId`(
+   parentValueId BIGINT
+)
+BEGIN
+   SET @parentValueId = parentValueId;
+            
+    
+
+   SELECT         Value.*,
+                            (
+                               SELECT      COUNT(*)
+                               FROM         Value AS Child
+                               WHERE      
+                                        Child.parentValueId =
+                                        Value.valueId
+                            ) AS childCount
+   FROM            Value
+   WHERE         Value.parentValueId = 
+                            @parentValueId
+   ORDER BY   Value.objectIndex;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `logoff` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -806,7 +751,7 @@ BEGIN
    DELETE
    FROM      Session
    WHERE   Session.sessionKey = @sessionKey
-   AND         Session. ipAddress = @ipAddress;
+   OR         Session. ipAddress = @ipAddress;
    
 END ;;
 DELIMITER ;
@@ -881,12 +826,13 @@ BEGIN
          )
       ) * 1000;
    
-   COMMIT; 
+   
     
    SELECT @userId as userId,
                     @sessionKey as sessionKey,
                    @expires  as expires;
                    
+   COMMIT; 
    
 END ;;
 DELIMITER ;
@@ -915,12 +861,12 @@ BEGIN
    SET            User. lostSecret = MD5(UUID())
    WHERE    User.userEmail = @email;
    
-   COMMIT;
    
    SELECT   lostSecret
    FROM     User
    WHERE   User.userEmail = @email;
     
+   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -965,10 +911,10 @@ BEGIN
       WHERE    User.userId = @userId;
    END IF;
    
-   COMMIT;
-   
    SELECT   NOT ISNULL(@userId)
    AS              response;
+   
+   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -1015,7 +961,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `upgradeTempObjects` */;
+/*!50003 DROP PROCEDURE IF EXISTS `upgradeTempValues` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -1025,24 +971,34 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempObjects`(
-   sessionKey VARCHAR(32),
-   userId BIGINT
+CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempValues`(
+   sessionKey VARCHAR(32)
 )
 BEGIN
-   SET @userId = userId,
-            @sessionKey = sessionKey;
-            
+   SET @sessionKey = sessionKey;
+   
    START TRANSACTION;
    
-   DELETE FROM Object
-   WHERE Object.ownerId = @userId
-   AND       Object.type = 'root';
+   SET      @userId = (
+                       SELECT userId
+                       FROM    Session
+                       WHERE  Session.sessionKey = 
+                                        @sessionKey
+                 );
+                 
+   DELETE
+   FROM          Value
+   WHERE       Value.sessionId IS NULL
+   AND              Value.ownerId = @userId;
    
-   UPDATE Object
-   SET           Object.type = 'root'
-   WHERE  Object.ownerId = @userId
-   AND         Object.type = @sessionKey;
+   UPDATE Value
+   SET           Value.sessionId = NULL
+   WHERE   Value.sessionId = (
+                         SELECT   Session.sessionId
+                         FROM      Session
+                         WHERE   Session.sessionKey =
+                                            @sessionKey
+                      );
    
    COMMIT;
    
@@ -1086,10 +1042,11 @@ BEGIN
       WHERE    User.userId = @userId;
    END IF;
    
-   COMMIT;
    
    SELECT NOT ISNULL(@userId)
    AS            validated;
+   
+   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -1097,24 +1054,6 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-
---
--- Final view structure for view `ObjectValue`
---
-
-/*!50001 DROP VIEW IF EXISTS `ObjectValue`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`brett`@`%` SQL SECURITY DEFINER */
-/*!50001 VIEW `ObjectValue` AS select `Object`.`objectId` AS `objectId`,`Object`.`parentId` AS `parentId`,`Object`.`type` AS `type`,`Object`.`ownerId` AS `ownerId`,`Value`.`valueId` AS `valueId`,`Value`.`objectIndex` AS `objectIndex`,`Value`.`objectKey` AS `objectKey`,`Value`.`numericValue` AS `numericValue`,`Value`.`stringValue` AS `stringValue`,`Value`.`idValue` AS `idValue`,`Value`.`boolValue` AS `boolValue`,`Value`.`isNull` AS `isNull` from (`Object` left join `Value` on((`Object`.`objectId` = `Value`.`objectId`))) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -1125,4 +1064,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-12 14:33:29
+-- Dump completed on 2025-04-13 19:08:57

@@ -1,6 +1,6 @@
 <?php
-require_once "functions.php";
-require_once "authentication/functions.php";
+require_once "../functions.php";
+require_once "../authentication/functions.php";
 
 http_response_code(200);
 

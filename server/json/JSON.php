@@ -9,6 +9,7 @@
    $method = $_SERVER['REQUEST_METHOD'];
 
    if ($method === "POST") {
+       
       $file = null;
       if (array_key_exists("file", $_FILES)) {
          if ($_FILES["file"]["error"] == 0) {

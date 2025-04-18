@@ -37,7 +37,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=214 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=216 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,6 +46,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
+INSERT INTO `Session` VALUES (214,'549ff9c73fbd7bd72197a170b530a684',98,'2025-04-18 19:22:30','49.182.203.197','2025-04-18 20:06:45','⏰ Finished in 1097 seconds',0,1),(215,'2387d3bd347377972545390197f91392',98,'2025-04-18 20:07:05','49.182.203.197','2025-04-18 20:07:29',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -160,7 +161,7 @@ CREATE TABLE `Value` (
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=43215416 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=43553465 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -621,26 +622,23 @@ DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getValueByPath`(
    userId BIGINT,
    ownerId BIGINT,
-   parentObjectId BIGINT,
+   parentValueId BIGINT,
    objectIndex BIGINT,
    objectKey BLOB
 )
 BEGIN
    SET           @userId = userId,
                       @ownerId = ownerId,
-                      @parentObjectId = parentObjectId,
+                      @parentValueId = parentValueId,
                       @objectIndex = objectIndex,
                       @objectKey = objectKey;
    
-   SELECT      Object.objectId,
-                         Value.valueId
-   FROM         Object
-   LEFT JOIN Value
-   ON               Object.objectId = Value.objectId
-   WHERE      ( (@parentObjectId IS NULL
+   SELECT        Value.valueId
+   FROM           Value
+   WHERE      ( (@parentValueId IS NULL
                           AND
-                        Object.parentId IS NULL) OR
-                     (Object.parentId = @parentObjectId))
+                        Value.parentValueId IS NULL) OR
+                     (Value.parentValueId = @parentValueId))
    AND            (@objectIndex IS NULL
                          OR
                           Value.objectIndex = @objectIndex)
@@ -648,7 +646,7 @@ BEGIN
                           OR
                          Value.objectKey =
                            @objectKey)
-   AND      Object.ownerId = @ownerId
+   AND           Value.ownerId = @ownerId
    -- THIS SECURITY CHECK WILL COME LATER
    AND           @ownerId = @userId;
    
@@ -1063,4 +1061,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-18 19:20:40
+-- Dump completed on 2025-04-18 20:07:29

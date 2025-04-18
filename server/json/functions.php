@@ -46,7 +46,7 @@ function getRootValueId($connection, $userId)
     return $valueId;
 }
 
-function getValueByPath($connection, $userId, $parentObjectId, & $paths)
+function getValueByPath($connection, $userId, $parentValueId, & $paths)
 {
      
     $statement = $connection->prepare(
@@ -58,12 +58,10 @@ function getValueByPath($connection, $userId, $parentObjectId, & $paths)
         'iiiis', 
         $userId,
         $ownerId,
-        $parentObjectId,
+        $parentValueId,
         $pathIndex,
         $pathKey
     );
-    
-    //$userId = $_SESSION['userId'];
     
     if (empty($paths))
         return null;
@@ -99,19 +97,17 @@ function getValueByPath($connection, $userId, $parentObjectId, & $paths)
         $statement->execute();
     
         $statement->bind_result(
-            $objectId,
             $valueId
         );
     
         if (!$statement->fetch()) {
             array_unshift($paths, $first);
             $paths[$count] = "{" . $path . "}";
-            $objectId = null;
             $valueId = null;
             break;
         }
             
-        $parentObjectId = $objectId;
+        $parentValueId = $valueId;
     }
     
     $statement->close();
@@ -267,10 +263,10 @@ function handleGet($connection)
 
     printValues($statement, $values);
         
-        
+    //printChildValues($statement, $valueId);
 }
     
-function printValues($statement, $values, $tabCount = 0) {
+function printValues($statement, $values, $tabCount = 0, $isFirst = true) {
      
     $counter = 0;
     $valueCount = count($values);
@@ -292,11 +288,13 @@ function printValues($statement, $values, $tabCount = 0) {
         echo tabs($tabCount);
         
         // Write object key
-        if (!is_null($objectKey))
+        if (!$isFirst && !is_null($objectKey))
         {
             echo encodeString($objectKey)
                  . ': ';
         }
+        
+        $isFirst = false;
         
         switch ($type) {
         case "null":
@@ -310,7 +308,8 @@ function printValues($statement, $values, $tabCount = 0) {
                 printChildValues(
                     $statement,
                     $valueId,
-                    $tabCount
+                    $tabCount,
+                    $isFirst
                 );
             }
             
@@ -325,7 +324,8 @@ function printValues($statement, $values, $tabCount = 0) {
                 printChildValues(
                     $statement,
                     $valueId,
-                    $tabCount
+                    $tabCount,
+                    $isFirst
                 );
             }
             echo "]";
@@ -362,7 +362,8 @@ function printValues($statement, $values, $tabCount = 0) {
 function printChildValues(
     $statement,
     $valueId,
-    $tabCount
+    $tabCount,
+    $isFirst
 )
 {
      echo "\r\n";
@@ -376,7 +377,8 @@ function printChildValues(
      printValues(
           $statement,
           $childValues,
-          $tabCount + 1
+          $tabCount + 1,
+          $isFirst
      );
             
      echo "\r\n" . tabs($tabCount);

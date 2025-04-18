@@ -9,14 +9,6 @@
     
     setCredentialsCookie($credentials);
     
-    /*
-    $expires = $credentials["expires"];
-    $date = new DateTime();
-    $date->setTimezone(new DateTimeZone('Australia/Brisbane'));
-    $date->setTimestamp($expires / 1000);
-    echo $date->format("D jS F Y H:i:s A T e");
-    */
-    
 ?>
 <!DOCTYPE html>
 <html lang="en">

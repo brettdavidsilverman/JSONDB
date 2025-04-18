@@ -2,6 +2,7 @@
 
 require_once "functions.php";
 
+
 $credentials = authenticate();
 
 $data = getPostedData();

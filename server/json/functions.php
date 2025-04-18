@@ -185,7 +185,16 @@ function handlePost($connection, $file = null)
         $parser->parse();
     }
     catch (Exception $e) {
-        throw $e;
+        setSessionStatus(
+            $credentials,
+            $e->getMessage(),
+            0,
+            true
+        );
+            
+        echo "false";
+            
+        return false;
     }
     finally {
         fclose($stream);

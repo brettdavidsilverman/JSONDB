@@ -300,11 +300,13 @@ saveButton.onclick =
         ).
         finally(
             () => {
+                /*
                 authentication.setSessionStatus(
                    null,
                    null,
                    null
                 );
+                */
                 updateStatus();
             }
         );

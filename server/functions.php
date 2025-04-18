@@ -2,9 +2,11 @@
 
 session_start(
    [
-      'cookie_lifetime' => (60*60 + 10)
+      'cookie_lifetime' => (60*60 + 10),
+      'read_and_close' => true
    ]
 );
+
 
 require_once "authentication/functions.php";
 require_once "json/functions.php";

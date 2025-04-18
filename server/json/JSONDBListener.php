@@ -1,6 +1,5 @@
 <?php
-//require_once 'jsonstreamingparser/vendor/autoload.php';
-//require_once "../functions.php";
+
 require_once "Parser.php";
 
 
@@ -22,6 +21,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
     protected $connection;
     protected $credentials;
+    protected $createValueStatement = null;
     
     public $valueCount = 0;
     protected $totalValueCount;
@@ -67,10 +67,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->execute();
    
         $statement->close();
-        
-       // $this->tempValueId =
-       //    $this->startComplexValue("root");
-           
+    
         
     }
     
@@ -85,6 +82,11 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            false
         );
     
+        if ($this->createValueStatement) {
+            $this->createValueStatement->close();
+            $this->createValueStatement = null;
+        }
+        
         $sessionKey =
            $this->credentials["sessionKey"];
         
@@ -160,9 +162,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
            $this->startTime = time();
            
-           //echo str_pad('',4096)."\r\n";
-           
-           //flush();
         }
         
     }
@@ -321,36 +320,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         return $valueId;
     }
-    /*
-    protected function createObject($parentId, $type)
-    {
-        
-        $userId = $this->credentials['userId'];
-        
-        $statement = $this->connection->prepare(
-              "CALL createObject(?, ?, ?);"
-           );
-          
-        $statement->bind_param(
-           'iis',
-           $userId,
-           $parentId,
-           $type
-        );
-   
-        $statement->execute();
-   
-        $objectId = null;
-        $statement->bind_result($objectId);
-   
-        $fetched = $statement->fetch();
-   
-        $statement->close();
     
-        return $objectId;
-    }
-
-    */
     protected function createValue(
        $parentValueId,
        $ownerId,
@@ -365,34 +335,62 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
        $idValue
     )
     {
+    
+        static $_parentValueId;
+        static $_ownerId;
+        static $_sessionKey;
+        static $_type;
+        static $_objectIndex;
+        static $_objectKey;
+        static $_isNull;
+        static $_stringValue;
+        static $_numericValue;
+        static $_boolValue;
+        static $_idValue;
+       
+        if (is_null($this->createValueStatement)) {
+            $this->createValueStatement = 
+                $this->connection->prepare(
+                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                );
         
-        $statement = $this->connection->prepare(
-              "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
-           );
-        
-        $statement->bind_param(
-           'iissisisdii',
-           $parentValueId,
-           $ownerId,
-           $sessionKey,
-           $type,
-           $objectIndex,
-           $objectKey,
-           $isNull,
-           $stringValue,
-           $numericValue,
-           $boolValue,
-           $idValue
-        );
+            $this->createValueStatement->bind_param(
+                'iissisisdii',
+                $_parentValueId,
+                $_ownerId,
+                $_sessionKey,
+                $_type,
+                $_objectIndex,
+                $_objectKey,
+                $_isNull,
+                $_stringValue,
+                $_numericValue,
+                $_boolValue,
+                $_idValue
+            );
+
+        }
    
+        $statement = $this->createValueStatement;
+        
+        $_parentValueId = $parentValueId;
+        $_ownerId = $ownerId;
+        $_sessionKey = $sessionKey;
+        $_type = $type;
+        $_objectIndex = $objectIndex;
+        $_objectKey = $objectKey;
+        $_isNull = $isNull;
+        $_stringValue = $stringValue;
+        $_numericValue = $numericValue;
+        $_boolValue = $boolValue;
+        $_idValue = $idValue;
+        
         $statement->execute();
         
         $valueId = null;
         $statement->bind_result($valueId);
-   
+
         $fetched = $statement->fetch();
-        
-        $statement->close();
 
         return $valueId;
        

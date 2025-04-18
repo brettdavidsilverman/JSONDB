@@ -37,7 +37,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=181 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=214 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,7 +46,6 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (179,'86082850210d1b41acff8565ed8846f1',98,'2025-04-13 18:22:56','49.182.203.197','2025-04-13 19:07:02','⏰ Finished in 466 seconds',0,1),(180,'b69883a7e082e86505ac686e13b63102',98,'2025-04-13 19:07:18','49.182.203.197','2025-04-13 19:07:49',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -124,7 +123,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (98,'brettdavidsilverman@gmail.com',_binary 'LmkauSLLDB8DTfHksW/qdUZLIokAZEH+XSL28cFn5YrwWc8KhJDSHtcUG21BJn5jkpvfceanIjErGCwoOiZ7UQ==',NULL,NULL,1);
+INSERT INTO `User` VALUES (98,'brettdavidsilverman@gmail.com',_binary 'DdHk3ljOVc9Hjgdisfiu6utxkd9YbHc84sPBWDjQSY08uaitSIgXo6T+h9ajatgFi8jJyk689MDXQ8ztM94a3w==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -161,7 +160,7 @@ CREATE TABLE `Value` (
   CONSTRAINT `FK_Value_idValue` FOREIGN KEY (`idValue`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=41137861 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=43215416 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1064,4 +1063,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-13 19:08:57
+-- Dump completed on 2025-04-18 19:20:40

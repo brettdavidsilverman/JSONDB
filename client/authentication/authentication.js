@@ -122,6 +122,7 @@ class Authentication
             )
             .then(
                 (response) => {
+                    
                     return response.text()
                 }
             )

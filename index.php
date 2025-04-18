@@ -152,7 +152,7 @@ authentication.onHandleLogon =
      
 }
 
-function loadJSON() {
+fetchButton.onclick = function() {
      
     var url = getURL();
     pathInput.value = url;
@@ -199,10 +199,7 @@ function loadJSON() {
                 if (!error)
                     error = "Invalid status " + status;
                     
-                displayError(error, loadJSON);
-                
-                
-                
+                displayError(error, "fetchButton.onclick");
             }
         )
         .finally(
@@ -248,18 +245,32 @@ saveButton.onclick =
             done: false
         }
 
-        updateStatus(status);
+        
+        var json;
+        try {
+            json = jsonEditor.value;
+            var object = JSON.parse(json);
+            json = JSON.stringify(object);
+        }
+        catch(error) {
+            displayError(error, "saveButton.onclick");
+            saveButton.disabled = false;
+            return;
+        }
+                uploading = true;
+        
+        updateStatus(status);
+        
         var promise =
         authentication.setSessionStatus(
-            "Uploading...",
-            1,
+            status.label,
+            status.percentage + 1,
             false
         )
         .then(
             () => {
-
                 var file = new Blob(
-                    [jsonEditor.value],
+                    [json],
                     {
                         type: "application/json; charset=utf-8"
                     }
@@ -282,23 +293,19 @@ saveButton.onclick =
                         "Unknown error uploading data",
                     );
                 }
+                updateStatus();
             }
         )
         .catch(
             function (error)
             {
+                saveButton.disabled = false;
                 displayError(error, "saveButton.onclick");
             }
         ).
         finally(
             () => {
-                /*
-                authentication.setSessionStatus(
-                   null,
-                   null,
-                   null
-                );
-                */
+                uploading = false;
                 updateStatus();
             }
         );
@@ -307,13 +314,7 @@ saveButton.onclick =
         return promise;
     }
 
-fetchButton.onclick =
-    function() {
 
-        loadJSON();
-
-    }
-    
 
 function switchFunctions(showFunctions)
 {
@@ -441,7 +442,6 @@ function updateStatus(status) {
         .catch(
             (error) => {
                 displayError(error, updateStatus);
-                setStatusTimeout();
             }
         );
         
@@ -450,13 +450,15 @@ function updateStatus(status) {
 
 
     saveButton.disabled = !status.done;
+    uploading = !status.done;
     progress.value = status.percentage;
   
     progressLabel.innerText = status.label;
     
     displayExpires();
     
-    setStatusTimeout();
+    if (uploading)
+        setStatusTimeout();
     
 }
         

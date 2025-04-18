@@ -46,7 +46,7 @@ function getRootValueId($connection, $userId)
     return $valueId;
 }
 
-function getValueByPath($connection, $userId, $parentValueId, & $paths)
+function _getValueByPath($connection, $userId, $parentValueId, & $paths)
 {
      
     $statement = $connection->prepare(
@@ -117,6 +117,37 @@ function getValueByPath($connection, $userId, $parentValueId, & $paths)
     return $valueId;
 }
 
+function getValueByPath($connection, $credentials)
+{
+    $userId = $credentials["userId"];
+
+    $pathValueId = null;
+    $rootValueId = getRootValueId($connection, $userId);
+        
+    $path = getPath();
+    $paths = explode("/", $path);
+        
+    if (count($paths) > 1) {
+        $pathValueId = _getValueByPath($connection, $userId, $rootValueId, $paths);
+
+        if (is_null($pathValueId)) {
+            http_response_code(404);
+            setCredentialsCookie($credentials);
+            header('Content-Type: application/json; charset=utf-8');
+            $error = "🛑 Path " . join("/", $paths) . " not found";
+            echo encodeString($error);
+            exit();
+        }
+
+    }
+    else
+        $pathValueId = $rootValueId;
+        
+
+    return $pathValueId;
+}
+
+
 function handlePost($connection, $file = null)
 {
 
@@ -124,6 +155,8 @@ function handlePost($connection, $file = null)
         
     $credentials = authenticate(true);
 
+    $pathValueId = getValueByPath($connection, $credentials);
+    
     http_response_code(200);
     setCredentialsCookie($credentials);
         
@@ -175,8 +208,9 @@ function handlePost($connection, $file = null)
          false
     );
         
+
     try {
-        $listener = new JSONDBListener($connection, $credentials, $totalValueCount);
+        $listener = new JSONDBListener($connection, $credentials, $pathValueId, $totalValueCount);
         $parser = new \JsonStreamingParser\Parser($stream, $listener);
         $parser->parse();
     }
@@ -218,32 +252,9 @@ function handleGet($connection)
 {
     $credentials = authenticate();
     
-    $userId = $credentials["userId"];
-
-    $valueId = null;
-    $rootValueId = getRootValueId($connection, $userId);
-        
-    $path = getPath();
-    $paths = explode("/", $path);
-        
-
-    if (count($paths) > 1) {
-        $valueId = getValueByPath($connection, $userId, $rootValueId, $paths);
-
-        if (is_null($valueId)) {
-            http_response_code(404);
-            setCredentialsCookie($credentials);
-            header('Content-Type: text/plain');
-            echo "🛑 Path " . join("/", $paths) . " not found\r\n";
-            return false;
-        }
-
-    }
-    else
-        $valueId = $rootValueId;
-        
-    http_response_code(200);
+    $pathValueId = getValueByPath($connection, $credentials);
     
+    http_response_code(200);
     
     header('Content-Type: application/json');
       
@@ -253,7 +264,7 @@ function handleGet($connection)
         "CALL getValuesById(?);"
     );
     
-    $values = loadValues($rootStatement, $valueId);
+    $values = loadValues($rootStatement, $pathValueId);
      
     $rootStatement->close();
     

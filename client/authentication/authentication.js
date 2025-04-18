@@ -2,7 +2,7 @@ class Authentication
 {
     static _uploadProgressName = null;
     static _uploadMaxFilesize = null;
-    
+
     constructor(authenticationServer = document.location.origin) {
         var creds = this.getCredentials();
         

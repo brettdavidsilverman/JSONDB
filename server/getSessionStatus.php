@@ -11,7 +11,7 @@ $key = $prefix . $name;
 
 $status = getSessionStatus($credentials);
 
-if ($status["label"] === "Uploading..." &&
+if (($status["label"] === "Uploading...") &&
     array_key_exists($key, $_SESSION))
 {
     

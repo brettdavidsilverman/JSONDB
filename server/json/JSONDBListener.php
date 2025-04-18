@@ -22,20 +22,22 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $connection;
     protected $credentials;
     protected $createValueStatement = null;
+    protected $pathValueId;
     
     public $valueCount = 0;
     protected $totalValueCount;
     protected $startTime;
     
-    public $nextId = 0;
-    public $tempValueId = null;
     
-    public function __construct($connection, $credentials, $totalValueCount) {
+    public function __construct($connection, $credentials, $pathValueId, $totalValueCount) {
         
         $this->connection = $connection;
         $this->credentials = $credentials;
+        $this->pathValueId = $pathValueId;
+        
         $this->totalValueCount =
            $totalValueCount;
+           
         $this->startTime = time();
     }
     
@@ -92,12 +94,13 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $statement =
            $this->connection->prepare(
-              "CALL upgradeTempValues(?);"
+              "CALL upgradeTempValues(?, ?);"
            );
           
         $statement->bind_param(
-           's',
-           $sessionKey
+           'si',
+           $sessionKey,
+           $this->pathValueId
         );
    
         $statement->execute();
@@ -199,7 +202,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            $objectIndex,
            $objectKey,
            false,
-           null,
            null,
            null,
            null
@@ -308,8 +310,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
               $isNull,
               $stringValue,
               $numericValue,
-              $boolValue,
-              null //idValue
+              $boolValue
            );
         
         }
@@ -331,8 +332,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
        $isNull,
        $stringValue,
        $numericValue,
-       $boolValue,
-       $idValue
+       $boolValue
     )
     {
     
@@ -346,16 +346,15 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         static $_stringValue;
         static $_numericValue;
         static $_boolValue;
-        static $_idValue;
        
         if (is_null($this->createValueStatement)) {
             $this->createValueStatement = 
                 $this->connection->prepare(
-                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
         
             $this->createValueStatement->bind_param(
-                'iissisisdii',
+                'iissisisdi',
                 $_parentValueId,
                 $_ownerId,
                 $_sessionKey,
@@ -365,8 +364,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 $_isNull,
                 $_stringValue,
                 $_numericValue,
-                $_boolValue,
-                $_idValue
+                $_boolValue
             );
 
         }
@@ -383,7 +381,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $_stringValue = $stringValue;
         $_numericValue = $numericValue;
         $_boolValue = $boolValue;
-        $_idValue = $idValue;
         
         $statement->execute();
         

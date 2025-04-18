@@ -301,6 +301,18 @@ saveButton.onclick =
             {
                 saveButton.disabled = false;
                 displayError(error, "saveButton.onclick");
+                authentication.setSessionStatus(
+                    error,
+                    0,
+                    true
+                );
+                updateStatus(
+                    {
+                        label: error,
+                        percentage: 0,
+                        done: true
+                    }
+                );
             }
         ).
         finally(

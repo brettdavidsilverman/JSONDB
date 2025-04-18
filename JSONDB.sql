@@ -37,7 +37,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=226 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=231 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,7 +46,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (225,'67e6cb570d476b2fa621e8b33d095112',98,'2025-04-19 04:37:51','49.182.203.197','2025-04-19 04:42:31','⏰ Finished in 0 seconds',0,1);
+INSERT INTO `Session` VALUES (230,'85a6c33a25f432ecf0d98eca152c5d3a',98,'2025-04-19 05:22:54','49.182.203.197','2025-04-19 05:26:01','⏰ Finished in 0 seconds',0,1);
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -124,7 +124,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (98,'brettdavidsilverman@gmail.com',_binary 'DdHk3ljOVc9Hjgdisfiu6utxkd9YbHc84sPBWDjQSY08uaitSIgXo6T+h9ajatgFi8jJyk689MDXQ8ztM94a3w==',NULL,NULL,1);
+INSERT INTO `User` VALUES (98,'brettdavidsilverman@gmail.com',_binary '3cENMmrgfjl6DCft7IKpgCZ/hZd1YV9SMf3AyUmYtf3uHzw8+eh78QKP60aq75Tah2sN2phRcqyfVhZw1+WbeQ==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -158,7 +158,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=44567675 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=44567710 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -167,7 +167,7 @@ CREATE TABLE `Value` (
 
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (44567666,NULL,98,NULL,'object',0,NULL,NULL,NULL,NULL,0),(44567672,44567666,98,NULL,'object',0,_binary 'hello',NULL,NULL,NULL,0),(44567674,44567672,98,NULL,'string',0,_binary 'to the',NULL,_binary '🌎',NULL,0);
+INSERT INTO `Value` VALUES (44567666,NULL,98,NULL,'object',0,NULL,NULL,NULL,NULL,0),(44567703,44567666,98,NULL,'array',0,_binary 'hello',NULL,NULL,NULL,0),(44567704,44567703,98,NULL,'number',0,NULL,1,NULL,NULL,0),(44567705,44567703,98,NULL,'number',1,NULL,2,NULL,NULL,0),(44567706,44567703,98,NULL,'object',2,NULL,NULL,NULL,NULL,0),(44567707,44567706,98,NULL,'object',0,_binary 'name',NULL,NULL,NULL,0),(44567708,44567707,98,NULL,'string',0,_binary 'first',NULL,_binary '🐝',NULL,0),(44567709,44567707,98,NULL,'string',1,_binary 'last',NULL,_binary '🥈',NULL,0);
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1221,4 +1221,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-19  4:43:32
+-- Dump completed on 2025-04-19  5:27:12

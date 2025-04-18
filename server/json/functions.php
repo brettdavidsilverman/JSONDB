@@ -72,19 +72,20 @@ function _getValueByPath($connection, $userId, $parentValueId, & $paths)
     else if (is_numeric($first))
         $ownerId = (int)($first);
      
-    $valueId = null;
+    $valueId = $parentValueId;
+    
     $count = 0;
     
     foreach ($paths as $path) {
-         
+        $valueId = null;
+                
         $count++;
         $path = urldecode($path);
         
         if ($path === "")
             continue;
             
-        $valueId = null;
-         
+
         if (is_numeric($path)) {
             $pathIndex = (int)($path);
             $pathKey = null;
@@ -113,7 +114,6 @@ function _getValueByPath($connection, $userId, $parentValueId, & $paths)
     $statement->close();
     
     
-    
     return $valueId;
 }
 
@@ -127,23 +127,18 @@ function getValueByPath($connection, $credentials)
     $path = getPath();
     $paths = explode("/", $path);
         
-    if (count($paths) > 1) {
-        $pathValueId = _getValueByPath($connection, $userId, $rootValueId, $paths);
-
-        if (is_null($pathValueId)) {
-            http_response_code(404);
-            setCredentialsCookie($credentials);
-            header('Content-Type: application/json; charset=utf-8');
-            $error = "🛑 Path " . join("/", $paths) . " not found";
-            echo encodeString($error);
-            exit();
-        }
-
+    $pathValueId = _getValueByPath($connection, $userId, $rootValueId, $paths);
+    
+    if (is_null($pathValueId)) {
+        http_response_code(404);
+        setCredentialsCookie($credentials);
+        header('Content-Type: application/json; charset=utf-8');
+        $error = "🛑 Path " . join("/", $paths) . " not found";
+        echo encodeString($error);
+        exit();
     }
-    else
-        $pathValueId = $rootValueId;
         
-
+        
     return $pathValueId;
 }
 
@@ -182,8 +177,8 @@ function handlePost($connection, $file = null)
                 "Unexpected end of data"
             );
                 
-            $totalValueCount =
-                $listener->valueCount;
+        $totalValueCount =
+            $listener->valueCount;
     }
     catch (Exception $e) {
              

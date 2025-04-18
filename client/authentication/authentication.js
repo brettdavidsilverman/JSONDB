@@ -91,6 +91,7 @@ class Authentication
     postFile(url, file) {
 
         var _this = this;
+        var status = null;
         
         var promise =
             _this.getUploadMaxFilesize()
@@ -122,13 +123,15 @@ class Authentication
             )
             .then(
                 (response) => {
-                    
-                    return response.text()
+                    status = response.ok;
+                    return response.json()
                 }
             )
             .then(
-                (text) => {
-                    return JSON.parse(text);
+                (json) => {
+                    if (!status)
+                       throw json;
+                    return json;
                 }
             );
             

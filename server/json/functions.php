@@ -123,22 +123,26 @@ function getValueByPath($connection, $credentials)
 
     $rootValueId = getRootValueId($connection, $userId);
         
-    $path = getPath();
-    $paths = explode("/", $path);
+    if (!is_null($rootValueId)) {
+        $path = getPath();
+        $paths = explode("/", $path);
         
-    $pathValueId = _getValueByPath($connection, $userId, $rootValueId, $paths);
+        $pathValueId = _getValueByPath($connection, $userId, $rootValueId, $paths);
     
-    if (is_null($pathValueId)) {
-        http_response_code(404);
-        setCredentialsCookie($credentials);
-        header('Content-Type: application/json; charset=utf-8');
-        $error = "🛑 Path " . join("/", $paths) . " not found";
-        echo encodeString($error);
-        exit();
+        if (is_null($pathValueId)) {
+            http_response_code(404);
+            setCredentialsCookie($credentials);
+            header('Content-Type: application/json; charset=utf-8');
+            $error = "🛑 Path " . join("/", $paths) . " not found";
+            echo encodeString($error);
+            exit();
+        }
+    
+        
+        return $pathValueId;
     }
-        
-        
-    return $pathValueId;
+    
+    return null;
 }
 
 

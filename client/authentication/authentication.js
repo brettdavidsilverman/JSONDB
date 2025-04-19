@@ -125,15 +125,15 @@ class Authentication
             .then(
                 (response) => {
                     status = response.ok;
-                    return response.text()
+                    return response.json()
                 }
             )
             .then(
-                (text) => {
+                (json) => {
                     if (!status) {
-                       throw text;
+                       throw new Error(json);
                     }
-                    return JSON.parse(text);
+                    return json;
                 }
             );
             

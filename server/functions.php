@@ -186,41 +186,29 @@ function getSessionStatus($credentials)
       $credentials["sessionKey"]
    );
    
+   $status = null;
+   
    $statement->execute();
 
    $statement->bind_result(
-      $label,
-      $percentage,
-      $done
+      $status
    );
    
-   $status = null;
    
-   if ($statement->fetch()) {
-      $status =[
-         "label" => $label,
-         "percentage" => $percentage,
-         "done" => $done,
-         "error" => false
-      ];
-   }
-   else {
-      $status = [
-         "label" => "Error in php",
-         "percentage" => 0,
-         "done" => true,
-         "error" => true
-      ];
-   }
+   if (!$statement->fetch())
+      $status = null;
       
    $statement->close();
    
    $connection->close();
   
-   return $status;
+   if (is_null($status))
+      return null;
+      
+   return json_decode($status, true);
 }
 
-function setSessionStatus($credentials, $label, $percentage, $done)
+function setSessionStatus($credentials, $status)
 {
     
    if (is_null($credentials) ||
@@ -232,16 +220,16 @@ function setSessionStatus($credentials, $label, $percentage, $done)
    $connection = getConnection();
    
    $statement = $connection->prepare(
-     'CALL setSessionStatus(?,?,?,?);'
+     'CALL setSessionStatus(?,?);'
    );
    
    $statement->bind_param(
-      'ssdi',
+      'ss',
       $credentials["sessionKey"],
-      $label,
-      $percentage,
-      $done
+      $statusString
    );
+   
+   $statusString = json_encode($status);
    
    $statement->execute();
 

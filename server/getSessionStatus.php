@@ -11,7 +11,9 @@ $key = $prefix . $name;
 
 $status = getSessionStatus($credentials);
 
-if (($status["label"] === "Uploading...") &&
+if ( !is_null($status) &&
+    array_key_exists("label", $status) &&
+    ($status["label"] === "Uploading...") &&
     array_key_exists($key, $_SESSION))
 {
     
@@ -52,18 +54,9 @@ if (($status["label"] === "Uploading...") &&
          "done" => $done,
          "error" => $error
       ];
-   else
-      $status = null;
+
 }
 
-if (is_null($status))
-   $status = [
-      "label" => "Ready...",
-      "percentage" => 0.0,
-      "done" => true,
-      "error" => false
-   ];
-   
 http_response_code(200);
 
 setCredentialsCookie($credentials);

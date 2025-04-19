@@ -29,15 +29,12 @@ CREATE TABLE `Session` (
   `createdDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ipAddress` varchar(15) NOT NULL,
   `lastAccessedDate` datetime NOT NULL,
-  `label` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `percentage` float DEFAULT NULL,
-  `done` tinyint DEFAULT NULL,
   PRIMARY KEY (`sessionId`),
   UNIQUE KEY `UI_Session_sessionKey` (`sessionKey`) USING BTREE,
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=231 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=265 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,8 +43,33 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (230,'85a6c33a25f432ecf0d98eca152c5d3a',98,'2025-04-19 05:22:54','49.182.203.197','2025-04-19 05:26:01','⏰ Finished in 0 seconds',0,1);
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `SessionStatus`
+--
+
+DROP TABLE IF EXISTS `SessionStatus`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `SessionStatus` (
+  `sessionStatusId` bigint NOT NULL AUTO_INCREMENT,
+  `sessionId` bigint NOT NULL,
+  `sessionStatus` blob,
+  PRIMARY KEY (`sessionStatusId`),
+  UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
+  CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `SessionStatus`
+--
+
+LOCK TABLES `SessionStatus` WRITE;
+/*!40000 ALTER TABLE `SessionStatus` DISABLE KEYS */;
+/*!40000 ALTER TABLE `SessionStatus` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -124,7 +146,6 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (98,'brettdavidsilverman@gmail.com',_binary '3cENMmrgfjl6DCft7IKpgCZ/hZd1YV9SMf3AyUmYtf3uHzw8+eh78QKP60aq75Tah2sN2phRcqyfVhZw1+WbeQ==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -143,22 +164,23 @@ CREATE TABLE `Value` (
   `type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `objectIndex` bigint NOT NULL,
   `objectKey` blob,
+  `lowerObjectKeyHash` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `numericValue` double DEFAULT NULL,
   `stringValue` blob,
   `boolValue` tinyint DEFAULT NULL,
   `isNull` tinyint NOT NULL,
   PRIMARY KEY (`valueId`),
   UNIQUE KEY `UI_Value_parentValueId_objectIndex` (`parentValueId`,`objectIndex`) USING BTREE,
+  UNIQUE KEY `UI_Value_parentValueId_lowerObjectKeyHash` (`parentValueId`,`lowerObjectKeyHash`) USING BTREE,
   KEY `I_Value_parentValueId` (`parentValueId`) USING BTREE,
   KEY `I_Value_objectKey_numericValue` (`objectKey`(100),`numericValue`) USING BTREE,
   KEY `I_Value_objectKey_stringValue` (`objectKey`(100),`stringValue`(100)) USING BTREE,
-  KEY `I_Value_parentValueId_objectKey` (`parentValueId`,`objectKey`(100)) USING BTREE,
   KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
   KEY `I_Value_ownerId` (`ownerId`),
   KEY `I_Value_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=44567710 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=45920483 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -167,7 +189,6 @@ CREATE TABLE `Value` (
 
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (44567666,NULL,98,NULL,'object',0,NULL,NULL,NULL,NULL,0),(44567703,44567666,98,NULL,'array',0,_binary 'hello',NULL,NULL,NULL,0),(44567704,44567703,98,NULL,'number',0,NULL,1,NULL,NULL,0),(44567705,44567703,98,NULL,'number',1,NULL,2,NULL,NULL,0),(44567706,44567703,98,NULL,'object',2,NULL,NULL,NULL,NULL,0),(44567707,44567706,98,NULL,'object',0,_binary 'name',NULL,NULL,NULL,0),(44567708,44567707,98,NULL,'string',0,_binary 'first',NULL,_binary '🐝',NULL,0),(44567709,44567707,98,NULL,'string',1,_binary 'last',NULL,_binary '🥈',NULL,0);
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -249,15 +270,12 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `authenticate`(
    sessionKey VARCHAR(32),
-   ipAddress VARCHAR(16),
    ignoreExpires TINYINT
 )
 BEGIN
 
-  START TRANSACTION;
   
    SET @sessionKey = sessionKey,
-           @ipAddress = ipAddress,
            @ignoreExpires = ignoreExpires,
            @timeout = CAST(
                  getSetting(N'SESSION_TIMEOUT')
@@ -268,7 +286,6 @@ BEGIN
        SELECT *
        FROM    Session
        WHERE Session.sessionKey = @sessionKey
-       AND        Session.ipAddress = @ipAddress
     ) THEN
        SET   @lastAccessedDate = (
           SELECT   lastAccessedDate
@@ -281,6 +298,8 @@ BEGIN
           INTERVAL @timeout SECOND
        );
        
+       START TRANSACTION;
+  
        IF @ignoreExpires = 1 OR @expires > NOW() THEN
           UPDATE   Session
           SET            lastAccessedDate = NOW()
@@ -292,6 +311,8 @@ BEGIN
     ELSE
        SET @sessionKey = NULL;
     END IF;
+    
+    COMMIT;
     
     SET @expires  =
       UNIX_TIMESTAMP(
@@ -308,7 +329,7 @@ BEGIN
    FROM      Session
    WHERE  Session. sessionKey = @sessionKey;
    
-  COMMIT;
+  
       
    
 END ;;
@@ -386,11 +407,13 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createUser`(
 )
 BEGIN
 
-   START TRANSACTION;
+   
    
    SET @email = email;
    SET @secret = secret;
    SET @userId = NULL;
+   
+   START TRANSACTION;
    
    IF NOT EXISTS(
          SELECT *
@@ -426,13 +449,12 @@ BEGIN
         
    END IF;
    
+   COMMIT;
    
    SELECT   userId,
                       newUserSecret
    FROM     User
    WHERE  User.userId = @userId;
-      
-   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -457,15 +479,23 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
            type VARCHAR(10),
            objectIndex BIGINT,
            objectKey BLOB,
+           lowerObjectKey BLOB,
            isNull TINYINT,
            stringValue BLOB,
            numericValue DOUBLE,
            boolValue TINYINT
 )
 BEGIN
-   START TRANSACTION; 
    
    SET @sessionKey = sessionKey;
+   SET @sessionId = (
+              SELECT Session.sessionId
+              FROM   Session
+              WHERE Session.sessionKey =
+                               @sessionKey
+           );
+           
+   START TRANSACTION; 
    
    INSERT INTO Value(
            parentValueId,
@@ -474,6 +504,7 @@ BEGIN
            type,
            objectIndex,
            objectKey,
+           lowerObjectKeyHash,
            isNull,
            stringValue,
            numericValue,
@@ -482,15 +513,11 @@ BEGIN
    VALUES(
            parentValueId,
            ownerId,
-           (
-              SELECT Session.sessionId
-              FROM   Session
-              WHERE Session.sessionKey =
-                               @sessionKey
-           ),
+           @sessionId,
            type,
            objectIndex,
            objectKey,
+           MD5(lowerObjectKey),
            isNull,
            stringValue,
            numericValue,
@@ -499,9 +526,9 @@ BEGIN
    
    SET @valueId = LAST_INSERT_ID();
    
-   SELECT @valueId AS valueId;
-   
    COMMIT;
+   
+   SELECT @valueId AS valueId;
    
 END ;;
 DELIMITER ;
@@ -570,17 +597,18 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `deleteTempValues`(
 BEGIN
 
    SET @sessionKey = sessionKey;
-   
-   START TRANSACTION;
-   
-   DELETE
-   FROM     Value
-   WHERE  Value.sessionId = (
+   SET @sessionId = (
                            SELECT   Session.sessionId
                            FROM      Session
                            WHERE   Session.sessionKey =
                                                @sessionKey
                     );
+   
+   START TRANSACTION;
+   
+   DELETE
+   FROM     Value
+   WHERE  Value.sessionId = @sessionId;
    
    COMMIT;
    
@@ -686,11 +714,13 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getSessionStatus`(
 BEGIN
    SET @sessionKey = sessionKey;
    
-   SELECT  IF( label IS NULL, "", label) AS label,
-                      IF(percentage IS NULL, 0, percentage) AS percentage,
-                     IF( done IS NULL, 1, done) AS done
-   FROM      Session
-   WHERE   Session.sessionKey = @sessionKey;
+   SELECT            SessionStatus.sessionStatus
+   FROM               SessionStatus
+   INNER JOIN  Session
+   ON                     Session.sessionId =
+                               SessionStatus.sessionId
+   WHERE           Session.sessionKey = 
+                              @sessionKey;
    
 END ;;
 DELIMITER ;
@@ -713,14 +743,15 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValueByPath`(
    ownerId BIGINT,
    parentValueId BIGINT,
    objectIndex BIGINT,
-   objectKey BLOB
+   lowerObjectKey BLOB
 )
 BEGIN
    SET           @userId = userId,
                       @ownerId = ownerId,
                       @parentValueId = parentValueId,
                       @objectIndex = objectIndex,
-                      @objectKey = objectKey;
+                      @lowerObjectKeyHash =
+                         MD5(lowerObjectKey);
    
    SELECT        Value.valueId
    FROM           Value
@@ -731,10 +762,10 @@ BEGIN
    AND            (@objectIndex IS NULL
                          OR
                           Value.objectIndex = @objectIndex)
-   AND            (@objectKey IS NULL
+   AND            (@lowerObjectKeyHash IS NULL
                           OR
-                         Value.objectKey =
-                           @objectKey)
+                         Value.lowerObjectKeyHash =
+                           @lowerObjectKeyHash)
    AND           Value.ownerId = @ownerId
    -- THIS SECURITY CHECK WILL COME LATER
    AND           @ownerId = @userId;
@@ -913,12 +944,13 @@ BEGIN
       ) * 1000;
    
    
-    
+   COMMIT; 
+   
    SELECT @userId as userId,
                     @sessionKey as sessionKey,
                    @expires  as expires;
                    
-   COMMIT; 
+   
    
 END ;;
 DELIMITER ;
@@ -1020,24 +1052,49 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `setSessionStatus`(
    sessionKey VARCHAR(32),
-   label VARCHAR(100),
-   percentage FLOAT,
-   done TINYINT
+   sessionStatus BLOB
 )
-BEGIN
+exit_procedure: BEGIN
    
    SET @sessionKey = sessionKey,
-            @label = label,
-            @percentage = percentage,
-            @done = done;
+            @sessionStatus = sessionStatus;
             
+   
+   SET  @sessionId = (
+           SELECT Session.sessionId
+           FROM    Session
+           WHERE Session.sessionKey =
+                             @sessionKey
+   );
+   
+   IF @sessionId IS NULL THEN
+         LEAVE exit_procedure;
+   END IF;
+   
    START TRANSACTION;
    
-   UPDATE Session
-   SET           Session.label = @label,
-                      Session.percentage = @percentage,
-                      Session.done = @done
-   WHERE   Session.sessionKey = @sessionKey;
+   IF EXISTS(
+            SELECT *
+            FROM     SessionStatus
+            WHERE  SessionStatus.sessionId =
+                               @sessionId
+   ) THEN
+         UPDATE SessionStatus
+         SET           SessionStatus.sessionStatus =
+                            @sessionStatus
+         WHERE   SessionStatus.sessionId =
+                            @sessionId;
+  ELSE
+         INSERT
+         INTO      SessionStatus(
+                             sessionId,
+                             sessionStatus
+                          )
+         VALUES (
+                             @sessionId,
+                             @sessionStatus
+                          );
+  END IF;
    
   COMMIT;
    
@@ -1064,9 +1121,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempValues`(
 exit_procedure: BEGIN
    SET @sessionKey = sessionKey,
             @existingValueId = existingValueId;
-   
-   START TRANSACTION;
-   
+ 
    SET    @sessionId = (
                          SELECT   Session.sessionId
                          FROM      Session
@@ -1098,6 +1153,8 @@ exit_procedure: BEGIN
                                     @existingValueId
    );
 
+  START TRANSACTION;
+   
    IF @existingParentId IS NULL THEN
          INSERT
          INTO      Value(
@@ -1181,8 +1238,6 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `validateUserEmail`(
 )
 BEGIN
 
-   START TRANSACTION;
-   
    SET @email = email;
    SET @newUserSecret = newUserSecret;
    SET @userId = (
@@ -1192,6 +1247,8 @@ BEGIN
       AND         User.newUserSecret = @newUserSecret
    );
    
+   START TRANSACTION;
+   
    IF NOT ISNULL(@userId) THEN
       UPDATE   User
       SET             newUserSecret = NULL,
@@ -1199,11 +1256,11 @@ BEGIN
       WHERE    User.userId = @userId;
    END IF;
    
+   COMMIT;
    
    SELECT NOT ISNULL(@userId)
    AS            validated;
    
-   COMMIT;
    
 END ;;
 DELIMITER ;
@@ -1221,4 +1278,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-19  5:27:12
+-- Dump completed on 2025-04-19 13:48:47

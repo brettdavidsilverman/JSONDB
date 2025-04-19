@@ -159,24 +159,25 @@ fetchButton.onclick = function() {
     
     fetchButton.disabled = true;
     
-    localStorage.setItem("path", url);
-
     authentication.authenticate();
+    
+    localStorage.setItem("path", url);
+    var status;
     
     var promise =
     authentication.fetch(url).
         then(
             function (response) {
-                status = response.status;
+                status = response.ok;
                 return response.text();
             }
         ).
         then(
-            function (json) {
-                if (status != "200") {
-                    throw json;
+            function (text) {
+                if (!status) {
+                    throw JSON.parse(text);
                 }
-                return json;
+                return text;
             }
         ).
         then(
@@ -237,15 +238,7 @@ saveButton.onclick =
         
         saveButton.disabled = true;
         
-        authentication.authenticate();
-        
-        var status = {
-            label: "Uploading...",
-            percentage: 1,
-            done: false
-        }
-
-        
+        authentication.authenticate();
         var json;
         try {
             json = jsonEditor.value;
@@ -257,18 +250,19 @@ saveButton.onclick =
             saveButton.disabled = false;
             return;
         }
-                uploading = true;
-        
+                var status = {
+            label: "Uploading...",
+            percentage: 1,
+            done: false
+        }
         updateStatus(status);
         
         var promise =
         authentication.setSessionStatus(
-            status.label,
-            status.percentage + 1,
-            false
+            status
         )
         .then(
-            () => {
+            (ok) => {
                 var file = new Blob(
                     [json],
                     {
@@ -281,18 +275,13 @@ saveButton.onclick =
                         url,
                         file
                     );
-                    
+            
                 return promise;
             }
         )
         .then(
             (uploaded) => {
-                
-                if (!uploaded) {
-                    throw new Error(
-                        "Unknown error uploading data",
-                    );
-                }
+
                 updateStatus();
             }
         )
@@ -301,24 +290,23 @@ saveButton.onclick =
             {
                 saveButton.disabled = false;
                 displayError(error, "saveButton.onclick");
-                authentication.setSessionStatus(
-                    error,
-                    0,
-                    true
-                );
-                updateStatus(
-                    {
-                        label: error,
-                        percentage: 0,
-                        done: true
+                var status = {
+                       label: error.toString(),
+                       percentage: 0,
+                       done: true
                     }
+                var promise =
+                authentication.setSessionStatus(
+                    status
                 );
+                updateStatus(status);
+                return promise;
             }
         ).
         finally(
             () => {
                 uploading = false;
-                updateStatus();
+        
             }
         );
         
@@ -446,8 +434,13 @@ function updateStatus(status) {
         authentication.getSessionStatus()
         .then(
             (status) => {
-                if (!status)
-                    throw new Error("Missing status");
+                if (!status) {
+                    status = {
+                        label: "Ready...",
+                        percentage: 0,
+                        done: true
+                    }
+                }
                 updateStatus(status);
             }
         )
@@ -462,14 +455,13 @@ function updateStatus(status) {
 
 
     saveButton.disabled = !status.done;
-    uploading = !status.done;
     progress.value = status.percentage;
   
     progressLabel.innerText = status.label;
     
     displayExpires();
     
-    if (uploading)
+    if (!status.done)
         setStatusTimeout();
     
 }

@@ -92,7 +92,7 @@ function _getValueByPath($connection, $userId, $parentValueId, & $paths)
         }
         else {
             $pathIndex = null;
-            $pathKey = $path;
+            $pathKey = strtolower($path);
         }
         
         $statement->execute();
@@ -121,7 +121,6 @@ function getValueByPath($connection, $credentials)
 {
     $userId = $credentials["userId"];
 
-    $pathValueId = null;
     $rootValueId = getRootValueId($connection, $userId);
         
     $path = getPath();
@@ -147,7 +146,7 @@ function handlePost($connection, $file = null)
 {
 
     $start = time();
-        
+
     $credentials = authenticate(true);
 
     $pathValueId = getValueByPath($connection, $credentials);
@@ -166,7 +165,13 @@ function handlePost($connection, $file = null)
 
     $totalValueCount = null;
       
-    setSessionStatus($credentials, "Validating...", 4.0, false);
+    setSessionStatus($credentials,
+        [
+            "label" => "Validating...",
+            "percentage" => 4.0,
+            "done" => false
+        ]
+    );
         
     try {
         $listener = new ValueCountListener();
@@ -184,9 +189,11 @@ function handlePost($connection, $file = null)
              
         setSessionStatus(
             $credentials,
-            $e->getMessage(),
-            0,
-            true
+            [
+                "label" => $e->getMessage(),
+                "percentage" => 0,
+                "done" => true
+            ]
         );
             
         echo "false";
@@ -198,9 +205,11 @@ function handlePost($connection, $file = null)
     rewind($stream);
     setSessionStatus(
         $credentials,
-        "Indexing...",
-         0,
-         false
+        [
+            "label" => "Indexing...",
+            "percentage" => 0,
+            "done" => false
+        ]
     );
         
 
@@ -212,9 +221,11 @@ function handlePost($connection, $file = null)
     catch (Exception $e) {
         setSessionStatus(
             $credentials,
-            $e->getMessage(),
-            0,
-            true
+            [
+                "label" => $e->getMessage(),
+                "percentage" => 0,
+                "done" => true
+            ]
         );
             
         echo "false";
@@ -232,9 +243,11 @@ function handlePost($connection, $file = null)
         
     setSessionStatus(
         $credentials,
-        "⏰ Finished in " . $timeTaken . " seconds",
-        0,
-        true
+        [
+            "label" => "⏰ Finished in " . $timeTaken . " seconds",
+            "percentage" => 0,
+            "done" => true
+        ]
     );
         
     echo "true";

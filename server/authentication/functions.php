@@ -311,14 +311,14 @@ function getCredentials($connection, $ignoreExpires = false)
       return getEmptyCredentials();
    }
    
+   
    $statement = $connection->prepare(
-     'CALL authenticate(?, ?, ?);'
+     'CALL authenticate(?, ?);'
    );
    
    $statement->bind_param(
-      'ssi',
+      'si',
       $credentials["sessionKey"],
-      $_SERVER['REMOTE_ADDR'],
       $ignoreExpires
    );
    

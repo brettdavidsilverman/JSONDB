@@ -78,10 +78,12 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         set_time_limit(30);
         
         setSessionStatus(
-           $this->credentials,
-           "Finalizing...",
-           100,
-           false
+            $this->credentials,
+            [
+                "label"=>"Finalizing...",
+                "percentage"=>100,
+                "done" => false
+            ]
         );
     
         if ($this->createValueStatement) {
@@ -158,9 +160,11 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            
            setSessionStatus(
               $this->credentials,
-              "Indexing...",
-              $percentage,
-              false
+              [
+                 "label" => "Indexing...",
+                 "percentage" => $percentage,
+                 "done" => false
+              ]
            );
 
            $this->startTime = time();
@@ -342,6 +346,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         static $_type;
         static $_objectIndex;
         static $_objectKey;
+        static $_lowerObjectKey;
         static $_isNull;
         static $_stringValue;
         static $_numericValue;
@@ -350,17 +355,18 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         if (is_null($this->createValueStatement)) {
             $this->createValueStatement = 
                 $this->connection->prepare(
-                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
         
             $this->createValueStatement->bind_param(
-                'iissisisdi',
+                'iississisdi',
                 $_parentValueId,
                 $_ownerId,
                 $_sessionKey,
                 $_type,
                 $_objectIndex,
                 $_objectKey,
+                $_lowerObjectKey,
                 $_isNull,
                 $_stringValue,
                 $_numericValue,
@@ -377,6 +383,10 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $_type = $type;
         $_objectIndex = $objectIndex;
         $_objectKey = $objectKey;
+        if (is_null($objectKey))
+            $_lowerObjectKey = null;
+        else
+           $_lowerObjectKey = strtolower($objectKey);
         $_isNull = $isNull;
         $_stringValue = $stringValue;
         $_numericValue = $numericValue;

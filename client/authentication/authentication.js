@@ -112,26 +112,28 @@ class Authentication
                     var formData = new FormData();
                     formData.append(name, "postFile");
                     formData.append("file", file);
-                    return _this.fetch(
+                    var promise = _this.fetch(
                         url,
                         {
                             method: "POST",
                             body: formData
                         }
                     );
+                    return promise;
                 }
             )
             .then(
                 (response) => {
                     status = response.ok;
-                    return response.json()
+                    return response.text()
                 }
             )
             .then(
-                (json) => {
-                    if (!status)
-                       throw json;
-                    return json;
+                (text) => {
+                    if (!status) {
+                       throw text;
+                    }
+                    return JSON.parse(text);
                 }
             );
             
@@ -250,7 +252,7 @@ class Authentication
     }
     
     setSessionStatus(
-       label, percentage, done
+       status
     )
     {
 
@@ -258,7 +260,7 @@ class Authentication
             this.postJSON(
                 this.url + "/server/setSessionStatus.php",
                 JSON.stringify(
-                    { label, percentage, done }
+                    status
                 )
             );
             
@@ -714,3 +716,4 @@ class LogonError extends Error {
           super("Please logon");
      }
 }
+

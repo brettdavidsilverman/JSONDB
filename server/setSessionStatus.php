@@ -5,7 +5,7 @@ require_once "functions.php";
 
 $credentials = authenticate();
 
-$data = getPostedData();
+$status = getPostedData();
 
 http_response_code(200);
 
@@ -13,7 +13,7 @@ setCredentialsCookie($credentials);
 
 header("content-type: application/json");
 
-if (is_null($data))
+if (is_null($status))
 {
    echo "false";
    exit();
@@ -21,9 +21,7 @@ if (is_null($data))
 
 $result = setSessionStatus(
    $credentials,
-   $data["label"],
-   $data["percentage"],
-   $data["done"]
+   $status
 );
 
 

@@ -166,6 +166,13 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                  "done" => false
               ]
            );
+           
+           $cancelled = getCancelLastUpload(
+               $this->credentials
+           );
+           
+           if ($cancelled === true)
+              throw new Exception("User cancelled");
 
            $this->startTime = time();
            

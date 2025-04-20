@@ -91,26 +91,54 @@ class Authentication
     postFile(url, file) {
 
         var _this = this;
-        var status = null;
+
+        var status = {
+            label: "Uploading...",
+            percentage: 1,
+            done: false
+        }
+        this.updateStatus(status);
+                    
+        var uploadProgressName;
+        
+        var promises = [
+            this.getUploadMaxFilesize(),
+            this.getUploadProgressName(),
+            this.setSessionStatus(status),
+            this.setCancelLastUpload(false),
+            
+        ];
         
         var promise =
-            _this.getUploadMaxFilesize()
+            Promise.all(promises)
             .then(
-                (size) => {
-                    if (file.size > size)
+                (values) => {
+                    
+                    var maxFilesize = values[0];
+                    if (file.size > maxFilesize)
                     {
-                        return Promise.reject(
+                        throw new Error(
                             "Max file size is " +
-                            size
+                            maxFilesize
                         );
                     }
-                    return _this.getUploadProgressName();
-                }
-            )
-            .then(
-                (name) => {
+                    uploadProgressName =
+                        values[1];
+                        
+                    var setSessionStatus =
+                        values[2];
+                        
+                    if (!setSessionStatus)
+                       throw new Error("Error setting session status");
+                       
+                    var setCancelUpload =
+                        values[3];
+                        
+                    if (!setCancelUpload)
+                       throw new Error("Error setting cancel upload");
+
                     var formData = new FormData();
-                    formData.append(name, "postFile");
+                    formData.append(uploadProgressName, "postFile");
                     formData.append("file", file);
                     var promise = _this.fetch(
                         url,
@@ -135,15 +163,84 @@ class Authentication
                     }
                     return json;
                 }
+            )
+            .catch(
+                (error) => {
+                    var status = {
+                       label: error.toString(),
+                       percentage: 0,
+                       done: true
+                    }
+                    var promise =
+                        _this.setSessionStatus(
+                            status
+                        );
+                    _this.updateStatus(status);
+                    return promise;
+                }
             );
             
         return promise;
         
     }
     
+    updateStatus(status) {
+        
+        var _this = this;
+        if (!status) {
+            this.getSessionStatus()
+            .then(
+                (status) => {
+                    if (!status) {
+                        status = {
+                            label: "Ready...",
+                            percentage: 0,
+                            done: true
+                        }
+                    }
+                    _this.updateStatus(status);
+                }
+            )
+            .catch(
+                (error) => {
+                    displayError(error, "Authentication.updateStatus");
+                }
+            );
+            
+            return;
+        }
+        
+        if (this.onupdatestatus)
+           this.onupdatestatus(status);
+        
+        if (!status.done)
+           this.setStatusTimeout();
     
-    logon(email, secret)
-    {
+
+    }
+    
+    
+    setStatusTimeout() {
+     
+        var _this = this;
+        
+        if (this.timeoutId)
+            window.clearTimeout(
+                this.timeoutId
+            );
+  
+        this.timeoutId = window.setTimeout(
+            () => {
+                _this.updateStatus();
+            },
+            1000 * 5
+        );
+        
+    
+    }
+
+    
+    logon(email, secret) {
 
         var _this = this;
         
@@ -267,7 +364,40 @@ class Authentication
         return promise;
     }
     
+    getCancelLastUpload() {
+
+            
+        var promise =
+            this.fetch(this.url + "/server/getCancelLastUpload.php")
+            .then(
+                function(response) {
+                    return response.json();
+                }
+            );
+
+        return promise;
+    }
     
+    setCancelLastUpload(
+       cancelLastUpload
+    )
+    {
+
+        var promise =
+            this.postJSON(
+                this.url + "/server/setCancelLastUpload.php",
+                JSON.stringify(
+                    cancelLastUpload
+                )
+            );
+            
+        return promise;
+    }
+    
+    cancelLastUpload()
+    {
+        return this.setCancelLastUpload(true);
+    }
     
     getUserEmailExists(email) {
 

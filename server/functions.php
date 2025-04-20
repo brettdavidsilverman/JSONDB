@@ -241,4 +241,77 @@ function setSessionStatus($credentials, $status)
    return true;
 }
 
+function getCancelLastUpload($credentials)
+{
+
+   if (is_null($credentials) ||
+       is_null($credentials["sessionKey"]))
+   {
+      return null;
+   }
+   
+   $connection = getConnection();
+   
+   $statement = $connection->prepare(
+     'CALL getCancelLastUpload(?);'
+   );
+   
+   $statement->bind_param(
+      's',
+      $credentials["sessionKey"]
+   );
+   
+   $cancelLastUpload = null;
+   
+   $statement->execute();
+
+   $statement->bind_result(
+      $cancelLastUpload
+   );
+   
+   
+   if (!$statement->fetch())
+      $cancelLastUpload = null;
+      
+   $statement->close();
+   
+   $connection->close();
+  
+   if (is_null($cancelLastUpload))
+      return null;
+      
+   return (bool)$cancelLastUpload;
+}
+
+function setCancelLastUpload($credentials, $cancelLastUpload)
+{
+    
+   if (is_null($credentials) ||
+       is_null($credentials["sessionKey"]))
+   {
+      return false;
+   }
+   
+   $connection = getConnection();
+   
+   $statement = $connection->prepare(
+     'CALL setCancelLastUpload(?,?);'
+   );
+   
+   $statement->bind_param(
+      'si',
+      $credentials["sessionKey"],
+      $cancelLastUpload
+   );
+   
+   $statement->execute();
+
+      
+   $statement->close();
+   
+   $connection->close();
+  
+   return true;
+}
+
 ?>

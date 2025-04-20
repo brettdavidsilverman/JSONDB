@@ -28,6 +28,10 @@ form > div {
     text-align: left;
 }
 
+#cancelLastUpload {
+    
+}
+
         </style>
     </head>
     <body>
@@ -71,8 +75,11 @@ form > div {
                 <br/>
                 <br/>
                 
-                <label for="progress"><div id="progressLabel"></div></label>
-                <progress id="progress" value="0" max="100"></progress>
+                <label for="progress"><span id="progressLabel"></span></label>
+                <div>
+                    <progress id="progress" value="0" max="100"></progress>
+                    <span id="cancelLastUpload">❌</span>
+                </div>
             </form>
             
         </div>
@@ -111,7 +118,7 @@ var header = document.getElementById("h1");
 var title = document.getElementById("title");
 var progress = document.getElementById("progress");
 var progressLabel = document.getElementById("progressLabel");
-var uploading = false;
+var cancelLastUpload = document.getElementById("cancelLastUpload");
 
 var origin =
     punycode.toUnicode(
@@ -216,21 +223,6 @@ fetchButton.onclick = function() {
 }
 
 
-if (!pathInput.value)
-    pathInput.value = defaultURL;
-    
-pathInput.onfocus = 
-    function() {
-        fetchButton.disabled = false;
-    };
-    
-    
-pathInput.onblur =
-    function() {
-        fetchButton.disabled = false;
-        setLinks();
-    }
-
 saveButton.onclick =
     function() {
         
@@ -250,71 +242,50 @@ saveButton.onclick =
             saveButton.disabled = false;
             return;
         }
-                var status = {
-            label: "Uploading...",
-            percentage: 1,
-            done: false
-        }
-        updateStatus(status);
-        
-        var promise =
-        authentication.setSessionStatus(
-            status
-        )
-        .then(
-            (ok) => {
-                var file = new Blob(
-                    [json],
-                    {
-                        type: "application/json; charset=utf-8"
-                    }
-                );
-
-                var promise =
-                    authentication.postFile(
-                        url,
-                        file
-                    );
-            
-                return promise;
-            }
-        )
-        .then(
-            (uploaded) => {
-
-                updateStatus();
-            }
-        )
-        .catch(
-            function (error)
+                
+        var file = new Blob(
+            [json],
             {
-                saveButton.disabled = false;
-                displayError(error, "saveButton.onclick");
-                var status = {
-                       label: error.toString(),
-                       percentage: 0,
-                       done: true
-                    }
-                var promise =
-                authentication.setSessionStatus(
-                    status
-                );
-                updateStatus(status);
-                return promise;
-            }
-        ).
-        finally(
-            () => {
-                uploading = false;
-        
+                type: "application/json; charset=utf-8"
             }
         );
+
+        var promise =
+            authentication.postFile(
+                url,
+                file
+            )
+            .catch(
+                (error) => {
+                    saveButton.disabled = false;
+                    displayError(error, "saveButton.onclick");
+                    
+                }
+            );
         
         
         return promise;
     }
 
+cancelLastUpload.onclick = function() {
+    if (confirm("Cancel upload?"))
+       authentication.cancelLastUpload();
+}
 
+if (!pathInput.value)
+    pathInput.value = defaultURL;
+    
+pathInput.onfocus = 
+    function() {
+        fetchButton.disabled = false;
+    };
+    
+    
+pathInput.onblur =
+    function() {
+        fetchButton.disabled = false;
+        setLinks();
+    }
 
 function switchFunctions(showFunctions)
 {
@@ -414,59 +385,18 @@ function displayExpires() {
  
 }
 
-var timeoutId = null;
-function setStatusTimeout() {
-     
-    if (timeoutId)
-        window.clearTimeout(timeoutId);
+
+authentication.onupdatestatus =
+   (status) => {
+        saveButton.disabled = !status.done;
+        progress.value = status.percentage;
   
-    timeoutId = window.setTimeout(
-        updateStatus,
-        1000 * 5
-    );
+        progressLabel.innerText = status.label;
     
-}
-
-function updateStatus(status) {
-
-         
-    if (!status) {
-        authentication.getSessionStatus()
-        .then(
-            (status) => {
-                if (!status) {
-                    status = {
-                        label: "Ready...",
-                        percentage: 0,
-                        done: true
-                    }
-                }
-                updateStatus(status);
-            }
-        )
-        .catch(
-            (error) => {
-                displayError(error, updateStatus);
-            }
-        );
-        
-        return;
+        displayExpires();
     }
-
-
-    saveButton.disabled = !status.done;
-    progress.value = status.percentage;
-  
-    progressLabel.innerText = status.label;
-    
-    displayExpires();
-    
-    if (!status.done)
-        setStatusTimeout();
-    
-}
         
-updateStatus();
+authentication.updateStatus();
 
         </script>
 

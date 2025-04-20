@@ -10,6 +10,18 @@ header("content-type: text/plain");
 
 setCredentialsCookie($credentials);
 
+$cancelLastUpload = true;
+
+$result = setCancelLastUpload(
+    $credentials,
+    $cancelLastUpload
+);
+
+if ($result)
+   echo "true";
+else
+   echo "false";
+/*
    $data = [
       'hello' => "world"
    ];
@@ -66,7 +78,7 @@ else
    $status = "null";
    
 echo $status . "\r\n";
-/*
+
 $result = setSessionStatus(
     $credentials,
     [

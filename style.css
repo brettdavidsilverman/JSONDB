@@ -51,6 +51,11 @@ input, textarea, progress {
    margin-bottom: 5px;
 }
 
+progress {
+   width: calc(100% - 30px);
+}
+
+
 input, textarea {
    border: inset 2px;
 }

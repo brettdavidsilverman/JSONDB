@@ -42,8 +42,8 @@ else {
       
         $done = null;
    
-        if ($upload["done"] ||
-           $upload["files"][0]["done"])
+        if ($upload["done"] || $error) //||
+        //   $upload["files"][0]["done"])
         {
 
             $done = true;

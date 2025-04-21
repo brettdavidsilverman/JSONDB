@@ -356,17 +356,18 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         static $_lowerObjectKey;
         static $_isNull;
         static $_stringValue;
+        static $_lowerStringValue;
         static $_numericValue;
         static $_boolValue;
        
         if (is_null($this->createValueStatement)) {
             $this->createValueStatement = 
                 $this->connection->prepare(
-                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
         
             $this->createValueStatement->bind_param(
-                'iississisdi',
+                'iissississdi',
                 $_parentValueId,
                 $_ownerId,
                 $_sessionKey,
@@ -376,6 +377,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 $_lowerObjectKey,
                 $_isNull,
                 $_stringValue,
+                $_lowerStringValue,
                 $_numericValue,
                 $_boolValue
             );
@@ -393,9 +395,15 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         if (is_null($objectKey))
             $_lowerObjectKey = null;
         else
-           $_lowerObjectKey = strtolower($objectKey);
+            $_lowerObjectKey =
+                strtolower($objectKey);
         $_isNull = $isNull;
         $_stringValue = $stringValue;
+        if (is_null($stringValue))
+            $_lowerStringValue = null;
+        else
+            $_lowerStringValue =
+                strtolower($stringValue);
         $_numericValue = $numericValue;
         $_boolValue = $boolValue;
         

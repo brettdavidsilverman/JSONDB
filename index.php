@@ -268,7 +268,7 @@ saveButton.onclick =
     }
 
 cancelLastUpload.onclick = function() {
-    if (confirm("Cancel upload?"))
+    if (confirm("Press OK to stop upload ❌"))
        authentication.cancelLastUpload();
 }
 

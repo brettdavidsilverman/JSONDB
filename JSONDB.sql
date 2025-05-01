@@ -34,7 +34,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=284 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=313 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -43,6 +43,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
+INSERT INTO `Session` VALUES (312,'3459a9a3d1611b0be30c8b0acde8aff9',102,'2025-05-01 19:04:31','49.182.203.197','2025-05-02 02:25:18');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -56,12 +57,12 @@ DROP TABLE IF EXISTS `SessionStatus`;
 CREATE TABLE `SessionStatus` (
   `sessionStatusId` bigint NOT NULL AUTO_INCREMENT,
   `sessionId` bigint NOT NULL,
-  `sessionStatus` blob,
+  `sessionStatus` text,
   `cancelLastUpload` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`sessionStatusId`),
   UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -70,6 +71,7 @@ CREATE TABLE `SessionStatus` (
 
 LOCK TABLES `SessionStatus` WRITE;
 /*!40000 ALTER TABLE `SessionStatus` DISABLE KEYS */;
+INSERT INTO `SessionStatus` VALUES (63,312,'{\"label\":\"\\u23f0 Finished in 0 seconds\",\"percentage\":0,\"done\":true}',0);
 /*!40000 ALTER TABLE `SessionStatus` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -132,13 +134,13 @@ DROP TABLE IF EXISTS `User`;
 CREATE TABLE `User` (
   `userId` bigint NOT NULL AUTO_INCREMENT,
   `userEmail` varchar(320) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `logonSecret` blob,
+  `logonSecret` text,
   `newUserSecret` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `lostSecret` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=103 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -147,6 +149,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
+INSERT INTO `User` VALUES (102,'brettdavidsilverman@gmail.com','oUu7jsku3hHddCPZIJaIDugHbb5hBoYBo5tMaL0xy5gJY7/s2aSrQvHfq6poRd56DSXL6Btd2MmawcGmU7iM0g==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -164,15 +167,15 @@ CREATE TABLE `Value` (
   `sessionId` bigint DEFAULT NULL,
   `type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `objectIndex` bigint NOT NULL,
-  `objectKey` blob,
-  `lowerObjectKeyHash` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `objectKey` text,
+  `lowerObjectKey` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
   `numericValue` double DEFAULT NULL,
-  `stringValue` blob,
+  `stringValue` text,
   `boolValue` tinyint DEFAULT NULL,
   `isNull` tinyint NOT NULL,
   PRIMARY KEY (`valueId`),
   UNIQUE KEY `UI_Value_parentValueId_objectIndex` (`parentValueId`,`objectIndex`) USING BTREE,
-  UNIQUE KEY `UI_Value_parentValueId_lowerObjectKeyHash` (`parentValueId`,`lowerObjectKeyHash`) USING BTREE,
+  UNIQUE KEY `I_Value_parentValueId_lowerObjectKey` (`parentValueId`,`lowerObjectKey`(100)) USING BTREE,
   KEY `I_Value_parentValueId` (`parentValueId`) USING BTREE,
   KEY `I_Value_objectKey_numericValue` (`objectKey`(100),`numericValue`) USING BTREE,
   KEY `I_Value_objectKey_stringValue` (`objectKey`(100),`stringValue`(100)) USING BTREE,
@@ -181,7 +184,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=47740430 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=53726691 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -191,6 +194,136 @@ CREATE TABLE `Value` (
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Value_Insert` AFTER INSERT ON `Value` FOR EACH ROW BEGIN
+
+      IF (NEW.objectKey IS NOT NULL) THEN
+            CALL createValueWords(
+                  NEW.valueId,
+                  LOWER(NEW.objectKey)
+            );
+      END IF;
+      
+      IF (NEW.stringValue IS NOT NULL) THEN
+            CALL createValueWords(
+                  NEW.valueId,
+                  LOWER(NEW.stringValue)
+            );
+      END IF;
+      
+      
+      
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Value_Update` AFTER UPDATE ON `Value` FOR EACH ROW BEGIN
+
+      SET @deleted = 0;
+      
+      IF ((OLD.objectKey IS NULL AND
+            NEW.objectKey IS NOT NULL) OR
+            (OLD.objectKey IS NOT NULL AND
+            NEW.objectKey IS NULL) OR
+            (OLD.objectKey != NEW.objectKey))
+      THEN
+      
+            IF (OLD.objectKey IS NOT NULL) 
+            THEN
+                  DELETE
+                  FROM       ValueWord
+                  WHERE    ValueWord.valueId = 
+                                       OLD.valueId;
+                  SET @deleted = 1;
+            END IF;
+                              
+            IF (NEW.objectKey IS NOT NULL) 
+            THEN
+                  CALL createValueWords(
+                        NEW.valueId,
+                        LOWER(NEW.objectKey)
+                  );
+            END IF;
+      END IF;
+      
+      IF ((OLD.stringValue IS NULL AND
+            NEW.stringValue IS NOT NULL) OR
+            (OLD.stringValue IS NOT NULL AND
+            NEW.stringValue IS NULL) OR
+            (OLD.stringValue != NEW.stringValue))
+      THEN
+      
+            IF (OLD.stringValue IS NOT NULL 
+                  AND  @deleted = 0) 
+            THEN
+                  DELETE
+                  FROM       ValueWord
+                  WHERE    ValueWord.valueId = 
+                                       OLD.valueId;
+            END IF;
+                              
+            IF (NEW.stringValue IS NOT NULL) 
+            THEN
+                  CALL createValueWords(
+                        NEW.valueId,
+                        LOWER(NEW.stringValue)
+                  );
+            END IF;
+      END IF;
+      
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `ValueParentChild`
+--
+
+DROP TABLE IF EXISTS `ValueParentChild`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ValueParentChild` (
+  `parentValueId` bigint NOT NULL,
+  `childValueId` bigint NOT NULL,
+  PRIMARY KEY (`parentValueId`,`childValueId`),
+  UNIQUE KEY `UI_ValueParentChild_parentValueId_childValueId` (`parentValueId`,`childValueId`) USING BTREE,
+  KEY `I_ValueParentChild_parentValueId` (`parentValueId`) USING BTREE,
+  KEY `I_ValueParentChild_childValueId` (`childValueId`) USING BTREE,
+  CONSTRAINT `FK_ValueParentChild_childValueId` FOREIGN KEY (`childValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
+  CONSTRAINT `FK_ValueParentChild_parentValueId` FOREIGN KEY (`parentValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ValueParentChild`
+--
+
+LOCK TABLES `ValueParentChild` WRITE;
+/*!40000 ALTER TABLE `ValueParentChild` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ValueParentChild` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -210,7 +343,7 @@ CREATE TABLE `ValueWord` (
   KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
   CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=733 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4645715 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -231,10 +364,10 @@ DROP TABLE IF EXISTS `Word`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Word` (
   `wordId` bigint NOT NULL AUTO_INCREMENT,
-  `word` blob NOT NULL,
+  `word` text NOT NULL,
   PRIMARY KEY (`wordId`),
   KEY `I_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=368 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=133419 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -243,13 +376,111 @@ CREATE TABLE `Word` (
 
 LOCK TABLES `Word` WRITE;
 /*!40000 ALTER TABLE `Word` DISABLE KEYS */;
-INSERT INTO `Word` VALUES (5,_binary '💕'),(6,_binary 'hello'),(7,_binary 'accidental drug related deaths 2012-2018'),(8,_binary 'office of the chief medical examiner'),(9,_binary 'http://www.ct.gov/ocme'),(10,_binary 'health and human services'),(11,_binary 'a listing of each accidental death associated with drug overdose in connecticut from 2012 to 2018. a \"y\" value under the different substance columns indicates that particular substance was detected.\n\ndata are derived from an investigation by the office of the chief medical examiner which includes the toxicity report, death certificate, as well as a scene investigation.\n\nthe “morphine (not heroin)” values are related to the differences between how morphine and heroin are metabolized and therefor detected in the toxicity results. heroin metabolizes to 6-mam which then metabolizes to morphine.  6-mam is unique to heroin, and has a short half-life (as does heroin itself). thus, in some heroin deaths, the toxicity results will not indicate whether the morphine is from heroin or prescription morphine. in these cases the medical examiner may be able to determine the cause based on the scene investigation (such as  finding heroin needles). if they find prescription morphine at the scene it is certified as “morphine (not heroin).”  therefor, the cause of death may indicate morphine, but the heroin or morphine (not heroin) may not be indicated.\n\n “any opioid” – if the medical examiner cannot conclude whether it’s rx morphine or heroin based morphine in the toxicity results, that column may be checked'),(12,_binary 'table'),(13,_binary 'public_domain'),(14,_binary 'official'),(15,_binary 'published'),(16,_binary 'deaths'),(17,_binary 'tabular'),(18,_binary 'approved'),(19,_binary 'public_audience_request'),(20,_binary 'change_audience'),(21,_binary 'read'),(22,_binary 'success'),(23,_binary 'cvy9-n6sb'),(24,_binary 'tyler kleykamp'),(25,_binary 'sid'),(26,_binary 'meta_data'),(27,_binary ':sid'),(28,_binary 'hidden'),(29,_binary 'id'),(30,_binary ':id'),(31,_binary 'position'),(32,_binary ':position'),(33,_binary 'created_at'),(34,_binary ':created_at'),(35,_binary 'created_meta'),(36,_binary ':created_meta'),(37,_binary 'updated_at'),(38,_binary ':updated_at'),(39,_binary 'updated_meta'),(40,_binary ':updated_meta'),(41,_binary 'meta'),(42,_binary ':meta'),(43,_binary 'text'),(44,''),(45,_binary '18-1018'),(46,_binary '12-0002'),(47,_binary '12-0003'),(48,_binary '12-0004'),(49,_binary '12-0005'),(50,_binary '12-0006'),(51,_binary '12-0007'),(52,_binary '12-0008'),(53,_binary '12-0009'),(54,_binary '12-0010'),(55,_binary '12-0011'),(56,_binary '12-0012'),(57,_binary '12-0013'),(58,_binary '12-0014'),(59,_binary '12-0015'),(60,_binary '12-0016'),(61,_binary '12-0017'),(62,_binary '12-0018'),(63,_binary '12-0019'),(64,_binary '12-0020'),(65,_binary '12-0021'),(66,_binary '12-0001'),(67,_binary 'date'),(68,_binary 'calendar_date'),(69,_binary '2018-12-31t00:00:00.000'),(70,_binary '2017-08-18t00:00:00.000'),(71,_binary '2017-06-18t00:00:00.000'),(72,_binary '2017-06-02t00:00:00.000'),(73,_binary '2017-05-29t00:00:00.000'),(74,_binary '2018-12-17t00:00:00.000'),(75,_binary '2016-11-13t00:00:00.000'),(76,_binary '2017-03-05t00:00:00.000'),(77,_binary '2013-09-21t00:00:00.000'),(78,_binary '2016-10-03t00:00:00.000'),(79,_binary '2018-08-05t00:00:00.000'),(80,_binary '2018-05-13t00:00:00.000'),(81,_binary '2018-05-12t00:00:00.000'),(82,_binary '2017-02-11t00:00:00.000'),(83,_binary '2018-07-03t00:00:00.000'),(84,_binary '2016-02-26t00:00:00.000'),(85,_binary '2018-06-02t00:00:00.000'),(86,_binary '2017-12-27t00:00:00.000'),(87,_binary '2017-05-05t00:00:00.000'),(88,_binary '2018-06-28t00:00:00.000'),(89,_binary '2016-11-18t00:00:00.000'),(90,_binary '2012-01-01t00:00:00.000'),(91,_binary 'datetype'),(92,_binary 'datereported'),(93,_binary 'dateofdeath'),(94,_binary 'age'),(95,_binary 'number'),(96,_binary 'sex'),(97,_binary 'unknown'),(98,_binary 'male'),(99,_binary 'female'),(100,_binary 'race'),(101,_binary 'white'),(102,_binary 'hispanic, white'),(103,_binary 'black'),(104,_binary 'hispanic, black'),(105,_binary 'asian, other'),(106,_binary 'asian indian'),(107,_binary 'other'),(108,_binary 'chinese'),(109,_binary 'hawaiian'),(110,_binary 'native american, other'),(111,_binary 'residencecity'),(112,_binary 'zionsville'),(113,_binary 'hartford'),(114,_binary 'waterbury'),(115,_binary 'bridgeport'),(116,_binary 'new haven'),(117,_binary 'new britain'),(118,_binary 'bristol'),(119,_binary 'meriden'),(120,_binary 'norwich'),(121,_binary 'manchester'),(122,_binary 'torrington'),(123,_binary 'west haven'),(124,_binary 'east hartford'),(125,_binary 'middletown'),(126,_binary 'danbury'),(127,_binary 'new london'),(128,_binary 'enfield'),(129,_binary 'stratford'),(130,_binary 'stamford'),(131,_binary 'milford'),(132,_binary 'hamden'),(133,_binary 'alfred station'),(134,_binary 'residencecounty'),(135,_binary 'yankton'),(136,_binary 'fairfield'),(137,_binary 'litchfield'),(138,_binary 'middlesex'),(139,_binary 'windham'),(140,_binary 'tolland'),(141,_binary 'westchester'),(142,_binary 'dutchess'),(143,_binary 'hampden'),(144,_binary 'essex'),(145,_binary 'suffolk'),(146,_binary 'washington'),(147,_binary 'orange'),(148,_binary 'harris'),(149,_binary 'berkshire'),(150,_binary 'new york'),(151,_binary 'aroostook'),(152,_binary 'gloucester'),(153,_binary 'residencestate'),(154,_binary 'vt'),(155,_binary 'ct'),(156,_binary 'ny'),(157,_binary 'ma'),(158,_binary 'fl'),(159,_binary 'nj'),(160,_binary 'ri'),(161,_binary 'pa'),(162,_binary 'tx'),(163,_binary 'me'),(164,_binary 'ca'),(165,_binary 'co'),(166,_binary 'il'),(167,_binary 'mi'),(168,_binary 'ga'),(169,_binary 'md'),(170,_binary 'mn'),(171,_binary 'oh'),(172,_binary 'la'),(173,_binary 'ok'),(174,_binary 'nc'),(175,_binary 'al'),(176,_binary 'deathcity'),(177,_binary 'woodstock'),(178,_binary 'norwalk'),(179,_binary 'derby'),(180,_binary 'deathcounty'),(181,_binary 'usa'),(182,_binary 'location'),(183,_binary 'residence'),(184,_binary 'hospital'),(185,_binary 'convalescent home'),(186,_binary 'nursing home'),(187,_binary 'hospice'),(188,_binary 'locationifother'),(189,_binary 'ymca-parking lot'),(190,_binary 'friend\'s residence'),(191,_binary 'friend\'s house'),(192,_binary 'friend\'s home'),(193,_binary 'in vehicle'),(194,_binary 'friends house'),(195,_binary 'parking lot'),(196,_binary 'boyfriend\'s residence'),(197,_binary 'motel'),(198,_binary 'mother\'s residence'),(199,_binary 'hotel/motel'),(200,_binary 'girlfriend\'s house'),(201,_binary 'roadway'),(202,_binary 'hotel or motel'),(203,_binary 'residential building'),(204,_binary 'wooded area'),(205,_binary 'friend\'s apartment'),(206,_binary 'sober house'),(207,_binary 'abandoned building'),(208,_binary 'descriptionofinjury'),(209,_binary 'used oxymorphone'),(210,_binary 'substance abuse'),(211,_binary 'drug use'),(212,_binary 'ingestion'),(213,_binary 'drug abuse'),(214,_binary 'injection'),(215,_binary 'inhalation'),(216,_binary 'used heroin'),(217,_binary 'multiple drug use'),(218,_binary 'took medications'),(219,_binary 'acute and chronic substance abuse'),(220,_binary 'used opiates'),(221,_binary 'used medications'),(222,_binary 'prescription medicine abuse'),(223,_binary 'used cocaine'),(224,_binary 'abuse'),(225,_binary 'injuryplace'),(226,_binary 'yard'),(227,_binary 'automobile'),(228,_binary 'other, other outdoor area'),(229,_binary 'halfway house'),(230,_binary 'house'),(231,_binary 'apartment'),(232,_binary 'restaurant'),(233,_binary 'other indoor area'),(234,_binary 'apartment house'),(235,_binary 'other, public buildings'),(236,_binary 'other (unknown)'),(237,_binary 'public park'),(238,_binary 'driveway'),(239,_binary 'alleyway'),(240,_binary 'injurycity'),(241,_binary 'wtby'),(242,_binary 'naugatuck'),(243,_binary 'amston'),(244,_binary 'injurycounty'),(245,_binary 'putnam'),(246,_binary 'injurystate'),(247,_binary 'connecticut'),(248,_binary 'cod'),(249,_binary 'tramadol, diphenhydramine and hydrocodone intoxication'),(250,_binary 'acute fentanyl intoxication'),(251,_binary 'multiple drug toxicity'),(252,_binary 'heroin intoxication'),(253,_binary 'acute heroin intoxication'),(254,_binary 'heroin toxicity'),(255,_binary 'acute heroin toxicity'),(256,_binary 'acute cocaine intoxication'),(257,_binary 'cocaine intoxication'),(258,_binary 'acute intoxication due to the combined effects of fentanyl and heroin'),(259,_binary 'cocaine toxicity'),(260,_binary 'opiate toxicity'),(261,_binary 'fentanyl toxicity'),(262,_binary 'methadone intoxication'),(263,_binary 'acute heroin and fentanyl toxicities'),(264,_binary 'fentanyl intoxication'),(265,_binary 'cocaine and heroin intoxication'),(266,_binary 'acute intoxication due to the combined effects of cocaine and fentanyl'),(267,_binary 'intoxication due to the combined effects of cocaine and heroin'),(268,_binary 'acute oxycodone intoxication'),(269,_binary '1,1-difluoroethane toxicity'),(270,_binary 'othersignifican'),(271,_binary 'seizure disorder'),(272,_binary 'hypertensive and atherosclerotic cardiovascular disease'),(273,_binary 'recent cocaine use'),(274,_binary 'coronary artery disease'),(275,_binary 'cardiac hypertrophy'),(276,_binary 'hypertensive cardiovascular disease'),(277,_binary 'chronic alcoholism'),(278,_binary 'ascvd'),(279,_binary 'atherosclerotic cardiovascular disease'),(280,_binary 'cardiomegaly'),(281,_binary 'cocaine use'),(282,_binary 'arteriosclerotic heart disease'),(283,_binary 'coronary atherosclerosis'),(284,_binary 'chronic cocaine abuse'),(285,_binary 'chronic cocaine use'),(286,_binary 'atherosclerotic coronary artery disease'),(287,_binary 'chronic obstructive pulmonary disease'),(288,_binary 'atherosclerotic coronary artery disease with cardiac hypertrophy'),(289,_binary 'diabetes mellitus'),(290,_binary 'acute alprazolam intoxication, obesity'),(291,_binary 'heroin'),(292,_binary 'y'),(293,_binary 'cocaine'),(294,_binary 'fentanyl'),(295,_binary 'y (ptch)'),(296,_binary 'y-a'),(297,_binary 'y pops'),(298,_binary 'fentanylanalogue'),(299,_binary 'oxycodone'),(300,_binary 'oxymorphone'),(301,_binary 'ethanol'),(302,_binary 'hydrocodone'),(303,_binary 'benzodiazepine'),(304,_binary 'methadone'),(305,_binary 'amphet'),(306,_binary 'tramad'),(307,_binary 'morphine_notheroin'),(308,_binary 'yes'),(309,_binary 'no rx but straws'),(310,_binary 'pcp neg'),(311,_binary 'stole meds'),(312,_binary 'hydromorphone'),(313,_binary 'zolpidem'),(314,_binary 'pcp'),(315,_binary 'morphine'),(316,_binary 'hydromorph'),(317,_binary 'bupren'),(318,_binary 'u-47700'),(319,_binary 'morph'),(320,_binary 'buprenor'),(321,_binary 'morphine rx'),(322,_binary 'opiate'),(323,_binary 'opiates'),(324,_binary 'mdma'),(325,_binary 'carfentanil'),(326,_binary 'ketamine'),(327,_binary 'bupreno'),(328,_binary '2-a'),(329,_binary 'opiatenos'),(330,_binary 'anyopioid'),(331,_binary 'n'),(332,_binary 'mannerofdeath'),(333,_binary 'pending'),(334,_binary 'accident'),(335,_binary 'natural'),(336,_binary 'deathcitygeo'),(337,_binary 'human_address'),(338,_binary 'latitude'),(339,_binary 'longitude'),(340,_binary 'machine_address'),(341,_binary 'needs_recoding'),(342,_binary 'residencecitygeo'),(343,_binary 'injurycitygeo'),(344,_binary 'town index'),(345,_binary ':@computed_region_m4y2_whse'),(346,_binary 'georegion_match_on_point'),(347,_binary '_m4y2-whse'),(348,_binary '_feature_id'),(349,_binary 'viewer'),(350,_binary 'public'),(351,_binary 'public domain'),(352,_binary 'death'),(353,_binary 'fatrow'),(354,_binary 'page'),(355,_binary 'rfiw-8538'),(356,_binary 'pauline zaldonis'),(357,_binary 'interactive'),(358,_binary 'site_member'),(359,_binary 'acceptedeula'),(360,_binary 'maybestoriescoowner'),(361,_binary 'drug'),(362,_binary 'overdose'),(363,_binary 'opioid'),(364,_binary 'default'),(365,_binary 'restorable'),(366,_binary 'restorepossiblefortype'),(367,_binary 'unsaved');
 /*!40000 ALTER TABLE `Word` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
 -- Dumping routines for database 'JSONDB'
 --
+/*!50003 DROP FUNCTION IF EXISTS `getPathByValue` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` FUNCTION `getPathByValue`(
+   valueId BIGINT
+) RETURNS text CHARSET utf8mb4
+BEGIN
+   SET @valueId = valueId;
+   
+   SET @parentValueId = (
+         SELECT   Value.parentValueId
+         FROM     Value
+         WHERE  Value.valueId = @valueId
+      );
+      
+   SET @path = '';
+   
+   WHILE (@valueId IS NOT NULL AND
+                   @parentValueId IS NOT NULL) DO
+      SET @path = CONCAT(
+         getSegmentByValue(@valueId),
+         CONCAT('/', @path)
+      );
+      SET @valueId = (
+         SELECT   Value.parentValueId
+         FROM     Value
+         WHERE  Value.valueId = @valueId
+      );
+      SET @parentValueId = (
+         SELECT   Value.parentValueId
+         FROM     Value
+         WHERE  Value.valueId = @valueId
+      );
+    
+   END WHILE;
+
+   SET @path = CONCAT('/my/', @path);
+   
+   RETURN @path;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `getSegmentByValue` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` FUNCTION `getSegmentByValue`(
+   valueId BIGINT
+) RETURNS text CHARSET utf8mb4
+BEGIN
+
+    SET @valueId = valueId;
+    
+    IF @valueId IS NULL THEN
+       RETURN '';
+    END IF;
+    
+    SET @objectKey = (
+       SELECT   objectKey
+       FROM     Value
+       WHERE   Value.valueId = @valueId
+    );
+    
+    SET @segment = NULL;
+    
+    IF (@objectKey IS NULL) THEN
+       SET @segment  = (
+          SELECT CAST(Value.objectIndex AS CHAR)
+          FROM   Value
+          WHERE Value.valueId = @valueId
+       );
+    ELSE
+       SET @segment = urlencode(@objectKey);
+    END IF;
+
+   RETURN @segment;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP FUNCTION IF EXISTS `getSetting` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -278,6 +509,168 @@ BEGIN
    
    RETURN @settingValue;
       
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `isChildValue` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` FUNCTION `isChildValue`(
+      parentValueId BIGINT,
+      childValueId BIGINT
+ ) RETURNS tinyint(1)
+    READS SQL DATA
+BEGIN
+   SET @parentValueId = parentValueId,
+            @childValueId = childValueId;
+    
+   IF (@parentValueId IS NULL) THEN
+         RETURN 0;
+   END IF;
+   
+   IF (@childValueId IS NULL) THEN
+         RETURN 0;
+   END IF;
+   
+   IF (@childValueId = @parentValueId) THEN
+        RETURN 0;
+   END IF;
+   
+   WHILE (@childValueId IS NOT NULL AND
+                    @childValueId != @parentValueId) 
+   DO
+         SET      @childValueId = (
+               SELECT      Value.parentValueId
+               FROM         Value
+               WHERE      Value.valueId = @childValueId
+         );
+   END WHILE;
+   
+   IF (@childValueId IS NULL) THEN
+         RETURN 0;
+  END IF;
+  
+   IF (@childValueId = @parentValueId) THEN
+        RETURN 1;
+   END IF;
+   
+   RETURN 0; 
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `isDelineator` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` FUNCTION `isDelineator`(
+       nchar TEXT ) RETURNS tinyint(1)
+BEGIN
+   SET @nchar = nchar,
+            @delineators = ",“–.”\'@#$_&()/*\'\":;!?~`|•√π÷×§∆£¢€¥^°={}\%©®™✓[] \t\r\n\b\\";
+            
+   RETURN IF(INSTR(@delineators, @nchar) > 0, 1, 0);
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `urlencode` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` FUNCTION `urlencode`(str TEXT CHARSET utf8) RETURNS text CHARSET utf8mb3
+    DETERMINISTIC
+BEGIN
+   -- the individual character we are converting in our loop
+   -- NOTE: must be VARCHAR even though it won't vary in length
+   -- CHAR(1), when used with SUBSTRING, made spaces '' instead of ' '
+   DECLARE sub TEXT CHARSET utf8;
+   -- the ordinal value of the character (i.e. ñ becomes 50097)
+   DECLARE val BIGINT DEFAULT 0;
+   -- the substring index we use in our loop (one-based)
+   DECLARE ind INT DEFAULT 1;
+   -- the integer value of the individual octet of a character being encoded
+   -- (which is potentially multi-byte and must be encoded one byte at a time)
+   DECLARE oct INT DEFAULT 0;
+   -- the encoded return string that we build up during execution
+   DECLARE ret TEXT DEFAULT '';
+   -- our loop index for looping through each octet while encoding
+   DECLARE octind INT DEFAULT 0;
+
+   IF ISNULL(str) THEN
+      RETURN NULL;
+   ELSE
+      SET ret = '';
+      -- loop through the input string one character at a time - regardless
+      -- of how many bytes a character consists of
+      WHILE ind <= CHAR_LENGTH(str) DO
+         SET sub = MID(str, ind, 1);
+         SET val = ORD(sub);
+         -- these values are ones that should not be converted
+         -- see http://tools.ietf.org/html/rfc3986
+         IF NOT (val BETWEEN 48 AND 57 OR     -- 48-57  = 0-9
+                 val BETWEEN 65 AND 90 OR     -- 65-90  = A-Z
+                 val BETWEEN 97 AND 122 OR    -- 97-122 = a-z
+                 -- 45 = hyphen, 46 = period, 95 = underscore, 126 = tilde
+                 val IN (45, 46, 95, 126)) THEN
+            -- This is not an &quot;unreserved&quot; char and must be encoded:
+            -- loop through each octet of the potentially multi-octet character
+            -- and convert each into its hexadecimal value
+            -- we start with the high octect because that is the order that ORD
+            -- returns them in - they need to be encoded with the most significant
+            -- byte first
+            SET octind = OCTET_LENGTH(sub);
+            WHILE octind > 0 DO
+               -- get the actual value of this octet by shifting it to the right
+               -- so that it is at the lowest byte position - in other words, make
+               -- the octet/byte we are working on the entire number (or in even
+               -- other words, oct will no be between zero and 255 inclusive)
+               SET oct = (val >> (8 * (octind - 1)));
+               -- we append this to our return string with a percent sign, and then
+               -- a left-zero-padded (to two characters) string of the hexadecimal
+               -- value of this octet)
+               SET ret = CONCAT(ret, '%', LPAD(HEX(oct), 2, 0));
+               -- now we need to reset val to essentially zero out the octet that we
+               -- just encoded so that our number decreases and we are only left with
+               -- the lower octets as part of our integer
+               SET val = (val & (POWER(256, (octind - 1)) - 1));
+               SET octind = (octind - 1);
+            END WHILE;
+         ELSE
+            -- this character was not one that needed to be encoded and can simply be
+            -- added to our return string as-is
+            SET ret = CONCAT(ret, sub);
+         END IF;
+         SET ind = (ind + 1);
+      END WHILE;
+   END IF;
+   RETURN ret;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -405,8 +798,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `changeSecret`(
    email NVARCHAR(320),
-   oldSecret BLOB,
-   newSecret BLOB
+   oldSecret TEXT,
+   newSecret TEXT
 )
 BEGIN
 
@@ -458,7 +851,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `createUser`(
    email NVARCHAR(320),
-   secret BLOB
+   secret TEXT
 )
 BEGIN
 
@@ -533,17 +926,17 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
            sessionKey VARCHAR(32),
            type VARCHAR(10),
            objectIndex BIGINT,
-           objectKey BLOB,
-           lowerObjectKey BLOB,
+           objectKey TEXT,
            isNull TINYINT,
-           stringValue BLOB,
-           lowerStringValue BLOB,
+           stringValue TEXT,
            numericValue DOUBLE,
            boolValue TINYINT
 )
 BEGIN
    
-   SET @sessionKey = sessionKey;
+   SET @sessionKey = sessionKey,
+           @parentValueId = parentValueId;
+           
    SET @sessionId = (
               SELECT Session.sessionId
               FROM   Session
@@ -552,7 +945,7 @@ BEGIN
            );
            
    SET @lowerStringValue =
-                  lowerStringValue;
+                  LOWER(stringValue);
    
    START TRANSACTION; 
    
@@ -563,7 +956,7 @@ BEGIN
            type,
            objectIndex,
            objectKey,
-           lowerObjectKeyHash,
+           lowerObjectKey,
            isNull,
            stringValue,
            numericValue,
@@ -576,7 +969,7 @@ BEGIN
            type,
            objectIndex,
            objectKey,
-           MD5(lowerObjectKey),
+           LOWER(objectKey),
            isNull,
            stringValue,
            numericValue,
@@ -585,16 +978,52 @@ BEGIN
    
    SET @valueId = LAST_INSERT_ID();
    
-   IF @lowerStringValue IS NOT NULL THEN
-         CALL createValueWord(
-               @valueId,
-               @lowerStringValue
+   /* Insert all parents parents */
+   
+   INSERT
+   INTO       ValueParentChild(
+                              parentValueId,
+                              childValueId
+                      )
+   SELECT   vpc.parentValueId,
+                     @valueId
+   FROM     ValueParentChild vpc
+   WHERE  vpc.childValueId =
+                            @parentValueId;
+                    
+   IF @parentValueId IS NOT NULL THEN
+         INSERT
+         INTO       ValueParentChild(
+                                    parentValueId,
+                                    childValueId
+                            )
+         SELECT  @parentValueId,
+                          @valueId
+         WHERE NOT EXISTS(
+               SELECT    *
+               FROM       ValueParentChild
+               WHERE    parentValueId = 
+                                      @parentValueId
+               AND          childValueId = @valueId
          );
    END IF;
+   
+   /* Insert this value */
+   INSERT
+   INTO       ValueParentChild(
+                              parentValueId,
+                              childValueId
+                      )
+   VALUES  (
+                              @valueId,
+                              @valueId
+   );
+   
    
    COMMIT;
    
    SELECT @valueId AS valueId;
+   
    
 END ;;
 DELIMITER ;
@@ -614,7 +1043,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `createValueWord`(
       valueId BIGINT,
-      lowerWord BLOB
+      lowerWord TEXT
 )
 BEGIN
   /* This should run in the transaction
@@ -641,9 +1070,89 @@ BEGIN
          );
    END IF;
    
-   INSERT
-   INTO      ValueWord(valueId, wordId)
-   VALUES (@valueId, @wordId);
+   IF NOT EXISTS(
+         SELECT      *
+         FROM         ValueWord
+         WHERE      ValueWord.valueId = 
+                                      @valueId
+         AND             ValueWord.wordId =
+                                      @wordId
+   ) THEN
+         INSERT
+         INTO      ValueWord(valueId, wordId)
+         VALUES (@valueId, @wordId);
+   END IF;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `createValueWords` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `createValueWords`(
+      valueId BIGINT,
+      lowerText TEXT
+)
+BEGIN
+  /* This should run in the transaction
+  space of the caller */
+  
+   SET @valueId = valueId,
+            @lowerText = lowerText,
+            @word = NULL,
+            @start = 1,
+            @length = LENGTH(@lowerText);
+            
+   WHILE (@start <= @length) DO
+         /* Read first character */
+         SET @nchar = SUBSTR(
+               @lowerText,
+               @start,
+               1
+         );
+         /* Read subsequent delineators */
+         WHILE (isDelineator(@nchar) AND
+                          @start <= @length) DO
+               SET @start = @start + 1;
+               SET @nchar = SUBSTR(
+                     @lowerText,
+                     @start,
+                     1
+               );
+         END WHILE;
+         
+         
+         /* Read word */
+         SET @word = '';
+         WHILE (isDelineator(@nchar) = 0 AND
+                          @start <= @length) DO
+              SET @word = CONCAT(@word, @nchar);
+              SET @start = @start + 1;
+              SET @nchar = SUBSTR(
+                     @lowerText,
+                     @start,
+                     1
+               );
+        END WHILE;
+                          
+        IF ( LENGTH(@word) > 0) THEN
+              CALL createValueWord(
+                    @valueId,
+                    @word
+              );
+        END IF;
+              
+   END WHILE;
+            
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -661,34 +1170,25 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `deleteChildValues`(
-   _valueId BIGINT
+   valueId BIGINT
 )
 BEGIN
-   DECLARE done INT DEFAULT FALSE;
-   DECLARE childId BIGINT;
+
+   SET @valueId = valueId;
    
-   DECLARE cur CURSOR FOR
-   SELECT    Value.valueId
-   FROM       Value
-   WHERE    Value.parentValueId = _valueId;
+   DELETE
+   FROM      Value
+   WHERE   Value.valueId IN (
+         SELECT ValueParentChild.childValueId
+         FROM    ValueParentChild
+         WHERE (@valueId IS NULL AND
+                            ValueParentChild.parentValueId IS NULL)
+         OR
+         ValueParentChild.parentValueId =
+              @valueId
+   )
+   AND      Value.valueId != @valueId;
   
-   DECLARE CONTINUE HANDLER FOR NOT
-   FOUND SET done = TRUE;
-
-   SET  max_sp_recursion_depth = 255;
-   
-   OPEN cur;
-
-   read_loop: LOOP
-         FETCH cur INTO childId;
-         IF done THEN
-            LEAVE read_loop;
-         END IF;
-         CALL deleteValue(childId);
-   END LOOP;
-
-   CLOSE cur;
-
   END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -743,39 +1243,21 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `deleteValue`(
-   _valueId BIGINT
+   valueId BIGINT
 )
 BEGIN
-   DECLARE done INT DEFAULT FALSE;
-   DECLARE childId BIGINT;
+      SET @valueId = valueId;
+      
+      DELETE
+      FROM      Value
+      WHERE   Value.valueId IN (
+         SELECT ValueParentChild.childValueId
+         FROM    ValueParentChild
+         WHERE ValueParentChild
+                          .parentValueId =  @valueId
+     );
    
-   DECLARE cur CURSOR FOR
-   SELECT    Value.valueId
-   FROM       Value
-   WHERE    Value.parentValueId = _valueId;
-  
-   DECLARE CONTINUE HANDLER FOR NOT
-   FOUND SET done = TRUE;
-
-   SET  max_sp_recursion_depth = 255;
-   
-   OPEN cur;
-
-   read_loop: LOOP
-         FETCH cur INTO childId;
-         IF done THEN
-            LEAVE read_loop;
-         END IF;
-         CALL deleteValue(childId);
-   END LOOP;
-
-   CLOSE cur;
-
-   DELETE
-   FROM      Value
-   WHERE   Value.valueId = _valueId; 
-  
-  END ;;
+END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -894,29 +1376,36 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValueByPath`(
    ownerId BIGINT,
    parentValueId BIGINT,
    objectIndex BIGINT,
-   lowerObjectKey BLOB
+   objectKey TEXT
 )
 BEGIN
    SET           @userId = userId,
                       @ownerId = ownerId,
                       @parentValueId = parentValueId,
                       @objectIndex = objectIndex,
-                      @lowerObjectKeyHash =
-                         MD5(lowerObjectKey);
+                      @lowerObjectKey =
+                         LOWER(objectKey);
    
    SELECT        Value.valueId
    FROM           Value
-   WHERE      ( (@parentValueId IS NULL
-                          AND
-                        Value.parentValueId IS NULL) OR
-                     (Value.parentValueId = @parentValueId))
+   WHERE      ( 
+                               (
+                                  @parentValueId IS NULL
+                                  AND
+                                  Value.parentValueId IS NULL
+                               ) 
+                               OR
+                              (Value.parentValueId = 
+                                    @parentValueId)
+                        )
    AND            (@objectIndex IS NULL
                          OR
                           Value.objectIndex = @objectIndex)
-   AND            (@lowerObjectKeyHash IS NULL
+   AND            (@lowerObjectKey IS NULL
                           OR
-                         Value.lowerObjectKeyHash =
-                           @lowerObjectKeyHash)
+                         Value.lowerObjectKey =
+                           @lowerObjectKey)
+   AND            Value.sessionId IS NULL
    AND           Value.ownerId = @ownerId
    -- THIS SECURITY CHECK WILL COME LATER
    AND           @ownerId = @userId;
@@ -1039,7 +1528,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `logon`(
    email NVARCHAR(320),
-   secret BLOB,
+   secret TEXT,
    ipAddress VARCHAR(15)
 )
 BEGIN
@@ -1156,7 +1645,7 @@ DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `resetSecret`(
    email NVARCHAR(320),
    lostSecret VARCHAR(32),
-   newSecret BLOB
+   newSecret TEXT
 )
 BEGIN
 
@@ -1269,7 +1758,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `setSessionStatus`(
    sessionKey VARCHAR(32),
-   sessionStatus BLOB
+   sessionStatus TEXT
 )
 exit_procedure: BEGIN
    
@@ -1336,6 +1825,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempValues`(
    existingValueId BIGINT
 )
 exit_procedure: BEGIN
+
+
    SET @sessionKey = sessionKey,
             @existingValueId = existingValueId;
  
@@ -1349,8 +1840,8 @@ exit_procedure: BEGIN
    SET      @userId = (
                        SELECT userId
                        FROM    Session
-                       WHERE  Session.sessionKey = 
-                                        @sessionKey
+                       WHERE  Session.sessionId = 
+                                        @sessionId
                  );
                 
    SET     @tempValueId = (
@@ -1362,70 +1853,92 @@ exit_procedure: BEGIN
                                        @sessionId
    );
          
-   SET     @existingParentId = (
-         SELECT          Value.valueId
-         FROM             Value
-         WHERE          Value.ownerId = @userId
-         AND                 Value.valueId =
+  IF @existingValueId IS NOT NULL AND
+       NOT EXISTS (
+              SELECT          Value.valueId
+              FROM             Value
+              WHERE          Value.ownerId = @userId
+              AND                 Value.valueId =
                                     @existingValueId
-   );
-
-  START TRANSACTION;
-   
-   IF @existingParentId IS NULL THEN
-         INSERT
-         INTO      Value(
-                              type,
-                              ownerId,
-                              objectIndex,
-                              isNull
-                          )
-         VALUES ( 'object', @userId, 0, 0);
-         SET @existingParentId =
-               LAST_INSERT_ID();
+     ) THEN
+           LEAVE exit_procedure;
    END IF;
 
    IF  @userId IS NULL OR
          @sessionId IS NULL OR
-         @existingParentId IS  NULL OR
          @tempValueId IS NULL
    THEN
-         ROLLBACK;
          LEAVE exit_procedure;
    END IF;
    
-   
-   CALL deleteChildValues(@existingParentId);
+  START TRANSACTION;
+  
+  IF @existingValueId IS NOT NULL THEN
+         
+         SET @parentValueId = (
+               SELECT   parentValueId
+               FROM     Value
+               WHERE  valueId = @existingValueId
+         );
+         
+         SET @objectIndex  = (
+               SELECT   objectIndex
+               FROM     Value
+               WHERE  valueId = @existingValueId
+         );
+         
+         SET @objectKey  = (
+               SELECT   objectKey
+               FROM     Value
+               WHERE  valueId = @existingValueId
+         );
+         
+         CREATE TEMPORARY TABLE Parent
+         (
+            valueId BIGINT NOT NULL PRIMARY KEY
+         );
+         
+         INSERT
+         INTO            Parent(valueId)
+         SELECT       vpc.parentValueId
+         FROM          ValueParentChild AS vpc
+         WHERE       vpc.childValueId =
+                                       @existingValueId
+         AND             vpc.parentValueId !=
+                                       @existingValueId;
+                                   
+    
+      
+         CALL deleteValue(
+               @existingValueId
+          );
 
-   /* MIGRATE TEMP CHILD RECORD UP
-        TO  EXISTING PARENT RECORD */
-        
-   UPDATE      Value AS ExistingValue,
-                           Value AS TempValue
-   SET                ExistingValue.type =
-                              TempValue.type,
-                           ExistingValue.numericValue =
-                              TempValue.numericValue,
-                           ExistingValue.stringValue =
-                              TempValue.stringValue,
-                           ExistingValue.boolValue =
-                              TempValue.boolValue,
-                           ExistingValue.isNull =
-                              TempValue.isNull
-   WHERE       ExistingValue.valueId =
-                              @existingParentId
-   AND              TempValue.valueId =
-                              @tempValueId;
-   
-   UPDATE Value
-   SET           Value.parentValueId = 
-                         @existingParentId
-   WHERE   Value.parentValueId =
-                         @tempValueId;
-                         
-   DELETE
-   FROM      Value
-   WHERE   Value.valueId = @tempValueId;
+         /* Update temp object index, key and 
+          parent  to existing value */
+         UPDATE     Value AS temp
+         SET              temp.parentValueId =
+                                   @parentValueId,
+                               temp.objectIndex =
+                                   @objectIndex,
+                               temp.objectKey =
+                                   @objectKey,
+                               temp.lowerObjectKey  =
+                                   LOWER(@objectKey)
+         WHERE      temp.valueId =
+                                  @tempValueId;
+                                  
+         INSERT
+         INTO       ValueParentChild(
+                                 parentValueId,
+                                 childValueId
+                           )
+         SELECT   Parent.valueId,
+                            @tempValueId
+         FROM     Parent;
+         
+         DROP TABLE Parent;
+         
+   END IF;
    
    UPDATE Value
    SET           Value.sessionId = NULL
@@ -1495,4 +2008,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-04-21 10:30:22
+-- Dump completed on 2025-05-02  2:26:24

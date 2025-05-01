@@ -203,7 +203,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         if (is_null($parent))
            $objectIndex = 0;
         else
-           $objectIndex = $parent["count"]++;
+           $objectIndex = $parent["count"];//++;
         
         $valueId = $this->createValue(
            $parentValueId,
@@ -363,21 +363,19 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         if (is_null($this->createValueStatement)) {
             $this->createValueStatement = 
                 $this->connection->prepare(
-                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
         
             $this->createValueStatement->bind_param(
-                'iissississdi',
+                'iissisisdi',
                 $_parentValueId,
                 $_ownerId,
                 $_sessionKey,
                 $_type,
                 $_objectIndex,
                 $_objectKey,
-                $_lowerObjectKey,
                 $_isNull,
                 $_stringValue,
-                $_lowerStringValue,
                 $_numericValue,
                 $_boolValue
             );

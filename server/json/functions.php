@@ -85,14 +85,14 @@ function _getValueByPath($connection, $userId, $parentValueId, & $paths)
         if ($path === "")
             continue;
             
-
+        
         if (is_numeric($path)) {
             $pathIndex = (int)($path);
             $pathKey = null;
         }
         else {
             $pathIndex = null;
-            $pathKey = strtolower($path);
+            $pathKey = $path;
         }
         
         $statement->execute();
@@ -103,7 +103,7 @@ function _getValueByPath($connection, $userId, $parentValueId, & $paths)
     
         if (!$statement->fetch()) {
             array_unshift($paths, $first);
-            $paths[$count] = "{" . $path . "}";
+            $paths[$count] = "{" . urldecode($path) . "}";
             $valueId = null;
             break;
         }
@@ -122,27 +122,31 @@ function getValueByPath($connection, $credentials)
     $userId = $credentials["userId"];
 
     $rootValueId = getRootValueId($connection, $userId);
+    $pathValueId = null;
+    
+    $path = getPath();
+    $paths = explode("/", $path);
         
     if (!is_null($rootValueId)) {
-        $path = getPath();
-        $paths = explode("/", $path);
         
         $pathValueId = _getValueByPath($connection, $userId, $rootValueId, $paths);
-    
-        if (is_null($pathValueId)) {
-            http_response_code(404);
-            setCredentialsCookie($credentials);
-            header('Content-Type: application/json; charset=utf-8');
-            $error = "🛑 Path " . join("/", $paths) . " not found";
-            echo encodeString($error);
-            exit();
-        }
-    
-        
-        return $pathValueId;
     }
     
-    return null;
+    if (is_null($pathValueId) &&
+        count($paths) > 1)
+    {
+        if (is_null($rootValueId))
+           $paths[1] = "{" . $paths[1] . "}";
+           
+        http_response_code(404);
+        setCredentialsCookie($credentials);
+        header('Content-Type: application/json; charset=utf-8');
+        $error = "🛑 Path " . join("/", $paths) . " not found";
+        echo encodeString($error);
+        exit();
+    }
+    
+    return $pathValueId;
 }
 
 

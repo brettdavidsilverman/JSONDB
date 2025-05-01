@@ -2,7 +2,7 @@
 
 session_start(
    [
-      'cookie_lifetime' => (60*60 + 10),
+      'cookie_lifetime' => (60*60 - 10),
       'read_and_close' => true
    ]
 );

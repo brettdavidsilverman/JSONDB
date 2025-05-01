@@ -67,21 +67,44 @@ class Authentication
             method: "POST",
             body: json
         }
-     
+        var ok = false;
+        var _this = this;
+        var status = {
+            label: "Saving...",
+            percentage: 1,
+            done: false
+        }
+        var promises = [
+            this.setCancelLastUpload(false),
+            this.setSessionStatus(status)
+        ];
+        
         var promise =
-            this.fetch(
-                url,
-                parameters
-            ).
-            then(
-                function (response) {
-                    if (!response.ok)
-                        throw new Error(
-                            "Invalid status " +
-                            response.status
+            Promise.all(promises)
+            .then(
+                (values) => {
+                    var promise = 
+                        _this.fetch(
+                            url,
+                            parameters
                         );
+                    return promise;
+                }
+            )
+            .then(
+                (response) => {
+                    ok = response.ok;
                     return response.json();
                 }
+            )
+            .then(
+                (value) => {
+                    if (!ok)
+                        throw new Error(value);
+                    _this.updateStatus();
+                    return ok;
+                }
+                
             );
 
             
@@ -97,8 +120,7 @@ class Authentication
             percentage: 1,
             done: false
         }
-        this.updateStatus(status);
-                    
+
         var uploadProgressName;
         
         var promises = [
@@ -175,7 +197,6 @@ class Authentication
                         _this.setSessionStatus(
                             status
                         );
-                    _this.updateStatus(status);
                     return promise;
                 }
             );
@@ -352,13 +373,19 @@ class Authentication
        status
     )
     {
-
-        var promise =
-            this.postJSON(
-                this.url + "/server/setSessionStatus.php",
-                JSON.stringify(
+        this.updateStatus(status);
+        
+        var parameters = {
+            method: "POST",
+            body: JSON.stringify(
                     status
                 )
+        }
+        
+        var promise =
+            this.fetch(
+                this.url + "/server/setSessionStatus.php",
+                parameters
             );
             
         return promise;
@@ -382,13 +409,17 @@ class Authentication
        cancelLastUpload
     )
     {
+        var parameters = {
+            method: "POST",
+            body: JSON.stringify(
+                cancelLastUpload
+            )
+        }
 
         var promise =
-            this.postJSON(
+            this.fetch(
                 this.url + "/server/setCancelLastUpload.php",
-                JSON.stringify(
-                    cancelLastUpload
-                )
+                parameters
             );
             
         return promise;

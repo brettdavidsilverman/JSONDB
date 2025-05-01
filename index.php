@@ -192,11 +192,11 @@ fetchButton.onclick = function() {
                 jsonEditor.value = json;
                 
                 fetchButton.disabled = false;
-          /*
+          
                 switchFunctions(
                     functionCheckbox.checked
                 );
-                */
+                
                 return json;
             }
         )
@@ -242,19 +242,36 @@ saveButton.onclick =
             saveButton.disabled = false;
             return;
         }
-                
-        var file = new Blob(
-            [json],
-            {
-                type: "application/json; charset=utf-8"
-            }
-        );
+                var promise;
+        
+        if (json.length > 1000) {
+            var file = new Blob(
+                [json],
+                {
+                    type: "application/json; charset=utf-8"
+                }
+            );
 
-        var promise =
-            authentication.postFile(
-                url,
-                file
-            )
+            promise =
+                authentication.postFile(
+                    url,
+                    file
+                );
+        }
+        else {
+            promise =
+                authentication.postJSON(
+                    url,
+                    json
+                )
+                .then(
+                    (response) => {
+                        saveButton.disabled = false;
+                    }
+                );
+        }
+        
+        promise
             .catch(
                 (error) => {
                     saveButton.disabled = false;

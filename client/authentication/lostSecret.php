@@ -32,7 +32,7 @@
          <input type="email" id="email"></input>
 
          <button class="g-recaptcha" 
-            data-sitekey="<?php echo getConfig()->{'reCaptcha'}->{'siteKey'}; ?>"
+            data-sitekey="<?php echo getConfig()['reCaptcha']['siteKey']; ?>"
             data-callback='lostSecret' 
             data-action='submit'>Lost Secret</button>
          

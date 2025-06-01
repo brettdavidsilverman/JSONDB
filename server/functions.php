@@ -13,18 +13,18 @@ require_once "json/functions.php";
 
 function getConfig() {
    $config = file_get_contents(__DIR__ . '/../../config.json'); 
-   $json = json_decode($config);
+   $json = json_decode($config, true);
    return $json;
 }
 
 function getConnection() {
    $json = getConfig();
  
-   $database =     $json->{"Database"};
-   $serverName =   $database->{"server"};
-   $userName =     $database->{"username"};
-   $password =     $database->{"password"};
-   $databaseName = $database->{"database"};
+   $database =     $json["Database"];
+   $serverName =   $database["server"];
+   $userName =     $database["username"];
+   $password =     $database["password"];
+   $databaseName = $database["database"];
 
    // Create connection
    $connection = new mysqli($serverName, $userName, $password, $databaseName);
@@ -52,7 +52,7 @@ function validateReCaptchaToken($token)
    $settings = getConfig();
 
    $secretKey =
-      $settings->{"reCaptcha"}->{"secretKey"};
+      $settings["reCaptcha"]["secretKey"];
    
    
    $data = [

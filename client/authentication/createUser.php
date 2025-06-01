@@ -47,7 +47,7 @@
          </div>
          <br />
          <button id="createUserButton" class="g-recaptcha" 
-            data-sitekey="<?php echo getConfig()->{'reCaptcha'}->{'siteKey'}; ?>"
+            data-sitekey="<?php echo getConfig()['reCaptcha']['siteKey']; ?>"
             data-callback='createUser' 
             data-action='submit'
             disabled='true'

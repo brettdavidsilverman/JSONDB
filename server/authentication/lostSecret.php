@@ -1,7 +1,11 @@
 <?php
 
    require_once '../functions.php';
-
+   
+   $config = getConfig();
+   $domain = $config["Domain"];
+   $serverEmail = $config["Server Email"];
+   
    $connection = getConnection();
       
    $json = getPostedData();
@@ -26,7 +30,7 @@
    $to = $email;
 
    // Subject
-   $subject = 'Reset password for bee.fish';
+   $subject = "Reset password for $domain";
 
    // Message
    $message = "
@@ -36,7 +40,7 @@
 </head>
 <body>
   <h1>Reset password</h1>
-  <p><a href=\"https://bee.fish/client/authentication/resetSecret.php?lostSecret=" . urlencode($lostSecret) . "&email=" . urlencode($email) . "\">Reset your password by clicking this link</a></p>
+  <p><a href=\"https://$domain/client/authentication/resetSecret.php?lostSecret=" . urlencode($lostSecret) . "&email=" . urlencode($email) . "\">Reset your password by clicking this link</a></p>
 </body>
 </html>
 ";
@@ -44,7 +48,7 @@
    // To send HTML mail, the Content-type header must be set
    $headers[] = 'MIME-Version: 1.0';
    $headers[] = 'Content-type: text/html; charset=utf-8';
-   $headers[] = 'From: no-reply <noreply.bee.fish@gmail.com>';
+   $headers[] = "From: $domain <$serverEmail>";
    
    // Mail it
    if (mail(

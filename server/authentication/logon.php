@@ -9,7 +9,7 @@ $json =
 if (!is_null($json)) {
    $email = $json['email'];
    $secret = $json['secret'];
-   $ipAddress = $_SERVER['REMOTE_ADDR'];
+   
    
    $connection = getConnection();
 
@@ -17,8 +17,7 @@ if (!is_null($json)) {
       logon(
          $connection,
          $email,
-         $secret,
-         $ipAddress
+         $secret
       );
    
    $connection->close();

@@ -1,2 +1,3 @@
-change https://bee.fish to config.json
-change getConfig to use associative arrays
+delete existing sessions on login 
+check authenticate for ipaddress
+sha512 hash

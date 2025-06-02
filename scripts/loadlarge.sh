@@ -8,7 +8,7 @@ fi
 
 echo ""
 date
-curl -s https://bee.fish/my -b ../cookies.txt -c ../cookies.txt --data "@large.json" &
+curl -s https://bee.fish/my -b ../../cookies.txt -c ../../cookies.txt --data "@../large.json" &
 
 UPLOAD_PID=$!
 

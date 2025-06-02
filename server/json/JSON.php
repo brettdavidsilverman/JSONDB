@@ -18,8 +18,14 @@
       }
       handlePost($connection, $file);
    }
-   else if ($method === "GET")
-      handleGet($connection);
+   else if ($method === "GET") {
+      
+      if (getQuery() === "")
+         handleGet($connection);
+      else
+         handleSearch($connection);
+         
+   }
       
    $connection->close();
       flush();

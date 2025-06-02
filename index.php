@@ -15,7 +15,7 @@
     <head>
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <title id="title">bee.fish</title>
+        <title id="title"><?php echo getConfig()["Domain"] ?></title>
         <script src="/client/head.js?v=1"></script>
         <script src="/client/stream/stream.js"></script>
         <script src="/client/power-encoding/power-encoding.js"></script>
@@ -35,7 +35,7 @@ form > div {
         </style>
     </head>
     <body>
-        <h1 id="h1">bee.fish</h1>
+        <h1 id="h1"><?php echo getConfig()["Domain"] ?></h1>
         
         <div id="expires"></div>
         
@@ -327,14 +327,20 @@ function getURL(publish = false) {
     if (url.startsWith("/"))
         url = url.substr(1);
 
-    var first = url.split("/")[0];
-    
-    if (first != "my" && !isInteger(first))
+    var first;
+    if (url.includes("?"))
+        first = url.split("?")[0];
+    else
+        first = url.split("/")[0];
+        
+    if (first != "my"  &&
+        first != "my/" &&
+        !isInteger(first))
     {
         if (url)
-            url = "/my/" + url;
+            url = "my/" + url;
         else
-            url = "/my";
+            url = "my";
     }
     
     if (!url.startsWith("/"))
@@ -403,7 +409,7 @@ function displayExpires() {
 }
 
 
-authentication.onupdatestatus =
+authentication.onUpdateStatus =
    (status) => {
         saveButton.disabled = !status.done;
         progress.value = status.percentage;

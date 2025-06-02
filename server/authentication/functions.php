@@ -129,13 +129,22 @@ function validateUserEmail($connection, $email, $newUserSecret)
    return $userValidated;
 }
 
-function logon($connection, $email, $secret, $ipAddress)
+function logon($connection, $email, $secret)
 {
+   
+   $ipAddress = getClientIPAddress();
+   
    $statement = $connection->prepare(
      "CALL logon(?, ?, ?);"
    );
    
-   $statement->bind_param('sss', $email, $secret, $ipAddress );
+
+   $statement->bind_param(
+      'sss',
+      $email,
+      $secret,
+      $ipAddress
+   );
    
    $statement->execute();
    
@@ -169,10 +178,10 @@ function logon($connection, $email, $secret, $ipAddress)
    return $credentials;
 }
 
-function logoff($connection, $ipAddress)
+function logoff($connection)
 {
    $statement = $connection->prepare(
-     "CALL logoff(?, ?);"
+     "CALL logoff(?);"
    );
    
    $credentials = getCredentialsCookie();
@@ -181,19 +190,16 @@ function logoff($connection, $ipAddress)
        $credentials["sessionKey"])
    {
       $statement->bind_param(
-         'ss',
-         $credentials["sessionKey"],
-         $ipAddress
+         's',
+         $credentials["sessionKey"]
       );
    
       $statement->execute();
 
    }
    
-
-   
+   $statement->close();
  
-   
 }
 
 function changeSecret($connection, $email, $oldSecret, $newSecret)
@@ -311,14 +317,16 @@ function getCredentials($connection, $ignoreExpires = false)
       return getEmptyCredentials();
    }
    
+   $ipAddress = getClientIPAddress();
    
    $statement = $connection->prepare(
-     'CALL authenticate(?, ?);'
+     'CALL authenticate(?, ?, ?);'
    );
    
    $statement->bind_param(
-      'si',
+      'ssi',
       $credentials["sessionKey"],
+      $ipAddress,
       $ignoreExpires
    );
    
@@ -369,14 +377,13 @@ function authenticate($ignoreExpires = false)
        
    if ($credentials["authenticated"] === false) {
        
-      http_response_code(401);
-      
-      if (!$isFetchClient) {
-          $url = '/client/authentication/logon.php';
-          $redirect = $_SERVER['REQUEST_URI'];
-          $url = $url . '?redirect=' . urlencode($redirect);
-          redirect($url);
-      }
+      if ($isFetchClient)
+         http_response_code(401);
+         
+      $url = '/client/authentication/logon.php';
+      $redirect = $_SERVER['REQUEST_URI'];
+      $url = $url . '?redirect=' . urlencode($redirect);
+      redirect($url);
       
       exit();
 

@@ -1,12 +1,6 @@
 <?php
 
-session_start(
-   [
-      'cookie_lifetime' => (60*60 - 10),
-      'read_and_close' => true
-   ]
-);
-
+startSession();
 
 require_once "authentication/functions.php";
 require_once "json/functions.php";
@@ -35,6 +29,52 @@ function getConnection() {
    }
    
    return $connection;
+}
+
+function getSetting($connection, $settingCode) {
+    
+   $statement = $connection->prepare(
+     'SELECT getSetting(?) as settingValue;'
+   );
+   
+   $statement->bind_param(
+      's',
+      $settingCode
+   );
+   
+   $settingValue = null;
+   
+   $statement->execute();
+
+   $statement->bind_result(
+      $settingValue
+   );
+   
+   
+   if (!$statement->fetch())
+      $settingValue = null;
+      
+   $statement->close();
+   
+   return $settingValue;
+}
+
+function startSession() {
+   $connection = getConnection();
+   $timeout = (int)getSetting(
+      $connection,
+      "SESSION_TIMEOUT"
+   );
+
+   session_start(
+      [
+         'cookie_lifetime' => ($timeout - 5),
+         'read_and_close' => true
+      ]
+   );
+   
+   $connection->close();
+
 }
 
 function encodeQueryString ($data) {
@@ -92,8 +132,11 @@ function redirect($url)
 {
     if (headers_sent() === false)
     {
-        http_response_code(302);
-        header('location: ' . $url);
+        $responseCode =
+           http_response_code();
+        if ($responseCode === 200)
+           $responseCode = 302;
+        header('location: ' . $url, true, $responseCode);
     }
 
     exit();
@@ -143,9 +186,13 @@ function getQuery() {
    return $_SERVER['QUERY_STRING'];
 }
 
+function getClientIPAddress() {
+   $ipAddress = $_SERVER['REMOTE_ADDR'];
+   return $ipAddress;
+}
+
 function encodeString($string) {
-   //return json_encode($string);
-      
+
    return
       '"' .
       addcslashes(

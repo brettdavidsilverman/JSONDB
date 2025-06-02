@@ -1,15 +1,15 @@
 <?php
 
-   http_response_code(200);
-   /*
-   header(
-      "Access-Control-Allow-Origin: *"
-   );
-   */
+   require_once "functions.php";
    
+   http_response_code(200);
+   
+   $connection = getConnection();
    
    header("Content-Type: text/plain");
-   date_default_timezone_set('UTC');
-   echo "Hello World 😄🌍";
+   
+   echo (int)getSetting($connection, "SESSION_TIMEOUT");
+   
+   $connection->close();
     
 ?>

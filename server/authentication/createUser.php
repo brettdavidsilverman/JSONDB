@@ -1,6 +1,10 @@
 <?php
    require_once '../functions.php';
    
+   $config = getConfig();
+   $domain = $config["Domain"];
+   $serverEmail = $config["Server Email"];
+   
    $connection = getConnection();
    
    $json = getPostedData();
@@ -27,7 +31,7 @@
    $to = $email;
 
    // Subject
-   $subject = 'Validate bee.fish user';
+   $subject = "Validate $domain user";
 
    $secret = urlencode($newUserSecret);
    $email = urlencode($email);
@@ -40,7 +44,7 @@
 </head>
 <body>
   <h1>Validate email</h1>
-  <p><a href=\"https://bee.fish/server/authentication/validateUserEmail.php?newUserSecret=$secret&email=$email\">Please validate your email address by clicking this link</a></p>
+  <p><a href=\"https://$domain/server/authentication/validateUserEmail.php?newUserSecret=$secret&email=$email\">Please validate your email address by clicking this link</a></p>
 </body>
 </html>
 ";
@@ -48,7 +52,7 @@
    // To send HTML mail, the Content-type header must be set
    $headers[] = 'MIME-Version: 1.0';
    $headers[] = 'Content-type: text/html; charset=utf-8';
-   $headers[] = 'From: no-reply <noreply.bee.fish@gmail.com>';
+   $headers[] = "From: $domain <$serverEmail>";
    
    // Mail it
    if (mail(

@@ -23,6 +23,9 @@ class Authentication
          this.redirect();
     }
     
+    onUpdateStatus() {
+    }
+    
     redirect() {
         var currentPage = document.location.href;
         var newPage = this.url + "/client/authentication/logon.php";
@@ -231,8 +234,8 @@ class Authentication
             return;
         }
         
-        if (this.onupdatestatus)
-           this.onupdatestatus(status);
+        if (this.onUpdateStatus)
+           this.onUpdateStatus(status);
         
         if (!status.done)
            this.setStatusTimeout();

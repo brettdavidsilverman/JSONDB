@@ -46,11 +46,11 @@ function getRootValueId($connection, $userId)
     return $valueId;
 }
 
-function _getValueByPath($connection, $userId, $parentValueId, & $paths)
+function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
 {
      
     $statement = $connection->prepare(
-      "CALL getValueByPath(?,?,?,?,?);"
+      "CALL getValueIdByPath(?,?,?,?,?);"
     );
     
 
@@ -117,7 +117,7 @@ function _getValueByPath($connection, $userId, $parentValueId, & $paths)
     return $valueId;
 }
 
-function getValueByPath($connection, $credentials)
+function getValueIdByPath($connection, $credentials)
 {
     $userId = $credentials["userId"];
 
@@ -129,7 +129,7 @@ function getValueByPath($connection, $credentials)
         
     if (!is_null($rootValueId)) {
         
-        $pathValueId = _getValueByPath($connection, $userId, $rootValueId, $paths);
+        $pathValueId = _getValueIdByPath($connection, $userId, $rootValueId, $paths);
     }
     
     if (is_null($pathValueId) &&
@@ -157,7 +157,7 @@ function handlePost($connection, $file = null)
 
     $credentials = authenticate(true);
 
-    $pathValueId = getValueByPath($connection, $credentials);
+    $pathValueId = getValueIdByPath($connection, $credentials);
     
     http_response_code(200);
     setCredentialsCookie($credentials);
@@ -268,7 +268,7 @@ function handleGet($connection)
 {
     $credentials = authenticate();
     
-    $pathValueId = getValueByPath($connection, $credentials);
+    $pathValueId = getValueIdByPath($connection, $credentials);
     
     http_response_code(200);
     
@@ -291,6 +291,21 @@ function handleGet($connection)
     printValues($statement, $values);
         
     //printChildValues($statement, $valueId);
+}
+
+function handleSearch($connection)
+{
+    $credentials = authenticate();
+    
+    $pathValueId = getValueIdByPath($connection, $credentials);
+    
+    http_response_code(200);
+    
+    header('Content-Type: application/json');
+      
+    setCredentialsCookie($credentials);
+    
+    echo $pathValueId;
 }
     
 function printValues($statement, $values, $tabCount = 0, $isFirst = true) {

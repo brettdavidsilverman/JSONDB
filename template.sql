@@ -7,41 +7,43 @@ inner join
 on
     vpc.parentValueId = 57443148
 and
-    vpc.childValueId = v.valueId,
-
-    (
+    vpc.childValueId = v.valueId
+where
+    exists(
         select
-            vpcWord.parentValueId as parentValueId
+            vw.valueId as valueId
         from
             ValueWord as vw,
             Word as w,
-            ValueParentChild as vpcWord
+            ValueParentChild as vpc
         where
             w.word = 'heroin'
         and
+            vw.valueId = vpc.childValueId
+        and
             vw.wordId = w.wordId
         and
-            vpcWord.childValueId = vw.valueId
+            vpc.parentValueId = v.valueId
+            
+    )
 
-    ) as word1,
-
-    (
+and
+    exists(
         select
-            vpcWord.parentValueId as parentValueId
+            vw.valueId as valueId
         from
             ValueWord as vw,
             Word as w,
-            ValueParentChild as vpcWord
+            ValueParentChild as vpc
         where
-            w.word = 'white'
+            w.word = 'black'
+        and
+            vw.valueId = vpc.childValueId
         and
             vw.wordId = w.wordId
         and
-            vpcWord.childValueId = vw.valueId
-        
-    ) as word2
-where
-    word1.parentValueId = v.valueId
-and
-    word2.parentValueId = v.valueId
-limit 10
+            vpc.parentValueId = v.valueId
+            
+    )
+
+limit 10;

@@ -1,9 +1,12 @@
 <?php
 
     require_once "server/functions.php";
+    
     $credentials = authenticate();
     
     http_response_code(200);
+    
+    setCredentialsCookie($credentials);
     
     header("Content-Type: text/plain");
     
@@ -12,10 +15,10 @@
     $pathValueId = getValueIdByPath(
         $connection,
         $credentials,
-        "/my/data"
+        "/my/data/"
     );
      
     $connection->close();
     
-    echo $pathValueId;
+    var_dump($pathValueId);
 ?>

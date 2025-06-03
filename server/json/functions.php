@@ -3,20 +3,19 @@
 require_once 'JSONDBListener.php';
 require_once 'ValueCountListener.php';
 
-function getRootValueId($connection, $userId)
+function getRootValueId($connection, $userId, $path)
 {
-    $path = getPath();
-    
-    $paths = explode('/', $path);
 
+    $paths = explode('/', $path);
+    
     $ownerId = null;
     
-    if (!empty($paths))
+    if (count($paths) >= 2)
     {
-        if ($paths[0] === 'my')
+        if ($paths[1] === 'my')
             $ownerId = $userId;
-        else if (is_numeric($paths[0]))
-            $ownerId = (int)($paths[0]);
+        else if (is_numeric($paths[1]))
+            $ownerId = (int)($paths[1]);
     }
     else
         $ownerId = $userId;
@@ -24,7 +23,7 @@ function getRootValueId($connection, $userId)
     $statement = $connection->prepare(
       "CALL getRootValueId(?,?);"
     );
-    
+
     $statement->bind_param(
         'ii', 
         $userId,
@@ -63,23 +62,37 @@ function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
         $pathKey
     );
     
-    if (empty($paths))
+    if (count($paths) < 2)
         return null;
-
+/*
     $first = array_shift($paths);
     if ($first === "my")
         $ownerId = $userId;
     else if (is_numeric($first))
         $ownerId = (int)($first);
+     */
      
+    if ($paths[1] === 'my')
+        $ownerId = $userId;
+    else if (is_numeric($paths[1]))
+        $ownerId = (int)($paths[1]);
+    else
+        return null;
+        
     $valueId = $parentValueId;
     
-    $count = 0;
-    
-    foreach ($paths as $path) {
+    $count = count($paths);
+
+    for($i = 2; $i < $count; ++$i) {
+        
+        $path = $paths[$i];
+        
+        if ($path === "")
+           continue;
+           
         $valueId = null;
                 
-        $count++;
+        
         $path = urldecode($path);
         
         if ($path === "")
@@ -102,8 +115,7 @@ function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
         );
     
         if (!$statement->fetch()) {
-            array_unshift($paths, $first);
-            $paths[$count] = "{" . urldecode($path) . "}";
+            $paths[$i] = "{" . urldecode($path) . "}";
             $valueId = null;
             break;
         }
@@ -117,30 +129,35 @@ function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
     return $valueId;
 }
 
-function getValueIdByPath($connection, $credentials)
+function getValueIdByPath($connection, $credentials, $path)
 {
     $userId = $credentials["userId"];
 
-    $rootValueId = getRootValueId($connection, $userId);
+    $rootValueId = getRootValueId(
+        $connection,
+        $userId,
+        $path
+    );
+    
+
     $pathValueId = null;
     
-    $path = getPath();
     $paths = explode("/", $path);
-        
+    
     if (!is_null($rootValueId)) {
         
         $pathValueId = _getValueIdByPath($connection, $userId, $rootValueId, $paths);
     }
     
     if (is_null($pathValueId) &&
-        count($paths) > 1)
+        count($paths) >= 2)
     {
         if (is_null($rootValueId))
            $paths[1] = "{" . $paths[1] . "}";
            
         http_response_code(404);
         setCredentialsCookie($credentials);
-        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Type: application/text');
         $error = "🛑 Path " . join("/", $paths) . " not found";
         echo encodeString($error);
         exit();
@@ -157,7 +174,11 @@ function handlePost($connection, $file = null)
 
     $credentials = authenticate(true);
 
-    $pathValueId = getValueIdByPath($connection, $credentials);
+    $pathValueId = getValueIdByPath(
+        $connection,
+        $credentials,
+        getPath()
+    );
     
     http_response_code(200);
     setCredentialsCookie($credentials);
@@ -268,7 +289,11 @@ function handleGet($connection)
 {
     $credentials = authenticate();
     
-    $pathValueId = getValueIdByPath($connection, $credentials);
+    $pathValueId = getValueIdByPath(
+        $connection,
+        $credentials,
+        getPath()
+    );
     
     http_response_code(200);
     
@@ -297,7 +322,49 @@ function handleSearch($connection)
 {
     $credentials = authenticate();
     
-    $pathValueId = getValueIdByPath($connection, $credentials);
+    $sql = <<<END
+select
+   getPathByValue(v.valueId) as path
+from 
+   Value as v
+inner join
+   ValueParentChild as vpc
+on
+   vpc.parentValueId = ?
+and
+   vpc.childValueId = v.valueId
+where
+   v.sessionId is null
+
+END;
+    
+    $pathValueId = getValueIdByPath(
+        $connection,
+        $credentials,
+        getPath()
+    );
+    $words = explode("+", getQuery());
+    
+    foreach ($words as $word) {
+        $sql = $sql . "and " . word();
+    }
+    
+    $sql = $sql . "limit 10";
+    
+    echo $sql;
+    return;
+    $parameters =
+        array_merge(
+            [$pathValueId],
+            $words
+        );
+    
+    $result = $connection->execute_query(
+        $sql,
+        $parameters
+    );
+    
+    $data = $result->fetch_all(MYSQLI_ASSOC);
     
     http_response_code(200);
     
@@ -305,7 +372,58 @@ function handleSearch($connection)
       
     setCredentialsCookie($credentials);
     
-    echo $pathValueId;
+    $count = count($data);
+
+    echo "[\r\n";
+    
+    for ($i = 0; $i < $count; ++$i) {
+        $row = $data[$i];
+        $path = $row["path"];
+        $paths = explode("/", $path);
+        $stringPath = "";
+        foreach ($paths as $segment)
+        {
+            $stringPath =
+                $stringPath
+                . escapeString($segment)
+                . "/";
+        }
+        
+        $stringPath =
+            substr($stringPath, 0, -1);
+        
+        echo tabs(1)
+            . '"' . $stringPath . '"';
+            
+        if ($i + 1 < $count)
+           echo ",";
+           
+        echo "\r\n";
+    }
+    
+    echo "]";
+}
+
+function word() {
+    $sql = <<<END
+exists(
+    select
+        *
+    from
+        ValueWord as vw,
+        Word as w
+    where
+        w.word = ?
+    and
+        vw.valueId = vpc.childValueId
+    and
+        vw.wordId = w.wordId
+       
+)
+
+END;
+
+   return $sql;
 }
     
 function printValues($statement, $values, $tabCount = 0, $isFirst = true) {

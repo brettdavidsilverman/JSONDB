@@ -182,7 +182,7 @@ fetchButton.onclick = function() {
         then(
             function (text) {
                 if (!status) {
-                    throw JSON.parse(text);
+                    throw text;
                 }
                 return text;
             }
@@ -324,36 +324,22 @@ function getURL(publish = false) {
     if (url == "")
         return "/my";
         
-    if (url.startsWith("/"))
-        url = url.substr(1);
-
     var first;
-    if (url.includes("?"))
+    if (url.includes("?")) {
         first = url.split("?")[0];
-    else
-        first = url.split("/")[0];
-        
-    if (first != "my"  &&
-        first != "my/" &&
-        !isInteger(first))
-    {
-        if (url)
-            url = "my/" + url;
-        else
-            url = "my";
     }
-    
-    if (!url.startsWith("/"))
-        url = "/" + url;
+    else {
+        first = url.split("/")[1];
+    }
         
-    if (url.endsWith("/"))
-        url = url.substr(0, url.length - 1);
         
     pathInput.value = url;
     
     if (publish && authentication.userId && !isInteger(first)) {
-        url = "/" + authentication.userId +
-                "/" + url.substr(4);
+        url =
+            "/" + 
+            authentication.userId.toString() +
+            url.substr(3);
                 
     }
     

@@ -1,3 +1,2 @@
-delete existing sessions on login 
-check authenticate for ipaddress
+replace email validating links with copy/paste random number
 sha512 hash

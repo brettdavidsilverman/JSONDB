@@ -172,13 +172,13 @@ function getPath() {
       $_SERVER['REQUEST_URI'],
       PHP_URL_PATH
    );
-   
+   /*
    if (substr($path, 0, 1) === "/")
       $path = substr($path, 1);
 
    if (substr($path, - 1) === "/")
       $path = substr($path, 0, - 1);
-
+*/
    return $path;
 }
 
@@ -200,6 +200,15 @@ function encodeString($string) {
          "\"\f\n\r\t\v\0\\"
       ) .
       '"';
+}
+
+function escapeString($string) {
+
+   return
+      addcslashes(
+         $string,
+         "\"\f\n\r\t\v\0\\"
+      );
 }
    
 function getHeader($name) {

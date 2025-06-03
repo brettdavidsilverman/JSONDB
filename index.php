@@ -339,6 +339,7 @@ function getURL(publish = false) {
         url =
             "/" + 
             authentication.userId.toString() +
+            "/" +
             url.substr(4);
                 
     }

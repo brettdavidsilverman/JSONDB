@@ -3,3 +3,5 @@ sha512 hash
 on post, allow for last segment to append to object keys
 on post, allow for [] operator to append to array
 intellisense for index.php path
+add count and paging to search
+add gzip to apache 

@@ -45,5 +45,23 @@ and
             vpc.parentValueId = v.valueId
             
     )
+and
+    exists(
+        select
+            vw.valueId as valueId
+        from
+            ValueWord as vw,
+            Word as w,
+            ValueParentChild as vpc
+        where
+            w.word = 'black'
+        and
+            vw.valueId = vpc.childValueId
+        and
+            vw.wordId = w.wordId
+        and
+            vpc.parentValueId = v.valueId
+            
+    )
 
 limit 10;

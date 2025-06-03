@@ -323,18 +323,18 @@ function handleSearch($connection)
     $credentials = authenticate();
     
     $sql = <<<END
-select
-   getPathByValue(v.valueId) as path
+select distinct
+    getPathByValue(v.valueId) as path
 from 
-   Value as v
+    Value as v
 inner join
-   ValueParentChild as vpc
+    ValueParentChild as vpc
 on
-   vpc.parentValueId = ?
+    vpc.parentValueId = ?
 and
-   vpc.childValueId = v.valueId
+    vpc.childValueId = v.valueId
 where
-   v.sessionId is null
+    v.sessionId is null
 
 END;
     
@@ -343,16 +343,15 @@ END;
         $credentials,
         getPath()
     );
+    
     $words = explode("+", getQuery());
     
     foreach ($words as $word) {
-        $sql = $sql . "and " . word();
+        $sql = $sql . "and\r\n" . word();
     }
     
     $sql = $sql . "limit 10";
     
-    echo $sql;
-    return;
     $parameters =
         array_merge(
             [$pathValueId],
@@ -406,20 +405,23 @@ END;
 
 function word() {
     $sql = <<<END
-exists(
-    select
-        *
-    from
-        ValueWord as vw,
-        Word as w
-    where
-        w.word = ?
-    and
-        vw.valueId = vpc.childValueId
-    and
-        vw.wordId = w.wordId
-       
-)
+    exists(
+        select
+            vw.valueId as valueId
+        from
+            ValueWord as vw,
+            Word as w,
+            ValueParentChild as vpc
+        where
+            w.word = ?
+        and
+            vw.valueId = vpc.childValueId
+        and
+            vw.wordId = w.wordId
+        and
+            vpc.parentValueId = v.valueId
+            
+    )
 
 END;
 

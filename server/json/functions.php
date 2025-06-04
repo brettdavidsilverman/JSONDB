@@ -369,11 +369,13 @@ END;
     );
     
     $words = explode("+", getQuery());
-    
-    foreach ($words as $word) {
+    $wordCount = count($words);
+    for ($i = 0; $i < $wordCount; ++$i) {
+        $word = $words[$i];
+        $words[$i] = urldecode($word);
         $sql = $sql . "and\r\n" . word();
     }
-    
+
     $sql = $sql . "limit 10";
     
     $parameters =

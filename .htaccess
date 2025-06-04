@@ -10,7 +10,6 @@ RewriteEngine on
   </IfModule>
 </FilesMatch>
 
-ErrorDocument 401 /var/www/html/client/authentication/logon.php
 
 AddDefaultCharset utf-8
 AddCharset utf-8 .htm .html .js .css .json

@@ -844,34 +844,6 @@ class Authentication
         
         return promise;
     }
-    
-    
-    mysqlDateToJavascript(mysqlDate) {
-         
-        if (!mysqlDate)
-            return null;
-            
-        if (typeof mysqlDate == "object")
-            return mysqlDate;
-     
-        if (typeof mysqlDate == "string") {
-            if (mysqlDate.length == 19) {
-                mysqlDate = mysqlDate.replace( /[-]/g, '/' );
-                mysqlDate = mysqlDate.replace( /[+]/g, ' ' ) + " GMT";
-                // parse the proper date string from the formatted string.
-                
-            }
-            mysqlDate = Date.parse( mysqlDate );
-            mysqlDate = new Date(mysqlDate);
-        }
-        else if (typeof mysqlDate == "number")
-            mysqlDate = new Date(mysqlDate);
-
-
-        return mysqlDate;
-            
-    }
-
 
 }
 

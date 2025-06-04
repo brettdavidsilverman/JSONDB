@@ -150,7 +150,7 @@ function getValueIdByPath($connection, $credentials, $path)
     }
     
     if (is_null($pathValueId) &&
-        count($paths) >= 2)
+        count($paths) > 2)
     {
         if (is_null($rootValueId))
            $paths[1] = "{" . $paths[1] . "}";
@@ -166,6 +166,60 @@ function getValueIdByPath($connection, $credentials, $path)
     return $pathValueId;
 }
 
+function getValueCount($stream) {
+    $valueCountListener = new ValueCountListener();
+    $valueCountParser = new \JsonStreamingParser\Parser(
+        $stream,
+        $valueCountListener
+    );
+    
+    $valueCountParser->parse();
+    
+    if (!$valueCountListener->getResult())
+        throw new Exception(
+            "Unexpected end of data"
+        );
+                
+    $totalValueCount =
+        $valueCountListener->valueCount;
+            
+    return $totalValueCount;
+}
+
+function insertIntoDatabase(
+    $connection,
+    $credentials,
+    $pathValueId,
+    $totalValueCount,
+    $stream
+)
+{
+    // Reset the stream to start inserting
+    rewind($stream);
+        
+    setSessionStatus(
+        $credentials,
+        [
+            "label" => "Indexing...",
+            "percentage" => 0,
+            "done" => false
+        ]
+    );
+        
+    $listener = new JSONDBListener(
+        $connection,
+        $credentials,
+        $pathValueId,
+        $totalValueCount
+    );
+        
+    $parser = new \JsonStreamingParser\Parser(
+        $stream,
+        $listener
+    );
+        
+    $parser->parse();
+}
 
 function handlePost($connection, $file = null)
 {
@@ -203,16 +257,21 @@ function handlePost($connection, $file = null)
     );
         
     try {
-        $listener = new ValueCountListener();
-        $parser = new \JsonStreamingParser\Parser($stream, $listener);
-        $parser->parse();
-        if (!$listener->getResult())
-            throw new Exception(
-                "Unexpected end of data"
-            );
-                
+        // Get the count of posted values
         $totalValueCount =
-            $listener->valueCount;
+            getValueCount($stream);
+            
+
+        // Parse stream into database
+        insertIntoDatabase(
+            $connection,
+            $credentials,
+            $pathValueId,
+            $totalValueCount,
+            $stream
+        );
+        
+        
     }
     catch (Exception $e) {
              
@@ -231,41 +290,6 @@ function handlePost($connection, $file = null)
             
     }
         
-    rewind($stream);
-    setSessionStatus(
-        $credentials,
-        [
-            "label" => "Indexing...",
-            "percentage" => 0,
-            "done" => false
-        ]
-    );
-        
-
-    try {
-        $listener = new JSONDBListener($connection, $credentials, $pathValueId, $totalValueCount);
-        $parser = new \JsonStreamingParser\Parser($stream, $listener);
-        $parser->parse();
-    }
-    catch (Exception $e) {
-        setSessionStatus(
-            $credentials,
-            [
-                "label" => $e->getMessage(),
-                "percentage" => 0,
-                "done" => true
-            ]
-        );
-            
-        echo "false";
-            
-        return false;
-    }
-    finally {
-        fclose($stream);
-    }
-        
-
     $end = time();
         
     $timeTaken = $end - $start;

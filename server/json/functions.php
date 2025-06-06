@@ -45,9 +45,48 @@ function getRootValueId($connection, $userId, $path)
     return $valueId;
 }
 
-function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
+function insertLastValue(
+    $connection,
+    $credentials,
+    $parentValueId,
+    $path
+)
+{
+    $statement = $connection->prepare(
+        "CALL insertLastValue(?,?,?);"
+    );
+    
+    $sessionKey = $credentials["sessionKey"];
+    
+    $statement->bind_param(
+        'sis', 
+        $sessionKey,
+        $parentValueId,
+        $path
+    );
+    
+    $statement->execute();
+    
+    $statement->bind_result(
+        $valueId
+    );
+    
+    if (!$statement->fetch())
+        $valueId = null;
+
+    $statement->close();
+    
+
+    return $valueId;
+}
+
+function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, & $lastPath, & $paths)
 {
      
+    $lastPath = null;
+    
+    $userId = $credentials["userId"];
+    
     $statement = $connection->prepare(
       "CALL getValueIdByPath(?,?,?,?,?);"
     );
@@ -64,14 +103,7 @@ function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
     
     if (count($paths) < 2)
         return null;
-/*
-    $first = array_shift($paths);
-    if ($first === "my")
-        $ownerId = $userId;
-    else if (is_numeric($first))
-        $ownerId = (int)($first);
-     */
-     
+
     if ($paths[1] === 'my')
         $ownerId = $userId;
     else if (is_numeric($paths[1]))
@@ -86,12 +118,6 @@ function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
     for($i = 2; $i < $count; ++$i) {
         
         $path = $paths[$i];
-        
-        if ($path === "")
-           continue;
-           
-        $valueId = null;
-                
         
         $path = urldecode($path);
         
@@ -114,10 +140,32 @@ function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
             $valueId
         );
     
+
+        
         if (!$statement->fetch()) {
-            $paths[$i] = "{" . urldecode($path) . "}";
-            $valueId = null;
-            break;
+            $statement->close();
+
+            if ($i === ($count - 1) &&
+                !is_numeric($path) &&
+                $insertLast
+            )
+            {
+                $lastPath = $path;
+                $valueId = $parentValueId;
+                /*
+                $valueId = insertLastValue(
+                    $connection,
+                    $credentials,
+                    $parentValueId,
+                    $path
+                );
+                */
+            }
+            else {
+                $paths[$i] = "{" . urldecode($path) . "}";
+                $valueId = null;
+            }
+            return $valueId;
         }
             
         $parentValueId = $valueId;
@@ -129,7 +177,13 @@ function _getValueIdByPath($connection, $userId, $parentValueId, & $paths)
     return $valueId;
 }
 
-function getValueIdByPath($connection, $credentials, $path)
+function getValueIdByPath(
+    $connection, 
+    $credentials,
+    $insertLast,
+    & $lastPath,
+    $path
+)
 {
     $userId = $credentials["userId"];
 
@@ -143,10 +197,18 @@ function getValueIdByPath($connection, $credentials, $path)
     $pathValueId = null;
     
     $paths = explode("/", $path);
+    $lastPath = null;
     
     if (!is_null($rootValueId)) {
         
-        $pathValueId = _getValueIdByPath($connection, $userId, $rootValueId, $paths);
+        $pathValueId = _getValueIdByPath(
+            $connection,
+            $credentials,
+            $rootValueId, 
+            $insertLast,
+            $lastPath,
+            $paths
+        );
     }
     
     if (is_null($pathValueId) &&
@@ -189,14 +251,11 @@ function getValueCount($stream) {
 function insertIntoDatabase(
     $connection,
     $credentials,
-    $pathValueId,
     $totalValueCount,
     $stream
 )
 {
-    // Reset the stream to start inserting
-    rewind($stream);
-        
+      
     setSessionStatus(
         $credentials,
         [
@@ -205,11 +264,24 @@ function insertIntoDatabase(
             "done" => false
         ]
     );
+    
+    $lastPath = null;
+    
+    $pathValueId = getValueIdByPath(
+        $connection,
+        $credentials,
+        true,
+        $lastPath,
+        getPath()
+    );
+    
+    
         
     $listener = new JSONDBListener(
         $connection,
         $credentials,
         $pathValueId,
+        $lastPath,
         $totalValueCount
     );
         
@@ -221,19 +293,15 @@ function insertIntoDatabase(
     $parser->parse();
 }
 
+
 function handlePost($connection, $file = null)
 {
 
     $start = time();
 
     $credentials = authenticate(true);
-
-    $pathValueId = getValueIdByPath(
-        $connection,
-        $credentials,
-        getPath()
-    );
     
+
     http_response_code(200);
     setCredentialsCookie($credentials);
         
@@ -261,12 +329,13 @@ function handlePost($connection, $file = null)
         $totalValueCount =
             getValueCount($stream);
             
-
+        // Reset the stream to start inserting
+        rewind($stream);
+      
         // Parse stream into database
         insertIntoDatabase(
             $connection,
             $credentials,
-            $pathValueId,
             $totalValueCount,
             $stream
         );
@@ -312,10 +381,13 @@ function handlePost($connection, $file = null)
 function handleGet($connection)
 {
     $credentials = authenticate();
+    $lastPath = null;
     
     $pathValueId = getValueIdByPath(
         $connection,
         $credentials,
+        false,
+        $lastPath,
         getPath()
     );
     
@@ -361,10 +433,14 @@ where
     v.sessionId is null
 
 END;
+
+    $lastPath = null;
     
     $pathValueId = getValueIdByPath(
         $connection,
         $credentials,
+        false,
+        $lastPath,
         getPath()
     );
     

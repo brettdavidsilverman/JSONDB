@@ -23,13 +23,21 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $credentials;
     protected $createValueStatement = null;
     protected $pathValueId;
+    protected $lastPath;
     
     public $valueCount = 0;
     protected $totalValueCount;
     protected $startTime;
     
     
-    public function __construct($connection, $credentials, $pathValueId, $totalValueCount) {
+    public function __construct(
+        $connection,
+        $credentials, 
+        $pathValueId,
+        $lastPath,
+        $totalValueCount
+    )
+    {
         
         $this->connection = $connection;
         $this->credentials = $credentials;
@@ -39,9 +47,33 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            $totalValueCount;
            
         $this->startTime = time();
+        
+        $this->deleteTempValues();
+        
     }
     
+    protected function deleteTempValues()
+    {
     
+        $sessionKey =
+            $this->credentials["sessionKey"];
+            
+        $statement =
+            $this->connection->prepare(
+                "CALL deleteTempValues(?);"
+            );
+          
+        $statement->bind_param(
+            's',
+            $sessionKey
+        );
+   
+        $statement->execute();
+   
+        $statement->close();
+    
+    }
+
 
     public function getJson()
     {
@@ -52,29 +84,13 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     {
         $this->stack = [];
         $this->keys = [];
-
-        $sessionKey =
-            $this->credentials["sessionKey"];
-            
-        $statement =
-            $this->connection->prepare(
-                "CALL deleteTempValues(?);"
-            );
-          
-        $statement->bind_param(
-           's',
-           $sessionKey
-        );
-   
-        $statement->execute();
-   
-        $statement->close();
-    
         
     }
     
     public function endDocument() : void
     {
+        
+
         set_time_limit(30);
         
         setSessionStatus(
@@ -96,13 +112,14 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $statement =
            $this->connection->prepare(
-              "CALL upgradeTempValues(?, ?);"
+              "CALL upgradeTempValues(?, ?, ?);"
            );
           
         $statement->bind_param(
-           'si',
+           'sis',
            $sessionKey,
-           $this->pathValueId
+           $this->pathValueId,
+           $this->lastPath
         );
    
         $statement->execute();
@@ -272,15 +289,16 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $parentValueId = null;
         
         if (!is_null($currentItem)) {
-           $objectIndex = $currentItem['count']++;
-           if ('object' === $currentItem['type']) {
-              $objectKey = array_pop($this->keys);
-           }
-           $parentValueId = $currentItem["valueId"];
+            $objectIndex = $currentItem['count']++;
+            if ('object' === $currentItem['type']) {
+                $objectKey = array_pop($this->keys);
+            }
+            $parentValueId = $currentItem["valueId"];
         }
-        else
+        else {
+           $parentValueId = $this->pathValueId;
            $objectIndex = 0;
-        
+        }
        
         $boolValue = null;
         $isNull = null;
@@ -353,10 +371,8 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         static $_type;
         static $_objectIndex;
         static $_objectKey;
-        static $_lowerObjectKey;
         static $_isNull;
         static $_stringValue;
-        static $_lowerStringValue;
         static $_numericValue;
         static $_boolValue;
        
@@ -390,18 +406,8 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $_type = $type;
         $_objectIndex = $objectIndex;
         $_objectKey = $objectKey;
-        if (is_null($objectKey))
-            $_lowerObjectKey = null;
-        else
-            $_lowerObjectKey =
-                strtolower($objectKey);
         $_isNull = $isNull;
         $_stringValue = $stringValue;
-        if (is_null($stringValue))
-            $_lowerStringValue = null;
-        else
-            $_lowerStringValue =
-                strtolower($stringValue);
         $_numericValue = $numericValue;
         $_boolValue = $boolValue;
         

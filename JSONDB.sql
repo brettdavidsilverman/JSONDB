@@ -56,7 +56,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=410 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=430 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -83,7 +83,7 @@ CREATE TABLE `SessionStatus` (
   PRIMARY KEY (`sessionStatusId`),
   UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=98 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1099 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -160,7 +160,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=107 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=108 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -203,7 +203,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_lowerObjectKey_stringValue` (`lowerObjectKey`(20),`stringValue`(20)) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=58117293 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=58802548 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -365,7 +365,7 @@ CREATE TABLE `ValueWord` (
   KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
   CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2082056 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2688802 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -389,7 +389,7 @@ CREATE TABLE `Word` (
   `word` text NOT NULL,
   PRIMARY KEY (`wordId`),
   UNIQUE KEY `UI_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=186759 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=235361 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -925,10 +925,18 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
            numericValue DOUBLE,
            boolValue TINYINT
 )
-BEGIN
-   
-   SET @sessionKey = sessionKey,
-           @parentValueId = parentValueId;
+exit_procedure: BEGIN
+
+   SET @parentValueId = parentValueId,
+            @ownerId = ownerId,
+            @sessionKey = sessionKey,
+            @type = type,
+            @objectIndex = objectIndex,
+            @objectKey = objectKey,
+            @isNull = isNull,
+            @stringValue = stringValue,
+            @numericValue = numericValue,
+            @boolValue = boolValue;
            
    SET @sessionId = (
               SELECT Session.sessionId
@@ -937,11 +945,14 @@ BEGIN
                                @sessionKey
            );
            
-   SET @lowerStringValue =
-                  LOWER(stringValue);
-   
+   IF @sessionId IS NULL
+   THEN
+         LEAVE exit_procedure;
+   END IF;
+    
    START TRANSACTION; 
    
+ 
    INSERT INTO Value(
            parentValueId,
            ownerId,
@@ -954,23 +965,24 @@ BEGIN
            stringValue,
            numericValue,
            boolValue
-   )
-   VALUES(
-           parentValueId,
-           ownerId,
+  )
+  VALUES(
+           @parentValueId,
+           @ownerId,
            @sessionId,
-           type,
-           objectIndex,
-           objectKey,
-           LOWER(objectKey),
-           isNull,
-           stringValue,
-           numericValue,
-           boolValue
+           @type,
+           @objectIndex,
+           @objectKey,
+           LOWER(@objectKey),
+           @isNull,
+           @stringValue,
+           @numericValue,
+           @boolValue
    );
    
    SET @valueId = LAST_INSERT_ID();
    
+
    /* Insert all parents parents */
    
    INSERT
@@ -983,36 +995,16 @@ BEGIN
    FROM     ValueParentChild vpc
    WHERE  vpc.childValueId =
                             @parentValueId;
-                    
-   IF @parentValueId IS NOT NULL THEN
-         INSERT
-         INTO       ValueParentChild(
-                                    parentValueId,
-                                    childValueId
-                            )
-         SELECT  @parentValueId,
-                          @valueId
-         WHERE NOT EXISTS(
-               SELECT    *
-               FROM       ValueParentChild
-               WHERE    parentValueId = 
-                                      @parentValueId
-               AND          childValueId = @valueId
-         );
-   END IF;
-   
+                            
    /* Insert this value */
    INSERT
    INTO       ValueParentChild(
                               parentValueId,
                               childValueId
                       )
-   VALUES  (
-                              @valueId,
-                              @valueId
-   );
-   
-   
+   SELECT   @valueId,
+                      @valueId;
+                      
    COMMIT;
    
    SELECT @valueId AS valueId;
@@ -1430,10 +1422,13 @@ BEGIN
                                   WHERE  
                                         Value.parentValueId = 
                                         @valueId
+                                  AND
+                                      Value.sessionId IS NULL
                             ) as childCount
    FROM            Value
    WHERE         Value.valueId = 
-                            @valueId;
+                            @valueId
+   AND               Value.sessionId IS NULL;
    
 END ;;
 DELIMITER ;
@@ -1466,12 +1461,94 @@ BEGIN
                                WHERE      
                                         Child.parentValueId =
                                         Value.valueId
+                                AND
+                                        Child.sessionId IS NULL
                             ) AS childCount
    FROM            Value
    WHERE         Value.parentValueId = 
                             @parentValueId
+   AND               Value.sessionId IS NULL
    ORDER BY   Value.objectIndex;
    
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `insertLastValue` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertLastValue`(
+    sessionKey VARCHAR(32),
+    parentValueId BIGINT ,
+    lastKey TEXT
+)
+BEGIN
+
+   SET @sessionKey = sessionKey,
+            @parentValueId = parentValueId,
+            @lastKey = lastKey;
+            
+   
+   SET  @sessionId = (
+           SELECT Session.sessionId
+           FROM    Session
+           WHERE Session.sessionKey =
+                             @sessionKey
+   );
+   
+   SET  @ownerId = (
+           SELECT Session.userId
+           FROM    Session
+           WHERE Session.sessionId =
+                             @sessionId
+   );
+   
+   START TRANSACTION;
+   
+   INSERT
+   INTO
+       Value(
+           parentValueId,
+           ownerId,
+           type,
+           sessionId,
+           objectIndex,
+           objectKey,
+           lowerObjectKey,
+           isNull
+       )
+   SELECT
+       @parentValueId,
+       @ownerId,
+       'dummy',
+       @sessionId ,
+       (
+           SELECT
+               MAX(Value.objectIndex) + 1
+           FROM
+               Value
+           WHERE
+               Value.parentValueId = @parentValueId
+       ),
+       @lastKey,
+       LOWER(@lastKey),
+       1;
+       
+    SET @valueId = LAST_INSERT_ID();
+    
+    COMMIT;
+    
+    SELECT @valueId as valueId;
+
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1775,33 +1852,21 @@ exit_procedure: BEGIN
          LEAVE exit_procedure;
    END IF;
    
-   SET @ipAddress = (
-       SELECT        Session.ipAddress
-       FROM           Session
-       WHERE        Session.sessionId =
-                                @sessionId
-   );
-   
-   CALL authenticate(
-       @sessionKey,
-       @ipAddress,
-       0
-   );
+   START TRANSACTION;
+           UPDATE   Session
+           SET            Session.lastAccessedDate = 
+                                   NOW()
+           WHERE   Session.sessionId = 
+                                  @sessionId;
+   COMMIT;
    
    START TRANSACTION;
    
-   IF EXISTS(
-            SELECT *
-            FROM     SessionStatus
-            WHERE  SessionStatus.sessionId =
-                               @sessionId
-   ) THEN
-         UPDATE SessionStatus
-         SET           SessionStatus.sessionStatus =
-                            @sessionStatus
-         WHERE   SessionStatus.sessionId =
-                            @sessionId;
-  ELSE
+          DELETE
+          FROM     SessionStatus
+          WHERE  SessionStatus.sessionId =
+                               @sessionId;
+                               
          INSERT
          INTO      SessionStatus(
                              sessionId,
@@ -1811,7 +1876,6 @@ exit_procedure: BEGIN
                              @sessionId,
                              @sessionStatus
                           );
-  END IF;
    
   COMMIT;
    
@@ -1833,7 +1897,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempValues`(
    sessionKey VARCHAR(32),
-   existingValueId BIGINT
+   existingValueId BIGINT,
+   lastPath TEXT
 )
 exit_procedure: BEGIN
 
@@ -1858,12 +1923,12 @@ exit_procedure: BEGIN
    SET     @tempValueId = (
           SELECT            Value.valueId
           FROM               Value
-          WHERE            Value.parentValueId
+          WHERE           Value.parentValueId
                                        IS NULL
           AND                   Value.sessionId = 
                                        @sessionId
    );
-         
+   
   IF @existingValueId IS NOT NULL AND
        NOT EXISTS (
               SELECT          Value.valueId
@@ -1885,72 +1950,97 @@ exit_procedure: BEGIN
   START TRANSACTION;
   
   IF @existingValueId IS NOT NULL THEN
-         
-         SET @parentValueId = (
+    
+         # Save existing values properties
+         SET @newParentValueId = (
                SELECT   parentValueId
                FROM     Value
                WHERE  valueId = @existingValueId
          );
          
-         SET @objectIndex  = (
+         SET @newObjectIndex  = (
                SELECT   objectIndex
                FROM     Value
                WHERE  valueId = @existingValueId
          );
          
-         SET @objectKey  = (
+         SET @newObjectKey  = (
                SELECT   objectKey
                FROM     Value
                WHERE  valueId = @existingValueId
          );
          
-         CREATE TEMPORARY TABLE Parent
+         # Save existing values children
+         CREATE TEMPORARY TABLE ExistingChildren
          (
-            valueId BIGINT NOT NULL PRIMARY KEY
+               valueId BIGINT NOT NULL
+                   PRIMARY KEY
          );
          
          INSERT
-         INTO            Parent(valueId)
-         SELECT       vpc.parentValueId
-         FROM          ValueParentChild AS vpc
-         WHERE       vpc.childValueId =
-                                       @existingValueId
-         AND             vpc.parentValueId !=
-                                       @existingValueId;
-                                   
-    
-      
-         CALL deleteValue(
-               @existingValueId
+         INTO       ExistingChildren(valueId)
+         SELECT  vpc.childValueId
+         FROM     ValueParentChild as vpc
+         WHERE  vpc.parentValueId =
+                               @existingValueId;
+                               
+         # Insert new child values into
+         # existing parents
+         
+         SET @parentValueId = @newParentValueId;
+         
+         WHILE @parentValueId IS NOT NULL
+         DO
+       
+             INSERT
+             INTO        ValueParentChild(
+                                    parentValueId,
+                                    childValueId
+                                )
+             SELECT   @parentValueId,
+                               vpc.childValueId
+             FROM     ValueParentChild as vpc
+             WHERE   vpc.parentValueId =
+                                @tempValueId;
+                                
+             SET @parentValueId =
+                      (
+                          SELECT  v.parentValueId
+                          FROM    Value as v
+                          WHERE v.valueId =
+                                           @parentValueId
+                    );
+             
+         END WHILE;
+   
+         # delete existing value
+         DELETE
+         FROM     Value
+         WHERE  Value.valueId IN (
+             SELECT    ec.valueId
+             FROM       ExistingChildren  as ec
           );
-
-         /* Update temp object index, key and 
-          parent  to existing value */
+          
+          DROP TABLE ExistingChildren;
+          
+         # Update new value with
+         # saved properties
+         
          UPDATE     Value AS temp
          SET              temp.parentValueId =
-                                   @parentValueId,
+                                   @newParentValueId,
                                temp.objectIndex =
-                                   @objectIndex,
+                                   @newObjectIndex,
                                temp.objectKey =
-                                   @objectKey,
+                                   @newObjectKey,
                                temp.lowerObjectKey  =
-                                   LOWER(@objectKey)
+                                   LOWER(@newObjectKey)
          WHERE      temp.valueId =
                                   @tempValueId;
                                   
-         INSERT
-         INTO       ValueParentChild(
-                                 parentValueId,
-                                 childValueId
-                           )
-         SELECT   Parent.valueId,
-                            @tempValueId
-         FROM     Parent;
-         
-         DROP TABLE Parent;
-         
    END IF;
    
+   # Upgrade temp values
    UPDATE Value
    SET           Value.sessionId = NULL
    WHERE   Value.sessionId = @sessionId;
@@ -2019,4 +2109,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-03 22:00:18
+-- Dump completed on 2025-06-06 17:04:21

@@ -251,7 +251,6 @@ function getValueCount($stream) {
 function insertIntoDatabase(
     $connection,
     $credentials,
-    $totalValueCount,
     $stream
 )
 {
@@ -275,7 +274,13 @@ function insertIntoDatabase(
         getPath()
     );
     
-    
+    // Get the count of posted values
+    $totalValueCount =
+        getValueCount($stream);
+            
+    // Reset the stream to start inserting
+    rewind($stream);
+      
         
     $listener = new JSONDBListener(
         $connection,
@@ -314,8 +319,6 @@ function handlePost($connection, $file = null)
     $stream = fopen($file, 'r');
     
 
-    $totalValueCount = null;
-      
     setSessionStatus($credentials,
         [
             "label" => "Validating...",
@@ -325,18 +328,11 @@ function handlePost($connection, $file = null)
     );
         
     try {
-        // Get the count of posted values
-        $totalValueCount =
-            getValueCount($stream);
-            
-        // Reset the stream to start inserting
-        rewind($stream);
-      
+
         // Parse stream into database
         insertIntoDatabase(
             $connection,
             $credentials,
-            $totalValueCount,
             $stream
         );
         

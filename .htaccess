@@ -10,6 +10,7 @@ RewriteEngine on
   </IfModule>
 </FilesMatch>
 
+AddOutputFilterByType DEFLATE text/html application/json
 
 AddDefaultCharset utf-8
 AddCharset utf-8 .htm .html .js .css .json

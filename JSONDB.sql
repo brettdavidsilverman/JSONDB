@@ -56,7 +56,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=430 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=439 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -83,7 +83,7 @@ CREATE TABLE `SessionStatus` (
   PRIMARY KEY (`sessionStatusId`),
   UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1099 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1808 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -160,7 +160,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=108 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -203,7 +203,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_lowerObjectKey_stringValue` (`lowerObjectKey`(20),`stringValue`(20)) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=58802548 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=59140762 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -365,7 +365,7 @@ CREATE TABLE `ValueWord` (
   KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
   CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2688802 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2987231 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -389,7 +389,7 @@ CREATE TABLE `Word` (
   `word` text NOT NULL,
   PRIMARY KEY (`wordId`),
   UNIQUE KEY `UI_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=235361 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=259661 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1951,6 +1951,28 @@ exit_procedure: BEGIN
   
   IF @existingValueId IS NOT NULL THEN
     
+
+         # Insert new child values into
+         # existing parents
+         INSERT
+         INTO        ValueParentChild(
+                                 parentValueId,
+                                 childValueId
+                             )
+         SELECT   existingParents.parentValueId,
+                            tempChildren.childValueId
+         FROM      ValueParentChild as
+                                existingParents,
+                            ValueParentChild as
+                                tempChildren
+         WHERE   existingParents.childValueId =
+                                @existingValueId
+         AND         existingParents.parentValueId !=
+                                @existingValueId
+         AND         tempChildren.parentValueId =
+                                 @tempValueId;
+                                 
+                                 
          # Save existing values properties
          SET @newParentValueId = (
                SELECT   parentValueId
@@ -1970,62 +1992,11 @@ exit_procedure: BEGIN
                WHERE  valueId = @existingValueId
          );
          
-         # Save existing values children
-         CREATE TEMPORARY TABLE ExistingChildren
-         (
-               valueId BIGINT NOT NULL
-                   PRIMARY KEY
-         );
-         
-         INSERT
-         INTO       ExistingChildren(valueId)
-         SELECT  vpc.childValueId
-         FROM     ValueParentChild as vpc
-         WHERE  vpc.parentValueId =
-                               @existingValueId;
-                               
-         # Insert new child values into
-         # existing parents
-         
-         SET @parentValueId = @newParentValueId;
-         
-         WHILE @parentValueId IS NOT NULL
-         DO
-       
-             INSERT
-             INTO        ValueParentChild(
-                                    parentValueId,
-                                    childValueId
-                                )
-             SELECT   @parentValueId,
-                               vpc.childValueId
-             FROM     ValueParentChild as vpc
-             WHERE   vpc.parentValueId =
-                                @tempValueId;
-                                
-             SET @parentValueId =
-                      (
-                          SELECT  v.parentValueId
-                          FROM    Value as v
-                          WHERE v.valueId =
-                                           @parentValueId
-                    );
-             
-         END WHILE;
-   
          # delete existing value
-         DELETE
-         FROM     Value
-         WHERE  Value.valueId IN (
-             SELECT    ec.valueId
-             FROM       ExistingChildren  as ec
-          );
-          
-          DROP TABLE ExistingChildren;
-          
-         # Update new value with
-         # saved properties
+         CALL deleteValue(@existingValueId);
          
+         # Update temp value with
+         # saved properties
          UPDATE     Value AS temp
          SET              temp.parentValueId =
                                    @newParentValueId,
@@ -2109,4 +2080,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-06 17:04:21
+-- Dump completed on 2025-06-08 16:52:15

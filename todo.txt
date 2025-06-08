@@ -4,4 +4,5 @@ on post, allow for last segment to append to object keys
 on post, allow for [] operator to append to array
 intellisense for index.php path
 add count and paging to search
+replace print values with fetch all children
 add gzip to apache 

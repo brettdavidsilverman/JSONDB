@@ -296,7 +296,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             $parentValueId = $currentItem["valueId"];
         }
         else {
-           $parentValueId = $this->pathValueId;
+           $parentValueId = null;//$this->pathValueId;
            $objectIndex = 0;
         }
        

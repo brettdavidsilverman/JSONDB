@@ -27,7 +27,7 @@ function evaluate(json, parent=json)
                    value +
                ")"
             )
-         
+
          var evaluated = f.call(parent);
 
          if (evaluated == undefined)

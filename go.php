@@ -14,7 +14,8 @@
       <script src="/client/stream/stream.js"></script>
       <script src="/client/power-encoding/power-encoding.js"></script>
       <script src="/client/id/id.js"></script>
-      <script src="/client/evaluate.js"></script>      <script src="/client/logon/authentication.js"></script>
+      <script src="/client/evaluate.js"></script>
+      <script src="/client/authentication/authentication.js?v=28"></script>
       <script src="/client/punycode.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
    </head>
@@ -25,6 +26,9 @@
       <script src="/client/origin.js"></script>
       
       <script>
+var authentication =
+   new Authentication();
+
 setup();
 
 go();
@@ -36,7 +40,7 @@ function go() {
          document.location.search.substr(1)
       );
 
-   fetch(path).
+   authentication.fetch(path).
    then(
       function(response) {
          return response.text()
@@ -50,7 +54,7 @@ function go() {
    ).
    then(
       function(json) {
-         json = evaluate(json);
+         return evaluate(json);
       }
    );
 }
@@ -60,7 +64,7 @@ function setup() {
       document.getElementById("logoff");
    
    logoff.href = 
-      "/logon.php?redirect=" +
+      "/client/authentication/logon.php?redirect=" +
       encodeURIComponent(document.location.href);
 }
       </script>

@@ -42,6 +42,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->connection = $connection;
         $this->credentials = $credentials;
         $this->pathValueId = $pathValueId;
+        $this->lastPath = $lastPath;
         
         $this->totalValueCount =
            $totalValueCount;
@@ -296,7 +297,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             $parentValueId = $currentItem["valueId"];
         }
         else {
-           $parentValueId = null;//$this->pathValueId;
+           $parentValueId = null;
            $objectIndex = 0;
         }
        

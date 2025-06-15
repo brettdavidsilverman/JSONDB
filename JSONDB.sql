@@ -56,7 +56,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=441 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=459 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -83,7 +83,7 @@ CREATE TABLE `SessionStatus` (
   PRIMARY KEY (`sessionStatusId`),
   UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2409 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3299 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -160,7 +160,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=111 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=114 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -203,7 +203,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_lowerObjectKey_stringValue` (`lowerObjectKey`(20),`stringValue`(20)) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=59478902 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=59817142 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -365,7 +365,7 @@ CREATE TABLE `ValueWord` (
   KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
   CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3285522 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3584023 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -389,7 +389,7 @@ CREATE TABLE `Word` (
   `word` text NOT NULL,
   PRIMARY KEY (`wordId`),
   UNIQUE KEY `UI_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=283959 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=308303 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1300,13 +1300,15 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getRootValueId`(
 BEGIN
 
    SET @userId = userId,
-          @ownerId = ownerId;
+            @ownerId = ownerId;
    
-   SELECT valueId
+   SELECT valueId,
+                    type
    FROM   Value
    WHERE Value.ownerId = @ownerId
    AND       Value.sessionId IS NULL
    AND       Value.parentValueId IS NULL;
+
 
 END ;;
 DELIMITER ;
@@ -1362,6 +1364,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValueIdByPath`(
    objectKey TEXT
 )
 BEGIN
+
+   
    SET           @userId = userId,
                       @ownerId = ownerId,
                       @parentValueId = parentValueId,
@@ -1369,7 +1373,8 @@ BEGIN
                       @lowerObjectKey =
                          LOWER(objectKey);
    
-   SELECT        Value.valueId
+   SELECT        Value.valueId,
+                           Value.type
    FROM           Value
    WHERE      ( 
                                (
@@ -1904,22 +1909,17 @@ exit_procedure: BEGIN
 
 
    SET @sessionKey = sessionKey,
-            @existingValueId = existingValueId;
- 
-   SET    @sessionId = (
-                         SELECT   Session.sessionId
-                         FROM      Session
-                         WHERE   Session.sessionKey =
-                                            @sessionKey
-                      );
+            @existingValueId = existingValueId,
+            @lastPath = lastPath;
 
-   SET      @userId = (
-                       SELECT userId
-                       FROM    Session
-                       WHERE  Session.sessionId = 
-                                        @sessionId
-                 );
-                
+   SELECT    Session.sessionId,
+                        Session.userId
+   INTO         @sessionId,
+                       @userId
+   FROM       Session
+   WHERE    Session.sessionKey =
+                       @sessionKey;
+ 
    SET     @tempValueId = (
           SELECT            Value.valueId
           FROM               Value
@@ -1950,8 +1950,7 @@ exit_procedure: BEGIN
   START TRANSACTION;
   
   IF @existingValueId IS NOT NULL THEN
-    
-
+         
          # Insert new child values into
          # existing parents
          INSERT
@@ -1967,48 +1966,74 @@ exit_procedure: BEGIN
                                 tempChildren
          WHERE   existingParents.childValueId =
                                 @existingValueId
-         AND         existingParents.parentValueId !=
-                                @existingValueId
+         AND         (
+             @lastPath IS NOT NULL
+             OR
+             existingParents.parentValueId !=
+            @existingValueId)
          AND         tempChildren.parentValueId =
                                  @tempValueId;
                                  
-                                 
-         # Save existing values properties
-         SET @newParentValueId = (
-               SELECT   parentValueId
-               FROM     Value
-               WHERE  valueId = @existingValueId
-         );
+         # Save existing value properties
+         SELECT   Value. parentValueId,
+                            Value. objectIndex,
+                            Value.objectKey
+         INTO        @newParentValueId,
+                            @newObjectIndex,
+                            @newObjectKey
+         FROM      Value
+         WHERE   Value.valueId =
+                             @existingValueId;
+
+          IF @lastPath IS NOT NULL THEN
+                 SELECT
+                     MAX(v.objectIndex) + 1
+                 INTO
+                     @newObjectIndex
+                 FROM
+                     Value as v
+                 WHERE
+                     v.parentValueId =
+                         @existingValueId
+                 FOR UPDATE;
+                 
+                 UPDATE
+                     Value as temp
+                 SET
+                     temp.parentValueId =
+                         @existingValueId,
+                     temp.objectIndex = 
+                         @newObjectIndex,
+                     temp.objectKey = @lastPath,
+                     temp.lowerObjectKey =
+                         LOWER(@lastPath)
+                 WHERE
+                     temp.valueId =
+                         @tempValueId;
+                        
+         ELSE
+          
+                 # delete existing value
+                 CALL deleteValue(@existingValueId);
          
-         SET @newObjectIndex  = (
-               SELECT   objectIndex
-               FROM     Value
-               WHERE  valueId = @existingValueId
-         );
-         
-         SET @newObjectKey  = (
-               SELECT   objectKey
-               FROM     Value
-               WHERE  valueId = @existingValueId
-         );
-         
-         # delete existing value
-         CALL deleteValue(@existingValueId);
-         
-         # Update temp value with
-         # saved properties
-         UPDATE     Value AS temp
-         SET              temp.parentValueId =
-                                   @newParentValueId,
-                               temp.objectIndex =
-                                   @newObjectIndex,
-                               temp.objectKey =
-                                   @newObjectKey,
-                               temp.lowerObjectKey  =
-                                   LOWER(@newObjectKey)
-         WHERE      temp.valueId =
+                 # Update temp value with
+                # saved properties
+                UPDATE
+                       Value AS temp
+                SET
+                         temp.parentValueId =
+                                @newParentValueId,
+                         temp.objectIndex =
+                                 @newObjectIndex,
+                         temp.objectKey =
+                                 @newObjectKey,
+                          temp.lowerObjectKey  =
+                                  LOWER(@newObjectKey)
+                 WHERE    
+                          temp.valueId =
                                   @tempValueId;
-                                  
+         END IF;
+         
    END IF;
    
    # Upgrade temp values
@@ -2080,4 +2105,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-08 18:45:34
+-- Dump completed on 2025-06-15 11:02:45

@@ -3,9 +3,10 @@
 require_once 'JSONDBListener.php';
 require_once 'ValueCountListener.php';
 
-function getRootValueId($connection, $userId, $path)
+function getRootValueId($connection, $userId, & $lastType, $path)
 {
-
+    $lastType = null;
+    
     $paths = explode('/', $path);
     
     $ownerId = null;
@@ -33,7 +34,8 @@ function getRootValueId($connection, $userId, $path)
     $statement->execute();
     
     $statement->bind_result(
-        $valueId
+        $valueId,
+        $lastType
     );
     
     if (!$statement->fetch())
@@ -45,42 +47,8 @@ function getRootValueId($connection, $userId, $path)
     return $valueId;
 }
 
-function insertLastValue(
-    $connection,
-    $credentials,
-    $parentValueId,
-    $path
-)
-{
-    $statement = $connection->prepare(
-        "CALL insertLastValue(?,?,?);"
-    );
-    
-    $sessionKey = $credentials["sessionKey"];
-    
-    $statement->bind_param(
-        'sis', 
-        $sessionKey,
-        $parentValueId,
-        $path
-    );
-    
-    $statement->execute();
-    
-    $statement->bind_result(
-        $valueId
-    );
-    
-    if (!$statement->fetch())
-        $valueId = null;
 
-    $statement->close();
-    
-
-    return $valueId;
-}
-
-function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, & $lastPath, & $paths)
+function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, $lastType, & $lastPath, & $paths)
 {
      
     $lastPath = null;
@@ -114,17 +82,18 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
     $valueId = $parentValueId;
     
     $count = count($paths);
-
+    
     for($i = 2; $i < $count; ++$i) {
         
         $path = $paths[$i];
         
-        $path = urldecode($path);
-        
         if ($path === "")
             continue;
             
+            
+        $path = urldecode($path);
         
+
         if (is_numeric($path)) {
             $pathIndex = (int)($path);
             $pathKey = null;
@@ -137,7 +106,8 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
         $statement->execute();
     
         $statement->bind_result(
-            $valueId
+            $valueId,
+            $type
         );
     
 
@@ -147,19 +117,12 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
 
             if ($i === ($count - 1) &&
                 !is_numeric($path) &&
-                $insertLast
+                $insertLast &&
+                $lastType === "object"
             )
             {
                 $lastPath = $path;
                 $valueId = $parentValueId;
-                /*
-                $valueId = insertLastValue(
-                    $connection,
-                    $credentials,
-                    $parentValueId,
-                    $path
-                );
-                */
             }
             else {
                 $paths[$i] = "{" . urldecode($path) . "}";
@@ -169,6 +132,7 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
         }
             
         $parentValueId = $valueId;
+        $lastType = $type;
     }
     
     $statement->close();
@@ -190,6 +154,7 @@ function getValueIdByPath(
     $rootValueId = getRootValueId(
         $connection,
         $userId,
+        $lastType,
         $path
     );
     
@@ -206,6 +171,7 @@ function getValueIdByPath(
             $credentials,
             $rootValueId, 
             $insertLast,
+            $lastType,
             $lastPath,
             $paths
         );

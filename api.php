@@ -15,9 +15,9 @@
    <head>
       <meta charset="utf-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
-      <title id="title">bee.fish api</title>
-      <script src="https://bee.fish/client/head.js?v=3"></script>      <script src="https://bee.fish/client/authentication/authentication.js?v=34"></script>
-      <script src="https://bee.fish/client/authentication/sha512.js"></script>
+      <title id="title"><?php echo getConfig()["Domain"] ?> api></title>
+      <script src="/client/head.js?v=3"></script>      <script src="/client/authentication/authentication.js?v=34"></script>
+      <script src="/client/authentication/sha512.js"></script>
       <link rel="stylesheet" type="text/css" href="style.css"/>
       <script>
 
@@ -25,13 +25,18 @@
    </head>
    <body>
       <h1 id="h1">Status</h1>
+      <!--
+      <input type="email" id="email"></input>
+      <input type="file" onchange="logon(this)"></input>
+      <br/>
+      -->
       <div id="expires"></div>
       <label for="progress"><div id="progressLabel"></div></label>
       <progress id="progress" value="0" max="100"></progress><div id="sessionKey"></div>
 
       <script>
 var authentication =
-   new Authentication("https://bee.fish");
+   new Authentication("https://<?php echo getConfig()["Domain"] ?>");
    
 var progress = document.getElementById("progress");
 var progressLabel = document.getElementById("progressLabel");
@@ -52,27 +57,29 @@ window.onmessage = function(event)
           authentication.setCredentials(
              credentials
           );
-if (credentials)
-   document.getElementById("sessionKey").innerText =
-      credentials.sessionKey;
-
-          updateStatus();
-          
           break;
           
        case "postFile":
 
-          postFile(
-             data.path,
-             data.file
+          authentication.postFile(
+              data.path,
+              data.file
           );
+          
           break;
+          
+       case "cancel":
+          
+          authentication.cancelLastUpload();
+          
+          break;
+
        default:
           displayError("Invalid command " + command, "api.onmessage");
     }
     
 
-    
+    displayExpires();
     
 
 }
@@ -82,38 +89,8 @@ authentication.onHandleLogon =
    () => {};
    
 
-function postFile(path, file) {
-   updateStatus(
-      {
-         label: "Uploading...",
-         percentage: 1,
-         done: false,
-         error: false
-      }
-   );
-      //const file = event.target.files[0];
-    
-   authentication.setSessionStatus(
-      "Uploading...",
-      2,
-      false
-   )
-   .then(
-      (ok) => {
-         return authentication.postFile(
-            path,
-            file
-         );
-      }
-   )
-   .catch(
-      (error) => {
-         displayError(error, postFile);
-      }
-   );
-}
-   
-   //alert(self.crypto.randomUUID());
+
+
 function displayExpires() {
    var div = document.getElementById("expires");
    
@@ -130,27 +107,11 @@ function displayExpires() {
  
 }
 
-function updateStatus(status) {
+authentication.onUpdateStatus =
+ function(status) {
     
    displayExpires();
 
-   if (!status && authentication.authenticated) {
-      authentication
-      .getSessionStatus()
-      .then(
-         (status) => {
-            updateStatus(status);
-         }
-      )
-      .catch(
-         (error) => {
-            window.clearInterval(intervalId);
-            displayError(error, updateStatus);
-         }
-      );
-      return;
-   }
-   
    try {
       progress.value = 0;
       progressLabel.innerText = "";
@@ -158,30 +119,48 @@ function updateStatus(status) {
       if (!status)
          return;
 
-      window.parent.postMessage(
-         status,
-         origin
-      );
-   
       progress.value = status.percentage;
       progressLabel.innerText = status.label;
    }
    catch (error) {
-      window.clearInterval(intervalId);
-      displayError(error, updateStatus);
+      displayError(error, "onUpdateStatus");
    }
    
 }
+
+function logon(fileInput) {
+    var email =
+       document.getElementById("email").value;
+    
+    var secret =
+        authentication.getFileHash(
+            fileInput.files[0]
+        );
+        
+    fileInput.value = null;
+    
+    secret.then(
+        (key) => {
+           return authentication.logon(
+              email,
+              key
+           );
+        }
+    )
+    .then(
+        (ok) => {
+            if (ok)
+               alert("Logged on");
+            else
+               alert("Invalid authentication");
+            displayExpires();
+        }
+    );
+    
+    
+}
       
-var intervalId =
-   window.setInterval(
-      function() {
-         updateStatus();
-      },
-      1000 * 5
-   );
-      
-updateStatus();
+authentication.updateStatus();
         </script>
 
    </body>

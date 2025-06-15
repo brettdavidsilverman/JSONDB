@@ -1,3 +1,7 @@
+<?php
+require_once "../server/functions.php";
+
+?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
    <head>
@@ -7,10 +11,10 @@
       <link rel="stylesheet" type="text/css" href="/style.css" />
       <link rel="stylesheet" type="text/css" href="style.css" />
 
-      <title>bee</title>
+      <title><?php echo getConfig()["Domain"] ?></title>
    </head>
    <body>
-      <h1 id="h1">bee.fish client</h1>
+      <h1 id="h1"><?php echo getConfig()["Domain"] ?> client</h1>
       <ul>
          <li>
             <a href="console/">Console</a>

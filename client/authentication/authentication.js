@@ -23,7 +23,7 @@ class Authentication
          this.redirect();
     }
     
-    onUpdateStatus() {
+    onUpdateStatus(status) {
     }
     
     redirect() {

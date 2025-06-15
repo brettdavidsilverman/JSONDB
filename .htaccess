@@ -15,7 +15,7 @@ AddOutputFilterByType DEFLATE text/html application/json
 AddDefaultCharset utf-8
 AddCharset utf-8 .htm .html .js .css .json
 
-# redirect https://bee.fish -> index.php
+# redirect https://{domain} -> index.php
 RewriteRule ^$ /index.php [END]
 # redirect client to same and exit
 RewriteRule ^client/(.*)$ client/$1 [END]

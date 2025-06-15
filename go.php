@@ -9,7 +9,7 @@
    <head>
       <meta charset="utf-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
-      <title id="title">bee.fish</title>
+      <title id="title"><?php echo getConfig()["Domain"] ?></title>
       <script src="/client/head.js"></script>
       <script src="/client/stream/stream.js"></script>
       <script src="/client/power-encoding/power-encoding.js"></script>

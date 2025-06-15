@@ -6,9 +6,11 @@ then
    exit 1
 fi
 
+DOMAIN=$(jq -r '.Domain' ../../config.json)
+    
 echo ""
 date
-curl -s https://bee.fish/my -b ../../cookies.txt -c ../../cookies.txt --data "@../large.json" &
+curl -s https://$DOMAIN/my -b ../../cookies.txt -c ../../cookies.txt --data "@../large.json" &
 
 UPLOAD_PID=$!
 

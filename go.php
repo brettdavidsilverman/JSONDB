@@ -54,7 +54,8 @@ function go() {
    ).
    then(
       function(json) {
-         return evaluate(json);
+        json = evaluate(json);
+        alert(json);
       }
    );
 }

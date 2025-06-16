@@ -83,6 +83,7 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
     
     $count = count($paths);
     
+
     for($i = 2; $i < $count; ++$i) {
         
         $path = $paths[$i];
@@ -90,9 +91,9 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
         if ($path === "")
             continue;
             
-            
         $path = urldecode($path);
         
+
 
         if (is_numeric($path)) {
             $pathIndex = (int)($path);
@@ -407,12 +408,15 @@ END;
     );
     
     $words = explode("+", getQuery());
+
+
     $wordCount = count($words);
     for ($i = 0; $i < $wordCount; ++$i) {
         $word = $words[$i];
         $words[$i] = urldecode($word);
         $sql = $sql . "and\r\n" . word();
     }
+    
 
     $sql = $sql . "limit 10";
     
@@ -421,7 +425,8 @@ END;
             [$pathValueId],
             $words
         );
-    
+
+
     $result = $connection->execute_query(
         $sql,
         $parameters

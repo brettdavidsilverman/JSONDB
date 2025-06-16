@@ -14,210 +14,6 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
---
--- Table structure for table `SearchValue`
---
-
-DROP TABLE IF EXISTS `SearchValue`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `SearchValue` (
-  `valueId` bigint NOT NULL,
-  PRIMARY KEY (`valueId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `SearchValue`
---
-
-LOCK TABLES `SearchValue` WRITE;
-/*!40000 ALTER TABLE `SearchValue` DISABLE KEYS */;
-/*!40000 ALTER TABLE `SearchValue` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `Session`
---
-
-DROP TABLE IF EXISTS `Session`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Session` (
-  `sessionId` bigint NOT NULL AUTO_INCREMENT,
-  `sessionKey` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `userId` bigint NOT NULL,
-  `createdDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `ipAddress` varchar(15) NOT NULL,
-  `lastAccessedDate` datetime NOT NULL,
-  PRIMARY KEY (`sessionId`),
-  UNIQUE KEY `UI_Session_sessionKey` (`sessionKey`) USING BTREE,
-  KEY `I_Session_userId` (`userId`) USING BTREE,
-  KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
-  CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=510 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Session`
---
-
-LOCK TABLES `Session` WRITE;
-/*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (497,'905dd4a49cd61cf3a48befed280b867c',114,'2025-06-16 10:52:51','49.184.242.248','2025-06-16 10:52:52'),(498,'6f827fae301ff97f40287188f64d3123',114,'2025-06-16 10:53:21','49.184.242.248','2025-06-16 10:53:21'),(499,'74eafa2e9cc58d26ec5194c128122747',114,'2025-06-16 10:55:00','49.184.242.248','2025-06-16 10:55:01'),(500,'c6c129b2ba6a289a3505476bd9b58298',114,'2025-06-16 10:55:54','49.184.242.248','2025-06-16 10:55:55'),(501,'bf87a3e4d867d9beb83d95b95cfa2f8b',114,'2025-06-16 10:56:31','49.184.242.248','2025-06-16 11:03:49'),(502,'afeab511e64be74700082dd5c6166291',114,'2025-06-16 11:04:32','49.184.242.248','2025-06-16 11:04:32'),(503,'236e839849f8ffdfb469e5de64f31f4b',114,'2025-06-16 11:09:11','49.184.242.248','2025-06-16 11:33:50'),(504,'b01e24ece91bc7a9493a6e07d8db590f',114,'2025-06-16 11:38:36','49.184.242.248','2025-06-16 11:38:38'),(505,'44118909d922d3ec5c06dd3ddd77d411',114,'2025-06-16 11:39:15','49.184.242.248','2025-06-16 11:39:17'),(506,'b91dfe24690c8cdb9654a06251e78948',114,'2025-06-16 11:39:53','49.184.242.248','2025-06-16 11:39:56'),(507,'bc962468ed1dfee3b119f3073698e8dc',114,'2025-06-16 11:40:41','49.184.242.248','2025-06-16 11:40:43'),(508,'867fbcc2a7610bd5e7d6188787cdf26a',114,'2025-06-16 11:40:57','49.184.242.248','2025-06-16 11:48:18'),(509,'93e0b64bc50f66b51cd5180330433936',114,'2025-06-16 11:48:32','49.184.242.248','2025-06-16 12:00:28');
-/*!40000 ALTER TABLE `Session` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `SessionStatus`
---
-
-DROP TABLE IF EXISTS `SessionStatus`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `SessionStatus` (
-  `sessionStatusId` bigint NOT NULL AUTO_INCREMENT,
-  `sessionId` bigint NOT NULL,
-  `sessionStatus` text,
-  `cancelLastUpload` tinyint NOT NULL DEFAULT '0',
-  PRIMARY KEY (`sessionStatusId`),
-  UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
-  CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4146 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `SessionStatus`
---
-
-LOCK TABLES `SessionStatus` WRITE;
-/*!40000 ALTER TABLE `SessionStatus` DISABLE KEYS */;
-INSERT INTO `SessionStatus` VALUES (4123,501,'{\"label\":\"\\u23f0 Finished in 0 seconds\",\"percentage\":0,\"done\":true}',0),(4129,503,'{\"label\":\"\\u23f0 Finished in 0 seconds\",\"percentage\":0,\"done\":true}',0),(4145,509,'{\"label\":\"\\u23f0 Finished in 0 seconds\",\"percentage\":0,\"done\":true}',0);
-/*!40000 ALTER TABLE `SessionStatus` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `Setting`
---
-
-DROP TABLE IF EXISTS `Setting`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Setting` (
-  `settingId` bigint NOT NULL AUTO_INCREMENT,
-  `settingCode` varchar(256) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `settingValue` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `settingDescription` text NOT NULL,
-  PRIMARY KEY (`settingId`),
-  UNIQUE KEY `UI_Setting_settingCode` (`settingCode`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Setting`
---
-
-LOCK TABLES `Setting` WRITE;
-/*!40000 ALTER TABLE `Setting` DISABLE KEYS */;
-INSERT INTO `Setting` VALUES (1,'SESSION_TIMEOUT','3600','Session timeout in seconds');
-/*!40000 ALTER TABLE `Setting` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `UploadFile`
---
-
-DROP TABLE IF EXISTS `UploadFile`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `UploadFile` (
-  `uploadFileId` bigint NOT NULL AUTO_INCREMENT,
-  PRIMARY KEY (`uploadFileId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `UploadFile`
---
-
-LOCK TABLES `UploadFile` WRITE;
-/*!40000 ALTER TABLE `UploadFile` DISABLE KEYS */;
-/*!40000 ALTER TABLE `UploadFile` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `User`
---
-
-DROP TABLE IF EXISTS `User`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `User` (
-  `userId` bigint NOT NULL AUTO_INCREMENT,
-  `userEmail` varchar(320) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `logonSecret` text,
-  `newUserSecret` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `lostSecret` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `validated` tinyint NOT NULL,
-  PRIMARY KEY (`userId`),
-  UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=115 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `User`
---
-
-LOCK TABLES `User` WRITE;
-/*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (114,'brettdavidsilverman@gmail.com','vOSBrmW1//O+hLA9M9SF8mu3Ln4vVZ+BOkYI7kjQ+rXlOjrCsjaFdWFuy0bOnkER1gQbUItnWMVWirwWwNWM/Q==',NULL,NULL,1);
-/*!40000 ALTER TABLE `User` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `Value`
---
-
-DROP TABLE IF EXISTS `Value`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Value` (
-  `valueId` bigint NOT NULL AUTO_INCREMENT,
-  `parentValueId` bigint DEFAULT NULL,
-  `ownerId` bigint NOT NULL,
-  `sessionId` bigint DEFAULT NULL,
-  `type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `objectIndex` bigint NOT NULL,
-  `objectKey` text,
-  `lowerObjectKey` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
-  `numericValue` double DEFAULT NULL,
-  `stringValue` text,
-  `boolValue` tinyint DEFAULT NULL,
-  `isNull` tinyint NOT NULL,
-  PRIMARY KEY (`valueId`),
-  UNIQUE KEY `UI_Value_parentValueId_objectIndex` (`parentValueId`,`objectIndex`) USING BTREE,
-  UNIQUE KEY `I_Value_parentValueId_lowerObjectKey` (`parentValueId`,`lowerObjectKey`(100)) USING BTREE,
-  KEY `I_Value_stringValue` (`stringValue`(100)) USING BTREE,
-  KEY `I_Value_ownerId` (`ownerId`),
-  KEY `I_Value_sessionId` (`sessionId`) USING BTREE,
-  KEY `I_Value_parentValueId` (`parentValueId`),
-  KEY `I_Value_lowerObjectKey_numericValue` (`lowerObjectKey`(20),`numericValue`) USING BTREE,
-  KEY `I_Value_lowerObjectKey_stringValue` (`lowerObjectKey`(20),`stringValue`(20)) USING BTREE,
-  CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
-  CONSTRAINT `FK_Value_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=60359792 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Value`
---
-
-LOCK TABLES `Value` WRITE;
-/*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (60359790,NULL,114,NULL,'object',0,NULL,NULL,NULL,NULL,NULL,0),(60359791,60359790,114,NULL,'string',0,'/','/',NULL,'🐝',NULL,0);
-/*!40000 ALTER TABLE `Value` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -226,6 +22,7 @@ UNLOCK TABLES;
 /*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50032 DROP TRIGGER IF EXISTS TG_Value_Insert */;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Value_Insert` AFTER INSERT ON `Value` FOR EACH ROW BEGIN
 
@@ -261,6 +58,7 @@ DELIMITER ;
 /*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50032 DROP TRIGGER IF EXISTS TG_Value_Update */;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Value_Update` AFTER UPDATE ON `Value` FOR EACH ROW BEGIN
 
@@ -324,89 +122,6 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-
---
--- Table structure for table `ValueParentChild`
---
-
-DROP TABLE IF EXISTS `ValueParentChild`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `ValueParentChild` (
-  `parentValueId` bigint NOT NULL,
-  `childValueId` bigint NOT NULL,
-  PRIMARY KEY (`parentValueId`,`childValueId`),
-  KEY `I_ValueParentChild_parentValueId` (`parentValueId`) USING BTREE,
-  KEY `I_ValueParentChild_childValueId` (`childValueId`) USING BTREE,
-  CONSTRAINT `FK_ValueParentChild_childValueId` FOREIGN KEY (`childValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
-  CONSTRAINT `FK_ValueParentChild_parentValueId` FOREIGN KEY (`parentValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `ValueParentChild`
---
-
-LOCK TABLES `ValueParentChild` WRITE;
-/*!40000 ALTER TABLE `ValueParentChild` DISABLE KEYS */;
-INSERT INTO `ValueParentChild` VALUES (60359790,60359790),(60359790,60359791),(60359791,60359791);
-/*!40000 ALTER TABLE `ValueParentChild` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `ValueWord`
---
-
-DROP TABLE IF EXISTS `ValueWord`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `ValueWord` (
-  `valueWordId` bigint NOT NULL AUTO_INCREMENT,
-  `valueId` bigint NOT NULL,
-  `wordId` bigint NOT NULL,
-  PRIMARY KEY (`valueWordId`),
-  UNIQUE KEY `UI_ValueWord_valueId_wordId` (`valueId`,`wordId`) USING BTREE,
-  KEY `I_ValueWord_valueId` (`valueId`) USING BTREE,
-  KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
-  CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
-  CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4064371 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `ValueWord`
---
-
-LOCK TABLES `ValueWord` WRITE;
-/*!40000 ALTER TABLE `ValueWord` DISABLE KEYS */;
-INSERT INTO `ValueWord` VALUES (4064370,60359791,332614),(4064369,60359791,332615);
-/*!40000 ALTER TABLE `ValueWord` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `Word`
---
-
-DROP TABLE IF EXISTS `Word`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Word` (
-  `wordId` bigint NOT NULL AUTO_INCREMENT,
-  `word` text NOT NULL,
-  PRIMARY KEY (`wordId`),
-  UNIQUE KEY `UI_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=332616 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Word`
---
-
-LOCK TABLES `Word` WRITE;
-/*!40000 ALTER TABLE `Word` DISABLE KEYS */;
-INSERT INTO `Word` VALUES (332614,'🐝'),(332615,'/');
-/*!40000 ALTER TABLE `Word` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Dumping routines for database 'JSONDB'
@@ -2121,4 +1836,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-16 12:16:06
+-- Dump completed on 2025-06-16 13:33:09

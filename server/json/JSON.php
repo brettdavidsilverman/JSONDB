@@ -3,7 +3,14 @@
    declare(strict_types=1);
    
    require_once '../functions.php';
-      
+      /*
+    http_response_code(200);
+    
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "hello 🐝";
+    
+    return;
+    */
    $connection = getConnection();
    
    $method = $_SERVER['REQUEST_METHOD'];

@@ -167,11 +167,40 @@ function nullable($value) {
       return $value;
 }
 
+function decodeSlashes($path) {
+   // Apache doesnt allow encoded
+   // slashes {/}
+   // So we double encode them
+   // from {%2F} to {%252F}
+   // on the client.
+   // Here we return the slashes to
+   // single encoded {%2F}
+   
+   // upper case
+   $path = str_replace(
+       "%252F", "%2F", $path
+   );
+   
+   // lower case
+   $path = str_replace(
+       "%252f", "%2f", $path
+   );
+   
+   return $path;
+   
+}
+
 function getPath() {
+    
+    
    $path = parse_url(
       $_SERVER['REQUEST_URI'],
       PHP_URL_PATH
    );
+   
+   
+   $path = decodeSlashes($path);
+
    /*
    if (substr($path, 0, 1) === "/")
       $path = substr($path, 1);
@@ -179,11 +208,15 @@ function getPath() {
    if (substr($path, - 1) === "/")
       $path = substr($path, 0, - 1);
 */
+
    return $path;
 }
 
 function getQuery() {
-   return $_SERVER['QUERY_STRING'];
+   $query = $_SERVER['QUERY_STRING'];
+   $query = decodeSlashes($query);
+   
+   return $query;
 }
 
 function getClientIPAddress() {

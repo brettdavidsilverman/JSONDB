@@ -15,6 +15,7 @@ AddOutputFilterByType DEFLATE text/html application/json
 AddDefaultCharset utf-8
 AddCharset utf-8 .htm .html .js .css .json
 
+
 # redirect https://{domain} -> index.php
 RewriteRule ^$ /index.php [END]
 # redirect client to same and exit
@@ -25,4 +26,4 @@ RewriteRule ^server/(.*)$ server/$1 [END]
 RewriteRule ^((.*)\.(php|css|html|js|ico))$ /$1 [END]
 
 # Redirect all else to JSON.php
-RewriteRule ^(.*)$ server/json/JSON.php [END]
+RewriteRule (.*) server/json/JSON.php [END]

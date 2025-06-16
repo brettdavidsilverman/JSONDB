@@ -23,9 +23,7 @@ function evaluate(json, parent=json)
          
          var f =
             new Function(
-               "return (" + 
-                   value +
-               ")"
+               value
             )
 
          var evaluated = f.call(parent);
@@ -52,12 +50,15 @@ function evaluate(json, parent=json)
          var newValue =
             evaluate(json[property], json);
  
-         object[newProperty] =
+         json[newProperty] =
             newValue;
+            
+         if (newProperty != property)
+            delete json[property];
 
       }
 
-      return object;
+      return json;
       break;
     
    default:

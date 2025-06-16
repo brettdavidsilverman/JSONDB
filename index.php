@@ -344,6 +344,16 @@ function getURL(publish = false) {
                 
     }
     
+    // Double encode slashes to allow
+    // apache to pass them through
+    // The server similarly decodes them
+    
+    // upper case
+    url = url.replaceAll("%2F", "%252F");
+    
+    // lower case
+    url = url.replaceAll("%2f", "%252f");
+    
     return url;
 }
 

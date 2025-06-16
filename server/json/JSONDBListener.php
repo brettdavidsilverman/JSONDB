@@ -26,6 +26,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $lastPath;
     
     public $valueCount = 0;
+    public $newPath = null;
     protected $totalValueCount;
     protected $startTime;
     
@@ -125,6 +126,15 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
    
         $statement->execute();
 
+        $statement->bind_result(
+            $newPath
+        );
+    
+        
+        $statement->fetch();
+        
+        $this->newPath = $newPath;
+        
         $statement->close();
         
     }

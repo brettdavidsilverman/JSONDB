@@ -119,7 +119,8 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
             if ($i === ($count - 1) &&
                 !is_numeric($path) &&
                 $insertLast &&
-                $lastType === "object"
+                ($lastType === "object" ||
+                 $lastType === "array")
             )
             {
                 $lastPath = $path;
@@ -263,6 +264,9 @@ function insertIntoDatabase(
     );
         
     $parser->parse();
+    
+    return $listener->newPath;
+    
 }
 
 
@@ -284,26 +288,21 @@ function handlePost($connection, $file = null)
         $file = 'php://input';
         
     $stream = fopen($file, 'r');
-    
-
-    setSessionStatus($credentials,
-        [
-            "label" => "Validating...",
-            "percentage" => 4.0,
-            "done" => false
-        ]
-    );
         
+
     try {
 
         // Parse stream into database
-        insertIntoDatabase(
+        $newPath = insertIntoDatabase(
             $connection,
             $credentials,
             $stream
         );
         
-        
+        $result = encodeString($newPath);
+
+        echo $result;
+    
     }
     catch (Exception $e) {
              
@@ -335,7 +334,6 @@ function handlePost($connection, $file = null)
         ]
     );
         
-    echo "true";
     
     return true;
             

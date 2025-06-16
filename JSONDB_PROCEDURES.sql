@@ -150,8 +150,10 @@ BEGIN
       
    SET @path = '';
    
-   WHILE (@valueId IS NOT NULL AND
+   WHILE (@valueId IS NOT NULL 
+   AND
                    @parentValueId IS NOT NULL) DO
+                   
       SET @path = CONCAT(
          getSegmentByValue(@valueId),
          CONCAT('/', @path)
@@ -161,6 +163,7 @@ BEGIN
          FROM     Value
          WHERE  Value.valueId = @valueId
       );
+      
       SET @parentValueId = (
          SELECT   Value.parentValueId
          FROM     Value
@@ -1677,8 +1680,8 @@ exit_procedure: BEGIN
    THEN
          LEAVE exit_procedure;
    END IF;
-   
-  START TRANSACTION;
+    
+   START TRANSACTION;
   
   IF @existingValueId IS NOT NULL THEN
          
@@ -1715,7 +1718,7 @@ exit_procedure: BEGIN
          FROM      Value
          WHERE   Value.valueId =
                              @existingValueId;
-
+         
           IF @lastPath IS NOT NULL THEN
                  SELECT
                      MAX(v.objectIndex) + 1
@@ -1728,42 +1731,41 @@ exit_procedure: BEGIN
                          @existingValueId
                  FOR UPDATE;
                  
-                 UPDATE
-                     Value as temp
-                 SET
-                     temp.parentValueId =
-                         @existingValueId,
-                     temp.objectIndex = 
-                         @newObjectIndex,
-                     temp.objectKey = @lastPath,
-                     temp.lowerObjectKey =
-                         LOWER(@lastPath)
-                 WHERE
-                     temp.valueId =
-                         @tempValueId;
-                        
+                 IF @newObjectIndex IS NULL THEN
+                     SET @newObjectIndex = 0;
+                 END IF;
+                 
+                 IF @lastPath = '[]' THEN
+                      SET @lastPath = NULL,
+                                @newObjectKey = NULL;
+                 ELSE
+                      SET @newObjectKey = @lastPath;
+                 END IF;
+                
+                 SET @newParentValueId =
+                              @existingValueId;
          ELSE
           
                  # delete existing value
                  CALL deleteValue(@existingValueId);
-         
-                 # Update temp value with
-                # saved properties
-                UPDATE
-                       Value AS temp
-                SET
-                         temp.parentValueId =
-                                @newParentValueId,
-                         temp.objectIndex =
-                                 @newObjectIndex,
-                         temp.objectKey =
-                                 @newObjectKey,
-                          temp.lowerObjectKey  =
-                                  LOWER(@newObjectKey)
-                 WHERE    
-                          temp.valueId =
-                                  @tempValueId;
          END IF;
+         
+         # Update temp value with
+         # saved properties
+         UPDATE
+                Value AS temp
+         SET
+                  temp.parentValueId =
+                         @newParentValueId,
+                  temp.objectIndex =
+                          @newObjectIndex,
+                  temp.objectKey =
+                          @newObjectKey,
+                   temp.lowerObjectKey  =
+                           LOWER(@newObjectKey)
+          WHERE    
+                   temp.valueId =
+                           @tempValueId;
          
    END IF;
    
@@ -1773,6 +1775,15 @@ exit_procedure: BEGIN
    WHERE   Value.sessionId = @sessionId;
    
    COMMIT;
+   
+   SELECT
+       getPathByValue(v.valueId) as path
+   FROM
+       Value as v
+   WHERE
+       v.valueId = @tempValueId;
+           
+   
    
 END ;;
 DELIMITER ;
@@ -1826,6 +1837,31 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `wait` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `wait`()
+BEGIN
+
+set @counter = 1;
+
+while @counter > 0 do
+   set @counter = @counter + 1;
+end while;
+
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -1836,4 +1872,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-16 13:33:09
+-- Dump completed on 2025-06-16 17:24:15

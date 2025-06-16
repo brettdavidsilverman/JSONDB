@@ -105,7 +105,7 @@ class Authentication
                     if (!ok)
                         throw new Error(value);
                     _this.updateStatus();
-                    return ok;
+                    return value;
                 }
                 
             );

@@ -263,20 +263,27 @@ saveButton.onclick =
                 authentication.postJSON(
                     url,
                     json
-                )
-                .then(
-                    (response) => {
-                        saveButton.disabled = false;
-                    }
                 );
+                
         }
         
         promise
+            .then(
+                (newPath) => {
+                    if (newPath)
+                        pathInput.value = newPath;
+                }
+            )
             .catch(
                 (error) => {
                     saveButton.disabled = false;
                     displayError(error, "saveButton.onclick");
                     
+                }
+            )
+            .finally(
+                () => {
+                    saveButton.disabled = false;
                 }
             );
         

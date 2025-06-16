@@ -98,6 +98,8 @@ form > div {
         <br />
         <a href="/client">Javascript client library</a>
         <br />
+        <a href="/archive">Archive suite</a>
+        <br />
         <a href="https://github.com/brettdavidsilverman/JSONDB">JSONDB on Git Hub</a>
         
         <script>

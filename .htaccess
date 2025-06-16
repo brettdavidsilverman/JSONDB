@@ -19,9 +19,9 @@ AddCharset utf-8 .htm .html .js .css .json
 # redirect https://{domain} -> index.php
 RewriteRule ^$ /index.php [END]
 # redirect client to same and exit
-RewriteRule ^client/(.*)$ client/$1 [END]
+RewriteRule ^(client|server|archive)/(.*)$ $1/$2 [END]
 # redirect server to same and exit
-RewriteRule ^server/(.*)$ server/$1 [END]
+#RewriteRule ^server/(.*)$ server/$1 [END]
 # redirect all root files to same and exit
 RewriteRule ^((.*)\.(php|css|html|js|ico))$ /$1 [END]
 

@@ -6,20 +6,22 @@ window.onerror = function(message, source, line) {
    alert(message + "\n" + line);
 }
       </script>
-   <style>
+      <style>
 body {
    background-color: lightblue;
 }
-   </style>
+      </style>
    </head>
    <body>
       <h1>Touch</h1>
       <script>
 document.body.ontouchstart = function(event) {
+
    event.preventDefault();
    if (event.touches.length >= 2)
      alert("$");
 }
+
       </script>
    </body>
 </html>

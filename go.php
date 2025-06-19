@@ -55,7 +55,7 @@ function go() {
    then(
       function(json) {
         json = evaluate(json);
-        alert(json);
+        return json;
       }
    );
 }

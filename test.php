@@ -30,6 +30,10 @@
         </style>
     </head>
     <body>
-        <h1 id="h1"><?php echo getConfig()["Domain"] ?></h1>
+        <h1 id="h1"><?php echo getConfig()["Domain"] ?> Test</h1>
+        <script>
+var c = "\n";
+alert(encodeURIComponent(c));
+        </script>
     </body>
 </html>

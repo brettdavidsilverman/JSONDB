@@ -6,13 +6,18 @@ stored in a MySQL database using
 php and apache.
 
 install mysql
-create config.json in parent directory.
+install apache2
+
+Create config.json in JSONDB parent directory.
 Theres a sample <a href="config.json">config.json</a>
 
-# for server scripts
-sudo apt install jq
 
-# Instructions to setup email
+# install JSONDB database
+sudo apt install jq
+./createdatabase.sh
+./updateprocedures.sh
+
+# Instructions to setup google email
 
 install postfix
 

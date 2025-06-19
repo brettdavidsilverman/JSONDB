@@ -1,3 +1,6 @@
 DOMAIN=$(jq -r '.Domain' ../../config.json)
-curl https://$DOMAIN/server/authentication/logoff.php -b ../../cookies.txt -c ../../cookies.txt -s
-rm -f ../../credentials.txt
+LOGGEDOFF=$(curl "https://${DOMAIN}/server/authentication/logoff.php" -b ../../cookies.txt -c ../../cookies.txt -s)
+if [[ "$LOGGEDOFF" == "true" ]]
+then
+   echo "Logged off"
+fi

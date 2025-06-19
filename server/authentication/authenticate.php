@@ -2,6 +2,14 @@
 
 require_once '../functions.php';
 
-authenticate();
+$credentials = authenticate();
+
+http_response_code(200);
+
+setCredentialsCookie($credentials);
+
+header("content-type: application/json");
+
+echo json_encode($credentials);
 
 ?>

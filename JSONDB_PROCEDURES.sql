@@ -499,10 +499,15 @@ BEGIN
    
     SELECT Session. sessionKey,
                       Session. userId,
+                      User.userEmail ,
                        @expires
                           as expires
    FROM      Session
-   WHERE  Session. sessionKey = @sessionKey;
+   INNER JOIN
+                      User
+   ON            User.userId = Session.userId
+   WHERE   Session.sessionKey =
+@sessionKey;
    
   
       
@@ -1597,9 +1602,9 @@ exit_procedure: BEGIN
                                    NOW()
            WHERE   Session.sessionId = 
                                   @sessionId;
-   COMMIT;
+   #COMMIT;
    
-   START TRANSACTION;
+  # START TRANSACTION;
    
           DELETE
           FROM     SessionStatus
@@ -1872,4 +1877,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-16 17:24:15
+-- Dump completed on 2025-06-19 13:21:45

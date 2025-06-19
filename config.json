@@ -1,6 +1,6 @@
 {
    "Domain": "domain.com",
-   "Server Email": "google.gmail.com",
+   "Server Email": "domain.gmail.com",
    "Database": {
       "server": "localhost",
       "username": "brett",

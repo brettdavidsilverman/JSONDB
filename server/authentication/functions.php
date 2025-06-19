@@ -165,8 +165,20 @@ function logon($connection, $email, $secret)
          "userId" => $userId, 
          "expires" => $expires,
          "authenticated" => true,
-         "sessionKey" => $sessionKey
+         "sessionKey" => $sessionKey,
+         "email" => $email
       );
+      
+      $status = [
+         "label" => "Logged in",
+         "percentage" => 0,
+         "done" => true,
+         "error" => null
+      ];
+      
+      setSessionStatus(
+          $credentials,
+          $status);
       
    }
    else
@@ -267,7 +279,8 @@ function getEmptyCredentials()
       "userId" => null, 
       "expires" => null,
       "authenticated" => false,
-      "sessionKey" => null
+      "sessionKey" => null,
+      "email" => null
    );
    
    return $credentials;
@@ -335,6 +348,7 @@ function getCredentials($connection, $ignoreExpires = false)
    $statement->bind_result(
       $sessionKey,
       $userId,
+      $email,
       $expires
    );
    
@@ -344,7 +358,8 @@ function getCredentials($connection, $ignoreExpires = false)
          "userId" => $userId, 
          "expires" => $expires,
          "authenticated" => true,
-         "sessionKey" => $sessionKey
+         "sessionKey" => $sessionKey,
+         "email" => $email
       );
    }
    else {

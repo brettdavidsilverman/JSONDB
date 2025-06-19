@@ -1,2 +1,4 @@
 DOMAIN=$(jq -r '.Domain' ../../config.json)
-curl https://$DOMAIN/server/getSessionStatus.php -b ../../cookies.txt -c ../../cookies.txt
+STATUS=$(curl "https://${DOMAIN}/server/getSessionStatus.php" -s -b ../../cookies.txt -c ../../cookies.txt)
+    
+echo "${STATUS}"

@@ -305,13 +305,16 @@ function handlePost($connection, $file = null)
     
     }
     catch (Exception $e) {
-             
+
         setSessionStatus(
             $credentials,
             [
-                "label" => $e->getMessage(),
+                "label" =>
+                    $e->getMessage(),
                 "percentage" => 0,
-                "done" => true
+                "done" => true,
+                "error" =>
+                    $e->getTraceAsString()
             ]
         );
             

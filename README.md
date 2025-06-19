@@ -9,12 +9,15 @@ install mysql
 install apache2
 
 Create config.json in JSONDB parent directory.
+
 Theres a sample <a href="config.json">config.json</a>
 
 
-# install JSONDB database
+# Install JSONDB database
 sudo apt install jq
+
 ./createdatabase.sh
+
 ./updateprocedures.sh
 
 # Instructions to setup google email

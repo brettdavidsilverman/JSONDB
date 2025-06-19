@@ -5,6 +5,11 @@ Stores, updates and searches JSON data
 stored in a MySQL database using
 php and apache.
 
+install mysql
+install 
+create config.json in parent directory.
+Theres a sample <a href="config.json">config.json</a>
+
 # for server scripts
 sudo apt install jq
 

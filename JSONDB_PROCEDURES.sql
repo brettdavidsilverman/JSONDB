@@ -653,6 +653,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
+           jobId BIGINT,
            parentValueId BIGINT,
            ownerId BIGINT ,
            sessionKey VARCHAR(32),
@@ -666,7 +667,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
 )
 exit_procedure: BEGIN
 
-   SET @parentValueId = parentValueId,
+   SET @jobId = jobId,
+            @parentValueId = parentValueId,
             @ownerId = ownerId,
             @sessionKey = sessionKey,
             @type = type,
@@ -695,7 +697,7 @@ exit_procedure: BEGIN
    INSERT INTO Value(
            parentValueId,
            ownerId,
-           sessionId,
+           jobId,
            type,
            objectIndex,
            objectKey,
@@ -708,7 +710,7 @@ exit_procedure: BEGIN
   VALUES(
            @parentValueId,
            @ownerId,
-           @sessionId,
+           @jobId,
            @type,
            @objectIndex,
            @objectKey,
@@ -928,23 +930,17 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `deleteTempValues`(
-    sessionKey VARCHAR(32)
+    jobId BIGINT
 )
 BEGIN
 
-   SET @sessionKey = sessionKey;
-   SET @sessionId = (
-                           SELECT   Session.sessionId
-                           FROM      Session
-                           WHERE   Session.sessionKey =
-                                               @sessionKey
-                    );
-   
+   SET  @jobId = jobId;
+
    START TRANSACTION;
    
    DELETE
    FROM     Value
-   WHERE  Value.sessionId = @sessionId;
+   WHERE  Value.jobId  = @jobId;
    
    COMMIT;
    
@@ -978,6 +974,178 @@ BEGIN
          WHERE ValueParentChild
                           .parentValueId =  @valueId
      );
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `endDocument` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
+   sessionKey VARCHAR(32),
+   jobId BIGINT,
+   existingValueId BIGINT,
+   lastPath TEXT
+)
+exit_procedure: BEGIN
+
+
+   SET @sessionKey = sessionKey,
+            @jobId = jobId,
+            @existingValueId = existingValueId,
+            @lastPath = lastPath;
+
+   SELECT    Session.sessionId,
+                        Session.userId
+   INTO         @sessionId,
+                       @userId
+   FROM       Session
+   WHERE    Session.sessionKey =
+                       @sessionKey;
+ 
+   SET     @tempValueId = (
+          SELECT            Value.valueId
+          FROM               Value
+          WHERE            Value.parentValueId
+                                       IS NULL
+          AND                   Value.jobId = 
+                                       @jobId
+   );
+   
+  IF @existingValueId IS NOT NULL AND
+       NOT EXISTS (
+              SELECT          Value.valueId
+              FROM             Value
+              WHERE          Value.ownerId = @userId
+              AND                 Value.valueId =
+                                    @existingValueId
+     ) THEN
+           LEAVE exit_procedure;
+   END IF;
+
+   IF  @userId IS NULL OR
+         @sessionId IS NULL OR
+         @tempValueId IS NULL
+   THEN
+         LEAVE exit_procedure;
+   END IF;
+    
+   START TRANSACTION;
+  
+  IF @existingValueId IS NOT NULL THEN
+         
+         # Insert new child values into
+         # existing parents
+         INSERT
+         INTO        ValueParentChild(
+                                 parentValueId,
+                                 childValueId
+                             )
+         SELECT   existingParents.parentValueId,
+                            tempChildren.childValueId
+         FROM      ValueParentChild as
+                                existingParents,
+                            ValueParentChild as
+                                tempChildren
+         WHERE   existingParents.childValueId =
+                                @existingValueId
+         AND         (
+             @lastPath IS NOT NULL
+             OR
+             existingParents.parentValueId !=
+            @existingValueId)
+         AND         tempChildren.parentValueId =
+                                 @tempValueId;
+                                 
+         # Save existing value properties
+         SELECT   Value. parentValueId,
+                            Value. objectIndex,
+                            Value.objectKey
+         INTO        @newParentValueId,
+                            @newObjectIndex,
+                            @newObjectKey
+         FROM      Value
+         WHERE   Value.valueId =
+                             @existingValueId;
+         
+          IF @lastPath IS NOT NULL THEN
+                 SELECT
+                     MAX(v.objectIndex) + 1
+                 INTO
+                     @newObjectIndex
+                 FROM
+                     Value as v
+                 WHERE
+                     v.parentValueId =
+                         @existingValueId
+                 FOR UPDATE;
+                 
+                 IF @newObjectIndex IS NULL THEN
+                     SET @newObjectIndex = 0;
+                 END IF;
+                 
+                 IF @lastPath = '[]' THEN
+                      SET @lastPath = NULL,
+                                @newObjectKey = NULL;
+                 ELSE
+                      SET @newObjectKey = @lastPath;
+                 END IF;
+                
+                 SET @newParentValueId =
+                              @existingValueId;
+         ELSE
+          
+                 # delete existing value
+                 CALL deleteValue(@existingValueId);
+         END IF;
+         
+         # Update temp value with
+         # saved properties
+         UPDATE
+                Value AS temp
+         SET
+                  temp.parentValueId =
+                         @newParentValueId,
+                  temp.objectIndex =
+                          @newObjectIndex,
+                  temp.objectKey =
+                          @newObjectKey,
+                   temp.lowerObjectKey  =
+                           LOWER(@newObjectKey)
+          WHERE    
+                   temp.valueId =
+                           @tempValueId;
+         
+   END IF;
+   
+   # Upgrade temp values
+   UPDATE Value
+   SET           Value.jobId = NULL
+   WHERE   Value.jobId = @jobId;
+   
+   # Clear the job
+   DELETE
+   FROM      Job
+   WHERE   Job.jobId = @jobId;
+   
+   COMMIT;
+   
+   SELECT
+       getPathByValue(v.valueId) as path
+   FROM
+       Value as v
+   WHERE
+       v.valueId = @tempValueId;
    
 END ;;
 DELIMITER ;
@@ -1045,7 +1213,7 @@ BEGIN
                     type
    FROM   Value
    WHERE Value.ownerId = @ownerId
-   AND       Value.sessionId IS NULL
+   AND       Value.jobId IS NULL
    AND       Value.parentValueId IS NULL;
 
 
@@ -1132,7 +1300,7 @@ BEGIN
                           OR
                          Value.lowerObjectKey =
                            @lowerObjectKey)
-   AND            Value.sessionId IS NULL
+   AND            Value.jobId IS NULL
    AND           Value.ownerId = @ownerId
    -- THIS SECURITY CHECK WILL COME LATER
    AND           @ownerId = @userId;
@@ -1167,12 +1335,12 @@ BEGIN
                                         Value.parentValueId = 
                                         @valueId
                                   AND
-                                      Value.sessionId IS NULL
+                                      Value.jobId IS NULL
                             ) as childCount
    FROM            Value
    WHERE         Value.valueId = 
                             @valueId
-   AND               Value.sessionId IS NULL;
+   AND               Value.jobId IS NULL;
    
 END ;;
 DELIMITER ;
@@ -1206,12 +1374,12 @@ BEGIN
                                         Child.parentValueId =
                                         Value.valueId
                                 AND
-                                        Child.sessionId IS NULL
+                                        Child.jobId IS NULL
                             ) AS childCount
    FROM            Value
    WHERE         Value.parentValueId = 
                             @parentValueId
-   AND               Value.sessionId IS NULL
+   AND               Value.jobId IS NULL
    ORDER BY   Value.objectIndex;
    
 END ;;
@@ -1629,7 +1797,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `upgradeTempValues` */;
+/*!50003 DROP PROCEDURE IF EXISTS `startDocument` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -1639,157 +1807,44 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `upgradeTempValues`(
+CREATE DEFINER=`brett`@`%` PROCEDURE `startDocument`(
    sessionKey VARCHAR(32),
-   existingValueId BIGINT,
-   lastPath TEXT
+   path TEXT
 )
 exit_procedure: BEGIN
 
-
-   SET @sessionKey = sessionKey,
-            @existingValueId = existingValueId,
-            @lastPath = lastPath;
-
-   SELECT    Session.sessionId,
-                        Session.userId
-   INTO         @sessionId,
-                       @userId
-   FROM       Session
-   WHERE    Session.sessionKey =
-                       @sessionKey;
- 
-   SET     @tempValueId = (
-          SELECT            Value.valueId
-          FROM               Value
-          WHERE            Value.parentValueId
-                                       IS NULL
-          AND                   Value.sessionId = 
-                                       @sessionId
-   );
-   
-  IF @existingValueId IS NOT NULL AND
-       NOT EXISTS (
-              SELECT          Value.valueId
-              FROM             Value
-              WHERE          Value.ownerId = @userId
-              AND                 Value.valueId =
-                                    @existingValueId
-     ) THEN
-           LEAVE exit_procedure;
-   END IF;
-
-   IF  @userId IS NULL OR
-         @sessionId IS NULL OR
-         @tempValueId IS NULL
-   THEN
-         LEAVE exit_procedure;
-   END IF;
+    SET @sessionKey = sessionKey,
+             @path = path;
+             
+    SET @userId = (
+        SELECT
+            Session.userId
+        FROM
+            Session
+        WHERE
+            Session.sessionKey = @sessionKey
+    );
     
-   START TRANSACTION;
-  
-  IF @existingValueId IS NOT NULL THEN
-         
-         # Insert new child values into
-         # existing parents
-         INSERT
-         INTO        ValueParentChild(
-                                 parentValueId,
-                                 childValueId
-                             )
-         SELECT   existingParents.parentValueId,
-                            tempChildren.childValueId
-         FROM      ValueParentChild as
-                                existingParents,
-                            ValueParentChild as
-                                tempChildren
-         WHERE   existingParents.childValueId =
-                                @existingValueId
-         AND         (
-             @lastPath IS NOT NULL
-             OR
-             existingParents.parentValueId !=
-            @existingValueId)
-         AND         tempChildren.parentValueId =
-                                 @tempValueId;
-                                 
-         # Save existing value properties
-         SELECT   Value. parentValueId,
-                            Value. objectIndex,
-                            Value.objectKey
-         INTO        @newParentValueId,
-                            @newObjectIndex,
-                            @newObjectKey
-         FROM      Value
-         WHERE   Value.valueId =
-                             @existingValueId;
-         
-          IF @lastPath IS NOT NULL THEN
-                 SELECT
-                     MAX(v.objectIndex) + 1
-                 INTO
-                     @newObjectIndex
-                 FROM
-                     Value as v
-                 WHERE
-                     v.parentValueId =
-                         @existingValueId
-                 FOR UPDATE;
-                 
-                 IF @newObjectIndex IS NULL THEN
-                     SET @newObjectIndex = 0;
-                 END IF;
-                 
-                 IF @lastPath = '[]' THEN
-                      SET @lastPath = NULL,
-                                @newObjectKey = NULL;
-                 ELSE
-                      SET @newObjectKey = @lastPath;
-                 END IF;
-                
-                 SET @newParentValueId =
-                              @existingValueId;
-         ELSE
-          
-                 # delete existing value
-                 CALL deleteValue(@existingValueId);
-         END IF;
-         
-         # Update temp value with
-         # saved properties
-         UPDATE
-                Value AS temp
-         SET
-                  temp.parentValueId =
-                         @newParentValueId,
-                  temp.objectIndex =
-                          @newObjectIndex,
-                  temp.objectKey =
-                          @newObjectKey,
-                   temp.lowerObjectKey  =
-                           LOWER(@newObjectKey)
-          WHERE    
-                   temp.valueId =
-                           @tempValueId;
-         
-   END IF;
-   
-   # Upgrade temp values
-   UPDATE Value
-   SET           Value.sessionId = NULL
-   WHERE   Value.sessionId = @sessionId;
-   
-   COMMIT;
-   
-   SELECT
-       getPathByValue(v.valueId) as path
-   FROM
-       Value as v
-   WHERE
-       v.valueId = @tempValueId;
-           
-   
-   
+    IF @userId IS NULL
+    THEN
+        LEAVE exit_procedure;
+    END IF;
+    
+    INSERT
+    INTO
+        Job(
+            userId,
+            jobPath
+        )
+    VALUES
+        (
+            @userId,
+            @path
+        );
+        
+    SELECT
+        LAST_INSERT_ID() AS jobId;
+        
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1877,4 +1932,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-19 13:21:45
+-- Dump completed on 2025-06-20 22:00:54

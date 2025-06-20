@@ -228,9 +228,8 @@ function encodeString($string) {
 
    return
       '"' .
-      addcslashes(
-         $string,
-         "\"\f\n\r\t\v\0\\"
+      escapeString(
+         $string
       ) .
       '"';
 }

@@ -216,10 +216,36 @@ function getValueCount($stream) {
     return $totalValueCount;
 }
 
-function insertIntoDatabase(
+function readFromDatabase(
     $connection,
     $credentials,
-    $stream
+    $path
+)
+{
+    throw new Exception("Not implemented yet");
+    
+    setSessionStatus(
+        $credentials,
+        [
+            "label" => "Reading...",
+            "percentage" => 0,
+            "done" => false
+        ]
+    );
+    
+    $domain = getConfig()["Domain"];
+
+
+    return $newPath;
+    
+}
+
+function writeToDatabase(
+    $connection,
+    $credentials,
+    $path,
+    $object = null,
+    $stream = null
 )
 {
       
@@ -232,40 +258,18 @@ function insertIntoDatabase(
         ]
     );
     
-    $lastPath = null;
-    
-    $pathValueId = getValueIdByPath(
-        $connection,
-        $credentials,
-        true,
-        $lastPath,
-        getPath()
-    );
-    
-    // Get the count of posted values
-    $totalValueCount =
-        getValueCount($stream);
-            
-    // Reset the stream to start inserting
-    rewind($stream);
-      
-        
     $listener = new JSONDBListener(
         $connection,
         $credentials,
-        $pathValueId,
-        $lastPath,
-        $totalValueCount
+        $path,
+        $object,
+        $stream
     );
         
-    $parser = new \JsonStreamingParser\Parser(
-        $stream,
-        $listener
-    );
-        
-    $parser->parse();
-    
-    return $listener->newPath;
+    $newPath =
+       $listener->writeToDatabase();
+  
+    return $newPath;
     
 }
 
@@ -293,9 +297,11 @@ function handlePost($connection, $file = null)
     try {
 
         // Parse stream into database
-        $newPath = insertIntoDatabase(
+        $newPath = writeToDatabase(
             $connection,
             $credentials,
+            getPath(),
+            null,
             $stream
         );
         
@@ -345,8 +351,7 @@ function handlePost($connection, $file = null)
 function handleGet($connection)
 {
     $credentials = authenticate();
-    $lastPath = null;
-    
+
     $pathValueId = getValueIdByPath(
         $connection,
         $credentials,
@@ -374,13 +379,20 @@ function handleGet($connection)
     );
 
     printValues($statement, $values);
-        
-    //printChildValues($statement, $valueId);
+
 }
 
 function handleSearch($connection)
 {
     $credentials = authenticate();
+    $query = getQuery();
+    
+    writeToDatabase(
+        $connection,
+        $credentials,
+        '/my/queries/[]',
+        urldecode($query)
+    );
     
     $sql = <<<END
 select distinct
@@ -394,7 +406,7 @@ on
 and
     vpc.childValueId = v.valueId
 where
-    v.sessionId is null
+    v.jobId is null
 
 END;
 
@@ -408,18 +420,20 @@ END;
         getPath()
     );
     
-    $words = explode("+", getQuery());
-
+    $words = explode("+", $query);
 
     $wordCount = count($words);
     for ($i = 0; $i < $wordCount; ++$i) {
         $word = $words[$i];
         $words[$i] = urldecode($word);
-        $sql = $sql . "and\r\n" . word();
+        $sql =
+            $sql .
+            "and\r\n" .
+            word();
     }
     
 
-    $sql = $sql . "limit 10";
+    $sql = $sql . "limit 100";
     
     $parameters =
         array_merge(

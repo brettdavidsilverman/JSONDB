@@ -26,57 +26,67 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $lastPath;
     
     public $valueCount = 0;
+    public $path;
     public $newPath = null;
     protected $totalValueCount;
+    protected $jobId;
     protected $startTime;
     
     
     public function __construct(
         $connection,
         $credentials, 
-        $pathValueId,
-        $lastPath,
-        $totalValueCount
+        $path,
+        $object = null,
+        $stream = null
     )
     {
+        if (is_null($stream)) {
+            
+            // Get json string
+            $string = json_encode($object);
+           
+            $stream = fopen('php://memory','r+');
+            
+            fwrite($stream, $string);
+            rewind($stream);
+        }
         
+        $this->path = $path;
         $this->connection = $connection;
         $this->credentials = $credentials;
-        $this->pathValueId = $pathValueId;
-        $this->lastPath = $lastPath;
-        
+    
         $this->totalValueCount =
-           $totalValueCount;
+           $this->getTotalValueCount($stream);
            
+        $this->lastPath = null;
+    
+        $this->pathValueId =
+            getValueIdByPath(
+                $connection,
+                $credentials,
+                true,
+                $this->lastPath,
+                $this->path,
+            );
+    
+
         $this->startTime = time();
         
-        $this->deleteTempValues();
+        $this->parser = new \JsonStreamingParser\Parser(
+            $stream,
+            $this
+        );
+        
         
     }
     
-    protected function deleteTempValues()
-    {
-    
-        $sessionKey =
-            $this->credentials["sessionKey"];
-            
-        $statement =
-            $this->connection->prepare(
-                "CALL deleteTempValues(?);"
-            );
-          
-        $statement->bind_param(
-            's',
-            $sessionKey
-        );
-   
-        $statement->execute();
-   
-        $statement->close();
-    
+    public function writeToDatabase() {
+        $this->parser->parse();
+        return $this->newPath;
     }
-
-
+    
+    
     public function getJson()
     {
         return $this->result;
@@ -87,11 +97,33 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->stack = [];
         $this->keys = [];
         
+        $statement =
+            $this->connection->prepare(
+                "CALL startDocument(?,?);"
+            );
+
+        $statement->bind_param(
+            'ss', 
+            $this->credentials['sessionKey'],
+            $this->path
+        );
+        
+        $statement->execute();
+    
+        $statement->bind_result(
+            $this->jobId,
+        );
+    
+        $statement->fetch();
+
+        $statement->close();
+        
+
     }
+    
     
     public function endDocument() : void
     {
-        
 
         set_time_limit(30);
         
@@ -114,12 +146,13 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $statement =
            $this->connection->prepare(
-              "CALL upgradeTempValues(?, ?, ?);"
+              "CALL endDocument(?, ?, ?, ?);"
            );
           
         $statement->bind_param(
-           'sis',
+           'siis',
            $sessionKey,
+           $this->jobId,
            $this->pathValueId,
            $this->lastPath
         );
@@ -138,7 +171,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->close();
         
     }
-    
 
     public function startObject(): void
     {
@@ -390,11 +422,12 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         if (is_null($this->createValueStatement)) {
             $this->createValueStatement = 
                 $this->connection->prepare(
-                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
         
             $this->createValueStatement->bind_param(
-                'iissisisdi',
+                'iiissisisdi',
+                $this->jobId,
                 $_parentValueId,
                 $_ownerId,
                 $_sessionKey,
@@ -432,7 +465,29 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         return $valueId;
        
     }
+    protected function getTotalValueCount($stream) {
+        
+        $valueCountListener = new ValueCountListener();
+        $valueCountParser = new \JsonStreamingParser\Parser(
+            $stream,
+            $valueCountListener
+        );
     
+        $valueCountParser->parse();
+    
+        if (!$valueCountListener->getResult())
+            throw new Exception(
+                "Unexpected end of data"
+            );
+                
+        $totalValueCount =
+             $valueCountListener->valueCount;
+    
+        // Reset the stream to start inserting
+        rewind($stream);
+    
+        return $totalValueCount;
+    }
     
 }
 

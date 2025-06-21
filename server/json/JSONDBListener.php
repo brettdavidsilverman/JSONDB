@@ -192,24 +192,23 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->execute();
 
         $statement->bind_result(
-            $newPath
+            $this->newPath
         );
     
         
         $statement->fetch();
         
-        $this->newPath = $newPath;
-        
         $statement->close();
         
         if ($this->log) {
-            $path = $this->path;
+            
             writeToDatabase(
                 $this->credentials,
                 $this->jobPath,
                 [
-                    "label"=>"Done $path ✅",
-                    "percentage"=>100,
+                    "label"=>"Done ✅",
+                    "path" => $this->path,
+                    "newPath" => $this->newPath,
                     "done" => true
                 ]
             );

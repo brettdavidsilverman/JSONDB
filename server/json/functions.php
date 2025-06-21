@@ -42,7 +42,7 @@ function writeToDatabaseEx(
     $object = null,
     $stream = null,
     $log = false,
-    & $jobPath
+    & $listener
 )
 {
     
@@ -55,34 +55,9 @@ function writeToDatabaseEx(
         $log
     );
         
-    try {
-       $newPath =
-          $listener->writeToDatabase();
-  
-    }
-    catch (Exception $e) {
-
-        writeToDatabase(
-            $credentials,
-            $listener->jobPath,
-            [
-                "label" => $e->getMessage(),
-                "percentage" => 0,
-                "done" => true,
-                "error" =>
-                    $e->getTraceAsString()
-            ]
-        );
-    
-            
-        echo encodeString($e->getMessage());
-            
-        return false;
-            
-    }
-    
-    $jobPath = $listener->jobPath;
-    
+    $newPath =
+       $listener->writeToDatabase();
+          
     
     return $newPath;
     
@@ -113,7 +88,7 @@ function writeToDatabase(
             $status,
             null,
             false,
-            $jobPath
+            $listener
         );
     }
     
@@ -189,40 +164,73 @@ function handlePost($connection, $file = null)
         
     $stream = fopen($file, 'r');
     $path = getPath();
+    $inError = false;
+    $listener = null;
     
+    try {
+        // Parse stream into database
+        $newPath = writeToDatabaseEx(
+            $connection,
+            $credentials,
+            $path,
+            null,
+            $stream,
+            true,
+            $listener
+        );
+  
+    }
+    catch (Exception $e) {
+        $jobStatus = [
+            "label" => $e->getMessage(),
+            "path" => $listener->path,
+            "newPath" => $listener->newPath,
+            "timeTaken" =>  (time() - $start),
+            "done" => true
+        ];
+        
+        if ($e->getMessage() !=
+            "User cancelled")
+        {
+            $jobStatus["error"] =
+               $e->getTraceAsString();
+        }
+            
+        
+        writeToDatabase(
+            $credentials,
+            $listener->jobPath,
+            $jobStatus
+        );
     
-    // Parse stream into database
-    $newPath = writeToDatabaseEx(
-        $connection,
-        $credentials,
-        $path,
-        null,
-        $stream,
-        true,
-        $jobPath
-    );
-
+            
+        //echo encodeString($e->getMessage());
+        
+        $newPath = $listener->jobPath;
+        $inError = true;
+    }
+    
+ 
     $result = encodeString($newPath);
 
     echo $result;
-    
           
-    $end = time();
+
+    if (!$inError)
+        writeToDatabase(
+            $credentials,
+            $listener->jobPath,
+            [
+                "label" => "Finished writing $path ✅",
+                "path" => $listener->path,
+                "newPath" => $listener->newPath,
+                "timeTaken" => (time() - $start),
+                "done" => true
+            ]
+        );
         
-    $timeTaken = $end - $start;
-        
-    writeToDatabase(
-        $credentials,
-        $jobPath,
-        [
-            "label" => "Finished writing $path ✅",
-            "percentage" => 0,
-            "timeTaken" => $timeTaken,
-            "done" => true
-        ]
-    );
-        
-    return true;
+    
+    return !$inError;
             
 }
     

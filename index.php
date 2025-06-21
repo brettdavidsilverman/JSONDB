@@ -69,7 +69,8 @@ form > div {
                     <input type="checkbox"
                              id="functionCheckbox"
                              onclick="switchFunctions(this.checked)" 
-                    />                </div>
+                    />
+                    <button id="clearButton">Clear</button>                </div>
                 <textarea id="jsonEditor"></textarea>
                 <button id="saveButton">Save</button>
                 <br/>
@@ -117,7 +118,7 @@ logon.href += "?redirect=" + encodeURIComponent(window.location.href);
 var pathInput = document.getElementById("pathInput");
 var result = document.getElementById("result");
 var jsonEditor = document.getElementById("jsonEditor");var html = document.getElementById("html");var fetchButton = document.getElementById("fetchButton");
-var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
+var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var clearButton = document.getElementById("clearButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
 var dataLink = document.getElementById("dataLink");
 var header = document.getElementById("h1");
 var title = document.getElementById("title");
@@ -161,18 +162,41 @@ authentication.onUpdateJobs =
         for (j in jobs) {
             job = jobs[j];
             if (!job.done) {
-                progress.value = job.percentage;
-                progressLabel.innerText = job.label;
+                setJob(job);
+                 
                 break;
              }
         }
       
         if (job && job.done) {
-            progress.value = job.percentage;
-            progressLabel.innerText = job.label;
+            setJob(job);
         }
         
    }
+   
+function setJob(job) {
+    
+    progressLabel.innerText = job.label;
+    
+    if (job.percentage >= 0) {
+        progress.style.visibility =
+            "visible";
+        progress.value = job.percentage;
+    }
+    else {
+        progress.style.visibility =
+            "hidden";
+    }
+                
+    if (job.done) {
+        cancelLastUpload.style.visibility =
+            "hidden";
+    }
+    else {
+        cancelLastUpload.style.visibility =
+            "visible";
+    }
+}
     
 //authentication.authenticate();function loadFile() {
      fileInput.disabled = true;
@@ -326,6 +350,11 @@ saveButton.onclick =
         
         
         return promise;
+    }
+    
+clearButton.onclick =
+    function() {
+        jsonEditor.value = "";
     }
 
 cancelLastUpload.onclick = function() {

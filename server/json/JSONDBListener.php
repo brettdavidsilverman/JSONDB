@@ -4,7 +4,13 @@ require_once "Parser.php";
 
 
 class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
-{
+{
+
+    public $valueCount = 0;
+    public $path = null;
+    public $newPath = null;
+    public $jobPath = null;
+    
     
     protected $result;
 
@@ -21,13 +27,12 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
     protected $connection;
     protected $credentials;
+    protected $stream;
     protected $createValueStatement = null;
     protected $pathValueId;
     protected $lastPath;
     
-    public $valueCount = 0;
-    public $path;
-    public $newPath = null;
+    
     protected $totalValueCount;
     protected $jobId;
     protected $startTime;
@@ -38,7 +43,8 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $credentials, 
         $path,
         $object = null,
-        $stream = null
+        $stream = null,
+        $log = false
     )
     {
         if (is_null($stream)) {
@@ -46,7 +52,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             // Get json string
             $string = json_encode($object);
            
-            $stream = fopen('php://memory','r+');
+            $stream = fopen('php://temp','r+');
             
             fwrite($stream, $string);
             rewind($stream);
@@ -55,34 +61,40 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->path = $path;
         $this->connection = $connection;
         $this->credentials = $credentials;
-    
+        $this->stream = $stream;
         $this->totalValueCount =
            $this->getTotalValueCount($stream);
            
         $this->lastPath = null;
     
         $this->pathValueId =
-            getValueIdByPath(
+            getValueIdByPathEx(
                 $connection,
                 $credentials,
                 true,
                 $this->lastPath,
                 $this->path,
+                true
             );
     
 
         $this->startTime = time();
-        
-        $this->parser = new \JsonStreamingParser\Parser(
-            $stream,
-            $this
-        );
+        $this->log = $log;
+
         
         
     }
     
     public function writeToDatabase() {
-        $this->parser->parse();
+        
+        
+        $parser = new \JsonStreamingParser\Parser(
+            $this->stream,
+            $this
+        );
+        
+        $parser->parse();
+        
         return $this->newPath;
     }
     
@@ -111,14 +123,31 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->execute();
     
         $statement->bind_result(
-            $this->jobId,
+            $this->jobId
         );
     
         $statement->fetch();
 
         $statement->close();
         
+        if ($this->log) {
+            
+            $jobId = $this->jobId;
+            $path = $this->path;
+            $this->jobPath = 
+                writeToDatabase(
+                    $this->credentials,
+                    "/my/jobs/[]",
+                    [
+                        "label" => "Indexing $path ...",
+                        "percentage" => 0,
+                        "done" => false
+                    ],
+                    true
+                );
 
+        }
+        
     }
     
     
@@ -127,14 +156,17 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
         set_time_limit(30);
         
-        setSessionStatus(
-            $this->credentials,
-            [
-                "label"=>"Finalizing...",
-                "percentage"=>100,
-                "done" => false
-            ]
-        );
+        if ($this->log) {
+            writeToDatabase(
+                $this->credentials,
+                $this->jobPath,
+                [
+                    "label"=>"Finalizing...",
+                    "percentage"=>100,
+                    "done" => false
+                ]
+            );
+        }
     
         if ($this->createValueStatement) {
             $this->createValueStatement->close();
@@ -170,6 +202,19 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $statement->close();
         
+        if ($this->log) {
+            $path = $this->path;
+            writeToDatabase(
+                $this->credentials,
+                $this->jobPath,
+                [
+                    "label"=>"Done $path ✅",
+                    "percentage"=>100,
+                    "done" => true
+                ]
+            );
+        }
+        
     }
 
     public function startObject(): void
@@ -204,37 +249,38 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $endTime = time();
         $elapsed =
-           $endTime - $this->startTime;
+            $endTime - $this->startTime;
            
         $this->valueCount++;
         
         if ($elapsed >= 5)
         {
-           set_time_limit(30);
-           //$this->credentials = refresh();
-           $percentage = (
-             $this->valueCount /
-             $this->totalValueCount *
-             100.0
-           );
+            set_time_limit(30);
            
-           setSessionStatus(
-              $this->credentials,
-              [
-                 "label" => "Indexing...",
-                 "percentage" => $percentage,
-                 "done" => false
-              ]
-           );
+            $percentage = (
+                $this->valueCount /
+                $this->totalValueCount *
+                100.0
+            );
            
-           $cancelled = getCancelLastUpload(
-               $this->credentials
-           );
+            $cancelled = getCancelLastUpload(
+                $this->credentials
+            );
            
-           if ($cancelled === true)
-              throw new Exception("User cancelled");
-
-           $this->startTime = time();
+            if ($cancelled === true) {
+               throw new Exception("User cancelled");
+            }
+           
+            if ($this->log) {
+                writeToDatabase(
+                    $this->credentials,
+                    $this->jobPath . "/percentage",
+                    $percentage,
+                    true
+                );
+            }
+            
+            $this->startTime = time();
            
         }
         

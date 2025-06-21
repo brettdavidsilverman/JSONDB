@@ -26,6 +26,9 @@ class Authentication
     onUpdateStatus(status) {
     }
     
+    onUpdateJobs(jobs) {
+    }
+    
     redirect() {
         var currentPage = document.location.href;
         var newPage = this.url + "/client/authentication/logon.php";
@@ -243,6 +246,51 @@ class Authentication
 
     }
     
+    updateJobs(jobs) {
+        var _this = this;
+        if (!jobs) {
+            this.getJobs()
+            .then(
+                (jobs) => {
+                    if (!jobs) {
+                        jobs = [];
+                    }
+                    _this.updateJobs(jobs);
+                }
+            )
+            .catch(
+                (error) => {
+                    displayError(error, "Authentication.updateJobs");
+                }
+            );
+            
+            return;
+        }
+        
+        if (this.onUpdateJobs)
+           this.onUpdateJobs(jobs);
+        
+        this.setJobsTimeout();
+    
+    }
+    
+    setJobsTimeout() {
+     
+        var _this = this;
+        
+        if (this.timeoutId)
+            window.clearTimeout(
+                this.timeoutId
+            );
+  
+        this.timeoutId = window.setTimeout(
+            () => {
+                _this.updateJobs();
+            },
+            1000 * 5
+        );
+    
+    }
     
     setStatusTimeout() {
      
@@ -360,9 +408,11 @@ class Authentication
     
     getSessionStatus() {
 
-            
         var promise =
-            this.fetch(this.url + "/server/getSessionStatus.php")
+            //this.fetch(this.url + "/my/jobs"
+            this.fetch(
+                this.url + "/server/getSessionStatus.php"
+            )
             .then(
                 function(response) {
                     return response.json();
@@ -387,10 +437,24 @@ class Authentication
         
         var promise =
             this.fetch(
+                //this.url + "/my/status",
                 this.url + "/server/setSessionStatus.php",
                 parameters
             );
             
+        return promise;
+    }
+    
+    getJobs() {
+
+        var promise =
+            this.fetch(this.url + "/my/jobs")
+            .then(
+                function(response) {
+                    return response.json();
+                }
+            );
+
         return promise;
     }
     

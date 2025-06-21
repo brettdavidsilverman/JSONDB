@@ -3,6 +3,223 @@
 require_once 'JSONDBListener.php';
 require_once 'ValueCountListener.php';
 
+function readFromDatabase(
+    $connection,
+    $credentials,
+    $path,
+    $stream = null,
+    $returnObject = false
+)
+{
+    
+    
+    if (is_null($stream)) {
+        $stream = fopen("php://temp", "w+");
+    }
+    
+    writeValues(
+        $connection,
+        $credentials,
+        $stream
+    );
+
+    if (!$returnObject)
+        return;
+        
+    rewind($stream);
+    
+    $string =
+        stream_get_contents($stream);
+    
+    return json_decode($string);
+
+}
+
+function writeToDatabaseEx(
+    $connection,
+    $credentials,
+    $path,
+    $object = null,
+    $stream = null,
+    $log = false
+)
+{
+    
+    $listener = new JSONDBListener(
+        $connection,
+        $credentials,
+        $path,
+        $object,
+        $stream,
+        $log
+    );
+        
+    try {
+       $newPath =
+          $listener->writeToDatabase();
+  
+    }
+    catch (Exception $e) {
+
+        writeToDatabase(
+            $credentials,
+            $listener->jobPath,
+            [
+                "label" => $e->getMessage(),
+                "percentage" => 0,
+                "done" => true,
+                "error" =>
+                    $e->getTraceAsString()
+            ]
+        );
+    
+            
+        echo encodeString($e->getMessage());
+            
+        return false;
+            
+    }
+    
+    return $newPath;
+    
+}
+
+function writeToDatabase(
+    $credentials,
+    $path,
+    $status,
+    $insertLast = true
+)
+{
+    $connection = getConnection();
+    $result = null;
+    
+    if (pathExists(
+           $connection,
+           $credentials,
+           $path,
+           $insertLast
+        )
+    )
+    {
+        $result = writeToDatabaseEx(
+            $connection,
+            $credentials,
+            $path,
+            $status,
+            null,
+            false
+        );
+    }
+    
+    $connection->close();
+    
+    return $result;
+}
+
+function handleGet($connection)
+{
+    $credentials = authenticate();
+
+    http_response_code(200);
+    
+    header('Content-Type: application/json');
+      
+    setCredentialsCookie($credentials);
+    
+    $stream = fopen("php://output", "w");
+    $path = getPath();
+    
+    /*
+    if ($path != "/my/status")
+        writeToDatabase(
+            $credentials,
+            "/my/status",
+            [
+                "label" => "Reading $path ...",
+                "percentage" => 0,
+                "done" => false
+            ]
+        );
+    
+    */
+    readFromDatabase(
+        $connection,
+        $credentials,
+        $path,
+        $stream,
+        false
+    );
+    /*
+    if ($path != "/my/status")
+        writeToDatabase(
+            $credentials,
+            "/my/status",
+            [
+                "label" => "Reading $path ✅",
+                "percentage" => 0,
+                "done" => true
+            ]
+        );
+    
+*/
+}
+
+function handlePost($connection, $file = null)
+{
+
+    $start = time();
+
+    $credentials = authenticate(true);
+    
+
+    http_response_code(200);
+    setCredentialsCookie($credentials);
+        
+    
+    header('Content-Type: application/json');
+     
+    if (is_null($file))
+        $file = 'php://input';
+        
+    $stream = fopen($file, 'r');
+    $path = getPath();
+    
+    
+    // Parse stream into database
+    $newPath = writeToDatabaseEx(
+        $connection,
+        $credentials,
+        $path,
+        null,
+        $stream,
+        true
+    );
+
+    $result = encodeString($newPath);
+
+    echo $result;
+    
+          
+    $end = time();
+        
+    $timeTaken = $end - $start;
+        
+    writeToDatabase(
+        $credentials,
+        "/my/status",
+        [
+            "label" => "Finished writing $path ✅",
+            "percentage" => 0,
+            "done" => true
+        ]
+    );
+        
+    return true;
+            
+}
+    
+
 function getRootValueId($connection, $userId, & $lastType, $path)
 {
     $lastType = null;
@@ -143,12 +360,45 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
     return $valueId;
 }
 
+// Most simple getValueIdByPath
+// If $returnError is set and the
+// path doesnt exist, this sets
+// the error code to 404 and exits
+// with a formatted error description.
+// If $returnValue is false and the
+// path doesnt exist, this returns null
 function getValueIdByPath(
+    $connection, 
+    $credentials,
+    $path,
+    $returnError = false
+)
+{
+    $lastPath = null;
+    return
+        getValueIdByPathEx(
+           $connection, 
+           $credentials,
+           false,
+           $lastPath,
+           $path,
+           $returnError
+        );
+    
+}
+
+// This is the extended version
+// The use of lastPath is for
+// Posts to append a key to
+// an object. To use this feature
+// you must set $insertLast to true
+function getValueIdByPathEx(
     $connection, 
     $credentials,
     $insertLast,
     & $lastPath,
-    $path
+    $path,
+    $returnError = true
 )
 {
     $userId = $credentials["userId"];
@@ -179,7 +429,8 @@ function getValueIdByPath(
         );
     }
     
-    if (is_null($pathValueId) &&
+    if ($returnError &&
+        is_null($pathValueId) &&
         count($paths) > 2)
     {
         if (is_null($rootValueId))
@@ -194,6 +445,26 @@ function getValueIdByPath(
     }
     
     return $pathValueId;
+}
+
+function pathExists(
+    $connection, 
+    $credentials,
+    $path,
+    $ignoreLast = false
+)
+{
+    $valueId =
+        getValueIdByPathEx(
+            $connection, 
+            $credentials,
+            $ignoreLast, //$insertLast,
+            $lastPath,
+            $path,
+            false //$returnError = true
+        );
+        
+    return !is_null($valueId);
 }
 
 function getValueCount($stream) {
@@ -216,155 +487,22 @@ function getValueCount($stream) {
     return $totalValueCount;
 }
 
-function readFromDatabase(
+
+
+
+
+function writeValues(
     $connection,
     $credentials,
-    $path
+    $stream
 )
 {
-    throw new Exception("Not implemented yet");
-    
-    setSessionStatus(
-        $credentials,
-        [
-            "label" => "Reading...",
-            "percentage" => 0,
-            "done" => false
-        ]
-    );
-    
-    $domain = getConfig()["Domain"];
-
-
-    return $newPath;
-    
-}
-
-function writeToDatabase(
-    $connection,
-    $credentials,
-    $path,
-    $object = null,
-    $stream = null
-)
-{
-      
-    setSessionStatus(
-        $credentials,
-        [
-            "label" => "Indexing...",
-            "percentage" => 0,
-            "done" => false
-        ]
-    );
-    
-    $listener = new JSONDBListener(
-        $connection,
-        $credentials,
-        $path,
-        $object,
-        $stream
-    );
-        
-    $newPath =
-       $listener->writeToDatabase();
-  
-    return $newPath;
-    
-}
-
-
-function handlePost($connection, $file = null)
-{
-
-    $start = time();
-
-    $credentials = authenticate(true);
-    
-
-    http_response_code(200);
-    setCredentialsCookie($credentials);
-        
-    
-    header('Content-Type: application/json');
-     
-    if (is_null($file))
-        $file = 'php://input';
-        
-    $stream = fopen($file, 'r');
-        
-
-    try {
-
-        // Parse stream into database
-        $newPath = writeToDatabase(
-            $connection,
-            $credentials,
-            getPath(),
-            null,
-            $stream
-        );
-        
-        $result = encodeString($newPath);
-
-        echo $result;
-    
-    }
-    catch (Exception $e) {
-
-        setSessionStatus(
-            $credentials,
-            [
-                "label" =>
-                    $e->getMessage(),
-                "percentage" => 0,
-                "done" => true,
-                "error" =>
-                    $e->getTraceAsString()
-            ]
-        );
-            
-        echo "false";
-            
-        return false;
-            
-    }
-        
-    $end = time();
-        
-    $timeTaken = $end - $start;
-        
-    setSessionStatus(
-        $credentials,
-        [
-            "label" => "⏰ Finished in " . $timeTaken . " seconds",
-            "percentage" => 0,
-            "done" => true
-        ]
-    );
-        
-    
-    return true;
-            
-}
-    
-function handleGet($connection)
-{
-    $credentials = authenticate();
-
     $pathValueId = getValueIdByPath(
         $connection,
         $credentials,
-        false,
-        $lastPath,
-        getPath()
+        getPath(),
+        true
     );
-    
-    http_response_code(200);
-    
-    header('Content-Type: application/json');
-      
-    setCredentialsCookie($credentials);
     
     $rootStatement = $connection->prepare(
         "CALL getValuesById(?);"
@@ -377,22 +515,17 @@ function handleGet($connection)
     $statement = $connection->prepare(
         "CALL getValuesByParentId(?);"
     );
+    
 
-    printValues($statement, $values);
-
+    printValues($stream, $statement, $values);
+    
 }
 
 function handleSearch($connection)
 {
     $credentials = authenticate();
-    $query = getQuery();
     
-    writeToDatabase(
-        $connection,
-        $credentials,
-        '/my/queries/[]',
-        urldecode($query)
-    );
+    $query = getQuery();
     
     $sql = <<<END
 select distinct
@@ -412,12 +545,13 @@ END;
 
     $lastPath = null;
     
-    $pathValueId = getValueIdByPath(
+    $pathValueId = getValueIdByPathEx(
         $connection,
         $credentials,
         false,
         $lastPath,
-        getPath()
+        getPath(),
+        true
     );
     
     $words = explode("+", $query);
@@ -485,6 +619,24 @@ END;
     }
     
     echo "]";
+    
+    // Log this query
+    if (pathExists(
+        $connection,
+        $credentials,
+        '/my/queries')
+    )
+    {
+    
+        writeToDatabaseEx(
+            $connection,
+            $credentials,
+            '/my/queries/[]',
+            urldecode($query)
+        );
+            
+    }
+    
 }
 
 function word() {
@@ -512,7 +664,7 @@ END;
    return $sql;
 }
     
-function printValues($statement, $values, $tabCount = 0, $isFirst = true) {
+function printValues($stream, $statement, $values, $tabCount = 0, $isFirst = true) {
      
     $counter = 0;
     $valueCount = count($values);
@@ -531,27 +683,28 @@ function printValues($statement, $values, $tabCount = 0, $isFirst = true) {
         $isEmpty = ($childCount === 0);
         $isLast = (++$counter === $valueCount);
 
-        echo tabs($tabCount);
+        fwrite($stream, tabs($tabCount));
         
         // Write object key
         if (!$isFirst && !is_null($objectKey))
         {
-            echo encodeString($objectKey)
-                 . ': ';
+            fwrite($stream, encodeString($objectKey)
+                 . ': ');
         }
         
         $isFirst = false;
         
         switch ($type) {
         case "null":
-            echo "null";
+            fwrite($stream, "null");
             break;
         case "object":
 
-            echo "{";
+            fwrite($stream, "{");
 
             if (!$isEmpty) {
                 printChildValues(
+                    $stream,
                     $statement,
                     $valueId,
                     $tabCount,
@@ -559,34 +712,37 @@ function printValues($statement, $values, $tabCount = 0, $isFirst = true) {
                 );
             }
             
-            echo "}";
+            fwrite($stream, "}");
                  
                  
             break;
             
         case "array":
-            echo "[";
+            fwrite($stream, "[");
             if (!$isEmpty) {
                 printChildValues(
+                    $stream,
                     $statement,
                     $valueId,
                     $tabCount,
                     $isFirst
                 );
             }
-            echo "]";
+            fwrite($stream, "]");
             break;
         case "string":
-            echo encodeString($stringValue);
+            fwrite($stream,
+                encodeString($stringValue)
+            );
             break;
         case "number":
-            echo $numericValue;
+            fwrite($stream, $numericValue);
             break;
         case "bool":
             if ($boolValue)
-                echo 'true';
+                fwrite($stream, 'true');
             else
-                echo 'false';
+                fwrite($stream, 'false');
             break;
         
         }
@@ -596,8 +752,8 @@ function printValues($statement, $values, $tabCount = 0, $isFirst = true) {
         // Write array or key seperator
         if (!$isLast)
         {
-            echo ",";
-            echo "\r\n";
+            fwrite($stream, ",");
+            fwrite($stream, "\r\n");
         }
             
     }
@@ -606,13 +762,14 @@ function printValues($statement, $values, $tabCount = 0, $isFirst = true) {
 }
 
 function printChildValues(
+    $stream,
     $statement,
     $valueId,
     $tabCount,
     $isFirst
 )
 {
-     echo "\r\n";
+     fwrite($stream, "\r\n");
                 
      $childValues = loadValues(
          $statement,
@@ -621,13 +778,14 @@ function printChildValues(
      
      // Print this child
      printValues(
+          $stream,
           $statement,
           $childValues,
           $tabCount + 1,
           $isFirst
      );
             
-     echo "\r\n" . tabs($tabCount);
+     fwrite($stream, "\r\n" . tabs($tabCount));
                 
 }
   

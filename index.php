@@ -75,11 +75,14 @@ form > div {
                 <br/>
                 <br/>
                 
-                <label for="progress"><span id="progressLabel"></span></label>
-                <div>
-                    <progress id="progress" value="0" max="100"></progress>
-                    <span id="cancelLastUpload">❌</span>
+                <div id="jobs">
+                    <div id="job">
+                        <label for="progress"><span id="progressLabel"></span></label>
+                        <progress id="progress" value="0" max="100"></progress>
+                        <span id="cancelLastUpload">❌</span>
+                    </div>
                 </div>
+                
             </form>
             
         </div>
@@ -121,6 +124,8 @@ var title = document.getElementById("title");
 var progress = document.getElementById("progress");
 var progressLabel = document.getElementById("progressLabel");
 var cancelLastUpload = document.getElementById("cancelLastUpload");
+var jobDiv = document.getElementById("job");
+var jobsDiv = document.getElementById("jobs");
 
 var origin =
     punycode.toUnicode(
@@ -131,7 +136,6 @@ header.innerText = origin;
 title.innerText = origin;
 
 fetchButton.disabled = true;
-saveButton.disabled = true;
 
 authentication.onHandleLogon =
     function() {
@@ -140,6 +144,30 @@ authentication.onHandleLogon =
         return false;
     }
     
+authentication.onUpdateStatus =
+   (status) => {
+       // displayExpires();
+    }
+        
+authentication.onUpdateJobs =
+   (jobs) => {
+      var job;
+      for (j in jobs) {
+         job = jobs[j];
+         if (!job.done) {
+            progress.value = job.percentage;
+            progressLabel.innerText = job.label;
+            break;
+         }
+      }
+      
+      if (job.done) {
+          progress.value = job.percentage;
+          progressLabel.innerText = job.label;
+      }
+        
+      displayExpires();
+   }
     
 //authentication.authenticate();function loadFile() {
      fileInput.disabled = true;
@@ -190,7 +218,7 @@ fetchButton.onclick = function() {
             }
         ).
         then(
-            function(json) {
+            function(json) {
                 jsonEditor.value = json;
                 
                 fetchButton.disabled = false;
@@ -415,17 +443,9 @@ function displayExpires() {
 }
 
 
-authentication.onUpdateStatus =
-   (status) => {
-        saveButton.disabled = !status.done;
-        progress.value = status.percentage;
-  
-        progressLabel.innerText = status.label;
-    
-        displayExpires();
-    }
-        
-authentication.updateStatus();
+
+//authentication.updateStatus();
+authentication.updateJobs();
 
         </script>
 

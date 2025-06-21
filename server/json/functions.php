@@ -41,7 +41,8 @@ function writeToDatabaseEx(
     $path,
     $object = null,
     $stream = null,
-    $log = false
+    $log = false,
+    & $jobPath
 )
 {
     
@@ -80,6 +81,9 @@ function writeToDatabaseEx(
             
     }
     
+    $jobPath = $listener->jobPath;
+    
+    
     return $newPath;
     
 }
@@ -108,7 +112,8 @@ function writeToDatabase(
             $path,
             $status,
             null,
-            false
+            false,
+            $jobPath
         );
     }
     
@@ -193,7 +198,8 @@ function handlePost($connection, $file = null)
         $path,
         null,
         $stream,
-        true
+        true,
+        $jobPath
     );
 
     $result = encodeString($newPath);
@@ -207,10 +213,11 @@ function handlePost($connection, $file = null)
         
     writeToDatabase(
         $credentials,
-        "/my/status",
+        $jobPath,
         [
             "label" => "Finished writing $path ✅",
             "percentage" => 0,
+            "timeTaken" => $timeTaken,
             "done" => true
         ]
     );
@@ -621,21 +628,12 @@ END;
     echo "]";
     
     // Log this query
-    if (pathExists(
-        $connection,
-        $credentials,
-        '/my/queries')
-    )
-    {
-    
-        writeToDatabaseEx(
-            $connection,
-            $credentials,
-            '/my/queries/[]',
-            urldecode($query)
-        );
-            
-    }
+    writeToDatabase(
+       $credentials,
+       '/my/queries/[]',
+       urldecode($query)
+    );
+
     
 }
 

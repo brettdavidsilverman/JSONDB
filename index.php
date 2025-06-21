@@ -146,27 +146,32 @@ authentication.onHandleLogon =
     
 authentication.onUpdateStatus =
    (status) => {
+       authentication.updateJobs();
        // displayExpires();
     }
         
 authentication.onUpdateJobs =
-   (jobs) => {
-      var job;
-      for (j in jobs) {
-         job = jobs[j];
-         if (!job.done) {
+    (jobs) => {
+        displayExpires();
+        
+        if (!Array.isArray(jobs))
+            return;
+
+        var job;
+        for (j in jobs) {
+            job = jobs[j];
+            if (!job.done) {
+                progress.value = job.percentage;
+                progressLabel.innerText = job.label;
+                break;
+             }
+        }
+      
+        if (job && job.done) {
             progress.value = job.percentage;
             progressLabel.innerText = job.label;
-            break;
-         }
-      }
-      
-      if (job.done) {
-          progress.value = job.percentage;
-          progressLabel.innerText = job.label;
-      }
+        }
         
-      displayExpires();
    }
     
 //authentication.authenticate();function loadFile() {
@@ -258,7 +263,7 @@ saveButton.onclick =
         
         var url = getURL();
         
-        saveButton.disabled = true;
+        saveButton.disabled = true;        
         
         authentication.authenticate();
         var json;
@@ -269,8 +274,10 @@ saveButton.onclick =
         }
         catch(error) {
             displayError(error, "saveButton.onclick");
-            saveButton.disabled = false;
             return;
+        }
+        finally {
+            saveButton.disabled = false;
         }
                 var promise;
         

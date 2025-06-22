@@ -12,6 +12,6 @@ header("content-type: text/plain");
 
 $maxFilesize =  ini_get("upload_max_filesize");
 
-echo $maxFilesize;
+echo json_encode($maxFilesize);
 
 ?>

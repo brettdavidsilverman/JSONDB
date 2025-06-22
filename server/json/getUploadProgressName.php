@@ -8,7 +8,9 @@ $credentials = authenticate();
 
 setCredentialsCookie($credentials);
 
-header("content-type: text/plain");
+header("content-type: application/json");
 
-echo ini_get("session.upload_progress.name");
+echo json_encode(
+    ini_get("session.upload_progress.name")
+);
 ?>

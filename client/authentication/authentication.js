@@ -41,7 +41,7 @@ class Authentication
     
     fetch(url, parameters) {
         var _this = this;
-        
+
         var defaultParameters = {
             mode: "cors",
             method: "GET",
@@ -56,12 +56,27 @@ class Authentication
         if (parameters)
             Object.assign(defaultParameters, parameters);
 
+        var ok;
         var promise =
             fetch(url, defaultParameters)
             .then(
                 (response) => {
                     _this.saveCredentials(response);
-                    return response;
+                    ok = response.ok;
+                    return response.text();
+                }
+            )
+            .then(
+                (text) => {
+                    return JSON.parse(text);
+                }
+            )
+            .then(
+                (json) => {
+                    if (!ok) {
+                        throw json;
+                    }
+                    return json;
                 }
             );
 
@@ -69,6 +84,8 @@ class Authentication
     }
     
     postJSON(url, json) {
+    
+
         var parameters = {
             method: "POST",
             body: json
@@ -80,37 +97,19 @@ class Authentication
             percentage: 1,
             done: false
         }
-        var promises = [
-            this.setCancelLastUpload(false),
-            this.setSessionStatus(status)
-        ];
+        
+        this.onUpdateStatus(status);
         
         var promise =
-            Promise.all(promises)
-            .then(
-                (values) => {
-                    var promise = 
-                        _this.fetch(
-                            url,
-                            parameters
-                        );
-                    return promise;
-                }
+            this.fetch(
+               url,
+               parameters
             )
-            .then(
-                (response) => {
-                    ok = response.ok;
-                    return response.json();
+            .finally(
+                () => {
+                    status.done = true;
+                    _this.onUpdateStatus(status);
                 }
-            )
-            .then(
-                (value) => {
-                    if (!ok)
-                        throw new Error(value);
-                    _this.updateStatus();
-                    return value;
-                }
-                
             );
 
             
@@ -133,8 +132,7 @@ class Authentication
             this.getUploadMaxFilesize(),
             this.getUploadProgressName(),
             this.setSessionStatus(status),
-            this.setCancelLastUpload(false),
-            
+            this.setCancelLastUpload(false)
         ];
         
         var promise =
@@ -166,7 +164,10 @@ class Authentication
                        throw new Error("Error setting cancel upload");
 
                     var formData = new FormData();
-                    formData.append(uploadProgressName, "postFile");
+                    formData.append(
+                        uploadProgressName,
+                        "postFile"
+                    );
                     formData.append("file", file);
                     var promise = _this.fetch(
                         url,
@@ -178,32 +179,16 @@ class Authentication
                     return promise;
                 }
             )
-            .then(
-                (response) => {
-                    status = response.ok;
-                    return response.json()
-                }
-            )
-            .then(
-                (json) => {
-                    if (!status) {
-                       throw new Error(json);
-                    }
-                    return json;
-                }
-            )
             .catch(
                 (error) => {
                     var status = {
-                       label: error.toString(),
-                       percentage: 0,
-                       done: true
+                        label: error,
+                        percentage: 0,
+                        done: true
                     }
-                    var promise =
-                        _this.setSessionStatus(
-                            status
-                        );
-                    return promise;
+                    _this.onUpdateStatus(
+                        status
+                    );
                 }
             );
             
@@ -221,7 +206,6 @@ class Authentication
                     if (!status) {
                         status = {
                             label: "Ready...",
-                            percentage: 0,
                             done: true
                         }
                     }
@@ -260,6 +244,8 @@ class Authentication
             )
             .catch(
                 (error) => {
+                    if (error.status == 404)
+                       return;
                     displayError(error, "Authentication.updateJobs");
                 }
             );
@@ -267,10 +253,18 @@ class Authentication
             return;
         }
         
+        var done = true;
+        for (var j in jobs) {
+            if (!jobs[j].done) {
+                done = false;
+            }
+        }
+        
         if (this.onUpdateJobs)
            this.onUpdateJobs(jobs);
         
-        this.setJobsTimeout();
+        if (!done)
+            this.setJobsTimeout();
     
     }
     
@@ -278,12 +272,12 @@ class Authentication
      
         var _this = this;
         
-        if (this.timeoutId)
+        if (this.jobsTimeoutId)
             window.clearTimeout(
-                this.timeoutId
+                this.jobsTimeoutId
             );
   
-        this.timeoutId = window.setTimeout(
+        this.jobsTimeoutId = window.setTimeout(
             () => {
                 _this.updateJobs();
             },
@@ -343,11 +337,6 @@ class Authentication
                 }
             )
             .then(
-                function(response) {
-                    return response.json();
-                }
-            )
-            .then(
                 function(authenticated) {
                     _this.authenticated =
                         authenticated;
@@ -392,11 +381,6 @@ class Authentication
         var promise =
             this.fetch(this.url + "/server/authentication/refresh.php")
             .then(
-                function(response) {
-                    return response.json();
-                }
-            )
-            .then(
                 function(authenticated) {
                     _this.authenticated = authenticated;
                     return _this.authenticated;
@@ -412,11 +396,6 @@ class Authentication
             //this.fetch(this.url + "/my/jobs"
             this.fetch(
                 this.url + "/server/getSessionStatus.php"
-            )
-            .then(
-                function(response) {
-                    return response.json();
-                }
             );
 
         return promise;
@@ -448,12 +427,7 @@ class Authentication
     getJobs() {
 
         var promise =
-            this.fetch(this.url + "/my/jobs")
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
+            this.fetch(this.url + "/my/jobs");
 
         return promise;
     }
@@ -462,13 +436,8 @@ class Authentication
 
             
         var promise =
-            this.fetch(this.url + "/server/getCancelLastUpload.php")
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
-
+            this.fetch(this.url + "/server/getCancelLastUpload.php");
+            
         return promise;
     }
     
@@ -506,12 +475,7 @@ class Authentication
         }
             
         var promise =
-            fetch(this.url + "/server/authentication/userEmailExists.php", parameters)
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
+            fetch(this.url + "/server/authentication/userEmailExists.php", parameters);
 
         return promise;
     }
@@ -530,12 +494,7 @@ class Authentication
         }
 
         var promise =
-            this.fetch(this.url + "/server/authentication/createUser.php", parameters)
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
+            this.fetch(this.url + "/server/authentication/createUser.php", parameters);
 
         return promise;
     }
@@ -553,12 +512,7 @@ class Authentication
         }
 
         var promise =
-            this.fetch(this.url + "/server/authentication/validateUserEmail.php", parameters)
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
+            this.fetch(this.url + "/server/authentication/validateUserEmail.php", parameters);
 
         return promise;
     }
@@ -576,12 +530,7 @@ class Authentication
         }
 
         var promise =
-            this.fetch(this.url + "/server/authentication/lostSecret.php", parameters)
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
+            this.fetch(this.url + "/server/authentication/lostSecret.php", parameters);
 
         return promise;
     }
@@ -600,12 +549,7 @@ class Authentication
         }
 
         var promise =
-            this.fetch(this.url + "/server/authentication/resetSecret.php", parameters)
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
+            this.fetch(this.url + "/server/authentication/resetSecret.php", parameters);
 
         return promise;
     }
@@ -626,12 +570,7 @@ class Authentication
         }
 
         var promise =
-            this.fetch(this.url + "/server/authentication/changeSecret.php", parameters)
-            .then(
-                function(response) {
-                    return response.json();
-                }
-            );
+            this.fetch(this.url + "/server/authentication/changeSecret.php", parameters);
 
         return promise;
     }
@@ -646,9 +585,9 @@ class Authentication
         var promise =
             this.fetch(this.url + "/server/authentication/logoff.php")
             .then(
-                function(response) {
+                function(json) {
                     _this.authenticated = false;
-                    return response.json();
+                    return json;
                 }
             );
             
@@ -818,11 +757,6 @@ class Authentication
             "/server/json/getUploadProgressName.php"
         )
         .then(
-            (response) => {
-                 return response.text()
-            }
-        )
-        .then(
             (text) => {
                 Authentication._uploadProgressName = text;
                 return text;
@@ -841,11 +775,6 @@ class Authentication
         var promise = this.fetch(
             this.url +
             "/server/json/getUploadMaxFilesize.php"
-        )
-        .then(
-            (response) => {
-                 return response.text()
-            }
         )
         .then(
             (text) => {
@@ -916,4 +845,5 @@ class LogonError extends Error {
           super("Please logon");
      }
 }
+
 

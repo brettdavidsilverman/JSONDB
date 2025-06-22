@@ -16,7 +16,7 @@
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <title id="title"><?php echo getConfig()["Domain"] ?></title>
-        <script src="/client/head.js?v=1"></script>
+        <script src="/client/head.js?v=2"></script>
         <script src="/client/stream/stream.js"></script>
         <script src="/client/power-encoding/power-encoding.js"></script>
         <script src="/client/id/id.js"></script>
@@ -77,13 +77,14 @@ form > div {
                 <br/>
                 
                 <div id="jobs">
-                    <div id="job">
-                        <label for="progress"><span id="progressLabel"></span></label>
-                        <progress id="progress" value="0" max="100"></progress>
-                        <span id="cancelLastUpload">❌</span>
-                    </div>
                 </div>
                 
+                <div id="job" style="visibility:hidden;">
+                    <label for="progress"><span class="progressLabel"></span></label>
+                    <progress class="progress" value="0" max="100"></progress>
+                    <span class="cancelUpload">❌</span>
+                </div>
+
             </form>
             
         </div>
@@ -124,7 +125,7 @@ var header = document.getElementById("h1");
 var title = document.getElementById("title");
 var progress = document.getElementById("progress");
 var progressLabel = document.getElementById("progressLabel");
-var cancelLastUpload = document.getElementById("cancelLastUpload");
+var cancelUpload = document.getElementById("cancelUpload");
 var jobDiv = document.getElementById("job");
 var jobsDiv = document.getElementById("jobs");
 
@@ -145,38 +146,56 @@ authentication.onHandleLogon =
         return false;
     }
     
+var uploadJob;
+
 authentication.onUpdateStatus =
    (status) => {
-       authentication.updateJobs();
-       // displayExpires();
+       displayExpires();
+       uploadJob = status;
+       if (uploadJob.done)
+           saveButton.disabled = false;
+       authentication.updateJobs()
     }
         
 authentication.onUpdateJobs =
     (jobs) => {
         displayExpires();
+        jobsDiv.innerHTML = "";
         
         if (!Array.isArray(jobs))
             return;
 
+        if (uploadJob && uploadJob.done)
+           uploadJob = null;
+        
+        jobs.unshift(uploadJob);
+        
+        
         var job;
-        for (j in jobs) {
+        for (var j in jobs) {
             job = jobs[j];
-            if (!job.done) {
-                setJob(job);
-                 
-                break;
-             }
+            if (job)
+                setJob(job, j - 1);
         }
       
-        if (job && job.done) {
-            setJob(job);
-        }
         
    }
    
-function setJob(job) {
+function setJob(job, index) {
     
+    var newJobDiv = jobDiv.cloneNode(true);
+    
+    newJobDiv.style.visibility = "visible";
+    
+    var progressLabel =
+       newJobDiv.querySelector(".progressLabel");
+    var progress =
+       newJobDiv.querySelector(".progress");
+    var cancelUpload =
+       newJobDiv.querySelector(".cancelUpload");
+       
     progressLabel.innerText = job.label;
+    
     
     if (job.percentage >= 0) {
         progress.style.visibility =
@@ -189,13 +208,38 @@ function setJob(job) {
     }
                 
     if (job.done) {
-        cancelLastUpload.style.visibility =
+        cancelUpload.style.visibility =
             "hidden";
     }
     else {
-        cancelLastUpload.style.visibility =
+        cancelUpload.style.visibility =
             "visible";
     }
+    
+    cancelUpload.onclick =
+        function() {
+            if (confirm("Press OK to stop upload ❌")) {
+               if (index === -1)
+                   authentication.cancelLastUpload();
+               else
+                   authentication.postJSON(
+                       "/my/jobs/" + index + "/cancelled",
+                       true
+                  );
+            }
+        }
+
+    
+    if (index >= 0) {
+        newJobDiv.onclick =
+            function()
+            {
+                pathInput.value = "/my/jobs/" + index;
+                fetchButton.onclick();
+            }
+    }
+        
+    jobsDiv.appendChild(newJobDiv);
 }
     
 //authentication.authenticate();function loadFile() {
@@ -228,54 +272,41 @@ fetchButton.onclick = function() {
     authentication.authenticate();
     
     localStorage.setItem("path", url);
-    var status;
-    
+
     var promise =
-    authentication.fetch(url).
-        then(
-            function (response) {
-                status = response.ok;
-                return response.text();
-            }
-        ).
-        then(
-            function (text) {
-                if (!status) {
-                    throw text;
-                }
-                return text;
-            }
-        ).
-        then(
-            function(json) {
-                jsonEditor.value = json;
-                
-                fetchButton.disabled = false;
-          
-                switchFunctions(
-                    functionCheckbox.checked
+    authentication.fetch(url)
+    .then(
+        function(json) {
+            jsonEditor.value =
+                JSON.stringify(
+                    json,
+                    null,
+                    "   "
                 );
                 
-                return json;
-            }
-        )
-        .catch(
-            (error) => {
-                fetchButton.disabled = false;
+            fetchButton.disabled = false;
+          
+            switchFunctions(
+                functionCheckbox.checked
+            );
                 
-                if (!error)
-                    error = "Invalid status " + status;
-                    
-                displayError(error, "fetchButton.onclick");
-            }
-        )
-        .finally(
-            () => {
+            return json;
+        }
+    )
+    .catch(
+        (error) => {
+            fetchButton.disabled = false;
+            displayError(error, "fetchButton.onclick");
+        }
+        
+    )
+    .finally(
+        () => {
                  
-                displayExpires();
+            displayExpires();
                 
-            }
-        );
+        }
+    );
     
     return promise;
         
@@ -298,10 +329,8 @@ saveButton.onclick =
         }
         catch(error) {
             displayError(error, "saveButton.onclick");
-            return;
-        }
-        finally {
             saveButton.disabled = false;
+            return;
         }
                 var promise;
         
@@ -337,7 +366,6 @@ saveButton.onclick =
             )
             .catch(
                 (error) => {
-                    saveButton.disabled = false;
                     displayError(error, "saveButton.onclick");
                     
                 }
@@ -357,10 +385,6 @@ clearButton.onclick =
         jsonEditor.value = "";
     }
 
-cancelLastUpload.onclick = function() {
-    if (confirm("Press OK to stop upload ❌"))
-       authentication.cancelLastUpload();
-}
 
 if (!pathInput.value)
     pathInput.value = defaultURL;
@@ -480,7 +504,7 @@ function displayExpires() {
 
 
 
-//authentication.updateStatus();
+authentication.updateStatus();
 authentication.updateJobs();
 
         </script>

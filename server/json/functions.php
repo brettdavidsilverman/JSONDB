@@ -4,6 +4,26 @@ require_once 'JSONDBListener.php';
 require_once 'ValueCountListener.php';
 
 function readFromDatabase(
+    $credentials,
+    $path
+)
+{
+    $connection = getConnection();
+    
+    $result = readFromDatabaseEx(
+        $connection,
+        $credentials,
+        $path,
+        null,
+        true
+    );
+    
+    $connection->close();
+    
+    return $result;
+}
+
+function readFromDatabaseEx(
     $connection,
     $credentials,
     $path,
@@ -20,6 +40,7 @@ function readFromDatabase(
     writeValues(
         $connection,
         $credentials,
+        $path,
         $stream
     );
 
@@ -33,6 +54,40 @@ function readFromDatabase(
     
     return json_decode($string);
 
+}
+function writeToDatabase(
+    $credentials,
+    $path,
+    $object,
+    $insertLast = true
+)
+{
+    $connection = getConnection();
+    $result = null;
+    $listener = null;
+    
+    if (pathExists(
+           $connection,
+           $credentials,
+           $path,
+           $insertLast
+        )
+    )
+    {
+        $result = writeToDatabaseEx(
+            $connection,
+            $credentials,
+            $path,
+            $object,
+            null,
+            false,
+            $listener
+        );
+    }
+    
+    $connection->close();
+    
+    return $result;
 }
 
 function writeToDatabaseEx(
@@ -55,47 +110,13 @@ function writeToDatabaseEx(
         $log
     );
         
-    $newPath =
-       $listener->writeToDatabase();
+    $listener->writeToDatabase();
           
-    
-    return $newPath;
+    return $listener->newPath;
     
 }
 
-function writeToDatabase(
-    $credentials,
-    $path,
-    $status,
-    $insertLast = true
-)
-{
-    $connection = getConnection();
-    $result = null;
-    
-    if (pathExists(
-           $connection,
-           $credentials,
-           $path,
-           $insertLast
-        )
-    )
-    {
-        $result = writeToDatabaseEx(
-            $connection,
-            $credentials,
-            $path,
-            $status,
-            null,
-            false,
-            $listener
-        );
-    }
-    
-    $connection->close();
-    
-    return $result;
-}
+
 
 function handleGet($connection)
 {
@@ -123,7 +144,7 @@ function handleGet($connection)
         );
     
     */
-    readFromDatabase(
+    readFromDatabaseEx(
         $connection,
         $credentials,
         $path,
@@ -169,7 +190,7 @@ function handlePost($connection, $file = null)
     
     try {
         // Parse stream into database
-        $newPath = writeToDatabaseEx(
+        writeToDatabaseEx(
             $connection,
             $credentials,
             $path,
@@ -203,16 +224,13 @@ function handlePost($connection, $file = null)
             $jobStatus
         );
     
-            
-        //echo encodeString($e->getMessage());
-        
-        $newPath = $listener->jobPath;
+
         $inError = true;
     }
     
- 
+    $newPath = $listener->newPath;
+    
     $result = encodeString($newPath);
-
     echo $result;
           
 
@@ -221,7 +239,7 @@ function handlePost($connection, $file = null)
             $credentials,
             $listener->jobPath,
             [
-                "label" => "Finished writing $path ✅",
+                "label" => "Finished ✅",
                 "path" => $listener->path,
                 "newPath" => $listener->newPath,
                 "timeTaken" => (time() - $start),
@@ -386,7 +404,7 @@ function getValueIdByPath(
     $connection, 
     $credentials,
     $path,
-    $returnError = false
+    $handleInvalidPath = true
 )
 {
     $lastPath = null;
@@ -397,7 +415,7 @@ function getValueIdByPath(
            false,
            $lastPath,
            $path,
-           $returnError
+           $handleInvalidPath
         );
     
 }
@@ -413,7 +431,7 @@ function getValueIdByPathEx(
     $insertLast,
     & $lastPath,
     $path,
-    $returnError = true
+    $handleInvalidPath = true
 )
 {
     $userId = $credentials["userId"];
@@ -444,7 +462,7 @@ function getValueIdByPathEx(
         );
     }
     
-    if ($returnError &&
+    if ($handleInvalidPath &&
         is_null($pathValueId) &&
         count($paths) > 2)
     {
@@ -453,9 +471,17 @@ function getValueIdByPathEx(
            
         http_response_code(404);
         setCredentialsCookie($credentials);
-        header('Content-Type: application/text');
-        $error = "🛑 Path " . join("/", $paths) . " not found";
-        echo encodeString($error);
+        
+        header('Content-Type: application/json');
+        
+        $error = [
+           "message" => "🛑 Path not found",
+           "status" => 404,
+           "path" => $path
+        ];
+        
+        echo json_encode($error);
+        
         exit();
     }
     
@@ -466,17 +492,22 @@ function pathExists(
     $connection, 
     $credentials,
     $path,
-    $ignoreLast = false
+    $insertLast = true
 )
 {
+    
+    if ($path === "my" ||
+        $path === "/my")
+        return true;
+        
     $valueId =
         getValueIdByPathEx(
             $connection, 
             $credentials,
-            $ignoreLast, //$insertLast,
+            $insertLast,
             $lastPath,
             $path,
-            false //$returnError = true
+            false//$returnError = true
         );
         
     return !is_null($valueId);
@@ -509,16 +540,27 @@ function getValueCount($stream) {
 function writeValues(
     $connection,
     $credentials,
+    $path,
     $stream
 )
 {
+    $pathValueId =
+        getValueIdByPathEx(
+           $connection, 
+           $credentials,
+           false,
+           $lastPath,
+           $path,
+           true //$handleInvalidPath
+        );
+        /*
     $pathValueId = getValueIdByPath(
         $connection,
         $credentials,
-        getPath(),
+        $path,
         true
     );
-    
+    */
     $rootStatement = $connection->prepare(
         "CALL getValuesById(?);"
     );

@@ -74,7 +74,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 true,
                 $this->lastPath,
                 $this->path,
-                true
+                false
             );
     
 
@@ -133,15 +133,17 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         if ($this->log) {
             
             $jobId = $this->jobId;
-            $path = $this->path;
+            $path = urldecode($this->path);
             $this->jobPath = 
                 writeToDatabase(
                     $this->credentials,
                     "/my/jobs/[]",
                     [
-                        "label" => "Indexing $path ...",
+                        "label" => "Indexing...",
+                        "path" => $path,
                         "percentage" => 0,
-                        "done" => false
+                        "done" => false,
+                        "jobId" => $jobId
                     ],
                     true
                 );
@@ -162,6 +164,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 $this->jobPath,
                 [
                     "label"=>"Finalizing...",
+                    "path"=>urldecode($this->path),
                     "percentage"=>100,
                     "done" => false
                 ]
@@ -261,13 +264,21 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 $this->totalValueCount *
                 100.0
             );
-           
-            $cancelled = getCancelLastUpload(
-                $this->credentials
+            
+            $cancelled = readFromDatabase(
+                $this->credentials,
+                $this->jobPath . "/cancelled"
             );
-           
+            
             if ($cancelled === true) {
-               throw new Exception("User cancelled");
+                error_log("RESULT writeToDatabase");
+                $result = writeToDatabase(
+                    $this->credentials,
+                    $this->jobPath . "/done",
+                    true
+                );
+                error_log("RESULT: " . $result);
+                throw new Exception("User cancelled");
             }
            
             if ($this->log) {

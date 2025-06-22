@@ -17,57 +17,55 @@ if ($cancelled) {
     
     $status = [
         "label" => "User cancelled",
-        "percentage" => 0,
         "done" => true
     ];
 }
-else {
-    $status = getSessionStatus($credentials);
-
-    if ( !is_null($status) &&
-        array_key_exists("label", $status) &&
-        ($status["label"] === "Uploading...") &&
-        array_key_exists($key, $_SESSION))
-    { 
+else if (array_key_exists($key, $_SESSION))
+{ 
     
-        $upload = $_SESSION[$key];
+    $upload = $_SESSION[$key];
 
-        $percentage =
-            $upload["bytes_processed"] /
-            $upload["content_length"]  *
-            100.0;
+    $percentage =
+        $upload["bytes_processed"] /
+        $upload["content_length"]  *
+        100.0;
       
-        $error =
-            $upload["files"][0]["error"] != 0;
+    $error =
+        $upload["files"][0]["error"] != 0;
       
-        $done = null;
+    $done = null;
+
+    $label = null;
    
-        if ($upload["done"] || $error) //||
-        //   $upload["files"][0]["done"])
-        {
-
-            $done = true;
-        }
-        else
-            $done = false;
-      
-
-        $label = null;
-   
-        if ($error === false) 
-            $label = "Uploading...";
-        else
-            $label = "Error uploading";
+    if ($cancelled) {
+           
+        $label = "User cancelled";
+        $done = true;
+    }
+    else if ($error) {
+        $label = "Error uploading";
+        $done = true;
+    }
+    else {
+        $label = "Uploading...";
+        $done = $upload["done"];
+    }
        
    
-        if (!$done)
-            $status = [
-                "label" => $label,
-                "percentage" => $percentage,
-                "done" => $done,
-                "error" => $error
-            ];
-    }
+    $status = [
+        "label" => $label,
+        "percentage" => $percentage,
+        "done" => $done,
+        "error" => $error
+    ];
+        
+
+}
+else {
+    $status = [
+        "label" => "Ready",
+        "done" => true
+    ];
 }
 
 http_response_code(200);

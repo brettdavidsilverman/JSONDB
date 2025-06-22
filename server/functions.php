@@ -201,6 +201,8 @@ function getPath() {
    
    $path = decodeSlashes($path);
 
+   $path = urldecode($path);
+   
    /*
    if (substr($path, 0, 1) === "/")
       $path = substr($path, 1);
@@ -215,7 +217,6 @@ function getPath() {
 function getQuery() {
    $query = $_SERVER['QUERY_STRING'];
    $query = decodeSlashes($query);
-   
    return $query;
 }
 

@@ -35,7 +35,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
     protected $totalValueCount;
     protected $jobId;
-    protected $startTime;
+    protected $startTimer;
     
     
     public function __construct(
@@ -44,16 +44,20 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $path,
         $object = null,
         $stream = null,
-        $log = false
+        $log = true,
+        $throwOnInvalidPath,
+        $jobPath
     )
     {
         if (is_null($stream)) {
-            
-            // Get json string
-            $string = json_encode($object);
            
             $stream = fopen('php://temp','r+');
             
+        }
+        
+        if (!is_null($object)) {
+            // Get json string
+            $string = json_encode($object);
             fwrite($stream, $string);
             rewind($stream);
         }
@@ -62,23 +66,25 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->connection = $connection;
         $this->credentials = $credentials;
         $this->stream = $stream;
+        $this->jobPath = $jobPath;
         $this->totalValueCount =
            $this->getTotalValueCount($stream);
-           
+
         $this->lastPath = null;
     
         $this->pathValueId =
             getValueIdByPathEx(
                 $connection,
                 $credentials,
-                true,
+                true, //$insertLast
                 $this->lastPath,
                 $this->path,
-                false
+                $throwOnInvalidPath //$throwOnInvalidPath
             );
     
+        
 
-        $this->startTime = time();
+        $this->startTimer = time();
         $this->log = $log;
 
         
@@ -86,7 +92,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     }
     
     public function writeToDatabase() {
-        
         
         $parser = new \JsonStreamingParser\Parser(
             $this->stream,
@@ -129,27 +134,15 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->fetch();
 
         $statement->close();
-        
+        /*
         if ($this->log) {
             
             $jobId = $this->jobId;
             $path = urldecode($this->path);
-            $this->jobPath = 
-                writeToDatabase(
-                    $this->credentials,
-                    "/my/jobs/[]",
-                    [
-                        "label" => "Indexing...",
-                        "path" => $path,
-                        "percentage" => 0,
-                        "done" => false,
-                        "jobId" => $jobId
-                    ],
-                    true
-                );
-
+            
+            
         }
-        
+        */
     }
     
     
@@ -163,9 +156,8 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 $this->credentials,
                 $this->jobPath,
                 [
-                    "label"=>"Finalizing...",
-                    "path"=>urldecode($this->path),
-                    "percentage"=>100,
+                    "message"=>"Finalizing...",
+                    "path"=>$this->path,
                     "done" => false
                 ]
             );
@@ -202,7 +194,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->fetch();
         
         $statement->close();
-        
+        /*
         if ($this->log) {
             
             writeToDatabase(
@@ -216,7 +208,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 ]
             );
         }
-        
+        */
     }
 
     public function startObject(): void
@@ -251,7 +243,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $endTime = time();
         $elapsed =
-            $endTime - $this->startTime;
+            $endTime - $this->startTimer;
            
         $this->valueCount++;
         
@@ -259,38 +251,33 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         {
             set_time_limit(30);
            
-            $percentage = (
+            if (is_null($this->jobPath)) {
+               $this->startTimer = time();
+               return;
+            }
+            
+            $cancel = readFromDatabase(
+                $this->credentials,
+                $this->jobPath . "/cancel"
+            );
+            
+            if ($cancel) {
+                throw new Exception("Cancelled");
+            }
+            
+            $progress = (
                 $this->valueCount /
                 $this->totalValueCount *
                 100.0
             );
-            
-            $cancelled = readFromDatabase(
+        
+            writeToDatabase(
                 $this->credentials,
-                $this->jobPath . "/cancelled"
+                $this->jobPath . "/progress",
+                $progress
             );
-            
-            if ($cancelled === true) {
-                error_log("RESULT writeToDatabase");
-                $result = writeToDatabase(
-                    $this->credentials,
-                    $this->jobPath . "/done",
-                    true
-                );
-                error_log("RESULT: " . $result);
-                throw new Exception("User cancelled");
-            }
-           
-            if ($this->log) {
-                writeToDatabase(
-                    $this->credentials,
-                    $this->jobPath . "/percentage",
-                    $percentage,
-                    true
-                );
-            }
-            
-            $this->startTime = time();
+
+            $this->startTimer = time();
            
         }
         

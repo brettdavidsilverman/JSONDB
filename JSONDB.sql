@@ -30,7 +30,7 @@ CREATE TABLE `Job` (
   PRIMARY KEY (`jobId`),
   KEY `I_Job_userId` (`userId`) USING BTREE,
   CONSTRAINT `FK_Job_User_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1090 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7937 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -83,7 +83,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=603 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=624 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -92,6 +92,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
+INSERT INTO `Session` VALUES (622,'12d6f356c14b432e50d5068b7ce6c0da',118,'2025-06-25 22:55:17','49.183.19.21','2025-06-26 02:36:02'),(623,'baf22c441a3138278789d6c89e53cad9',118,'2025-06-26 02:52:37','49.183.19.21','2025-06-26 03:24:59');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -110,7 +111,7 @@ CREATE TABLE `SessionStatus` (
   PRIMARY KEY (`sessionStatusId`),
   UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9108 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9256 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -119,6 +120,7 @@ CREATE TABLE `SessionStatus` (
 
 LOCK TABLES `SessionStatus` WRITE;
 /*!40000 ALTER TABLE `SessionStatus` DISABLE KEYS */;
+INSERT INTO `SessionStatus` VALUES (9253,622,'{\"label\":\"Uploading...\",\"percentage\":1,\"done\":false}',0),(9255,623,'{\"label\":\"Uploading...\",\"percentage\":1,\"done\":false}',0);
 /*!40000 ALTER TABLE `SessionStatus` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -210,7 +212,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=118 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=119 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -219,6 +221,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
+INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','6BbTxnvCARNhPn85OLoIISCVzSv4yqsxw+jz7S+2PmtLxra+9sOXsHLuaBa4dCi7PDG9U64GpK1mjIK+Ft5LDw==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -253,7 +256,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_jobId` (`jobId`) USING BTREE,
   CONSTRAINT `FK_Value_Job_jobId` FOREIGN KEY (`jobId`) REFERENCES `Job` (`jobId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=63512689 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=66991341 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -415,7 +418,7 @@ CREATE TABLE `ValueWord` (
   KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
   CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6502142 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9202407 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -439,7 +442,7 @@ CREATE TABLE `Word` (
   `word` text NOT NULL,
   PRIMARY KEY (`wordId`),
   UNIQUE KEY `UI_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=427679 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=477607 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1019,7 +1022,7 @@ exit_procedure: BEGIN
          LEAVE exit_procedure;
    END IF;
     
-   START TRANSACTION; 
+   #START TRANSACTION; 
    
  
    INSERT INTO Value(
@@ -1074,7 +1077,7 @@ exit_procedure: BEGIN
    SELECT   @valueId,
                       @valueId;
                       
-   COMMIT;
+   #COMMIT;
    
    SELECT @valueId AS valueId;
    
@@ -1111,6 +1114,7 @@ BEGIN
          SELECT *
          FROM   Word
          WHERE Word.word = @lowerWord
+         FOR UPDATE
    ) THEN
          INSERT
          INTO         Word(word)
@@ -1131,6 +1135,7 @@ BEGIN
                                       @valueId
          AND             ValueWord.wordId =
                                       @wordId
+         FOR UPDATE
    ) THEN
          INSERT
          INTO      ValueWord(valueId, wordId)
@@ -1414,8 +1419,12 @@ exit_procedure: BEGIN
                  FROM
                      Value as v
                  WHERE
-                     v.parentValueId =
-                         @existingValueId
+                     (@existingValueId IS NULL AND
+                       v.parentValueId IS NULL
+                      )
+                      OR
+                      (@existingValueId = 
+                      v.parentValueId)
                  FOR UPDATE;
                  
                  IF @newObjectIndex IS NULL THEN
@@ -2260,4 +2269,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-22  5:08:01
+-- Dump completed on 2025-06-26  3:38:11

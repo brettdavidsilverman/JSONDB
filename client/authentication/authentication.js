@@ -57,26 +57,45 @@ class Authentication
             Object.assign(defaultParameters, parameters);
 
         var ok;
+        var status;
+        
         var promise =
             fetch(url, defaultParameters)
             .then(
                 (response) => {
                     _this.saveCredentials(response);
                     ok = response.ok;
+                    status = response.status;
                     return response.text();
                 }
             )
             .then(
-                (text) => {
-                    return JSON.parse(text);
-                }
-            )
-            .then(
-                (json) => {
-                    if (!ok) {
-                        throw json;
+                (string) => {
+
+                    if (string == "undefined")
+                       return undefined;
+                       
+                    var json = string;
+                    var object;
+                    
+                    try {
+                        json = JSON.parse(string);
                     }
+                    catch (ex) {
+                        // Error parsing
+                        throw {
+                            message: ex.toString(),
+                            string: string,
+                            url: url,
+                            method: defaultParameters.method,
+                            status: status,
+                            where: "Authentication.fetch parse"
+                        }
+                    }
+                    
                     return json;
+                    
+                    
                 }
             );
 
@@ -197,7 +216,7 @@ class Authentication
     }
     
     updateStatus(status) {
-        
+        /*
         var _this = this;
         if (!status) {
             this.getSessionStatus()
@@ -226,11 +245,12 @@ class Authentication
         
         if (!status.done)
            this.setStatusTimeout();
-    
+    */
 
     }
     
     updateJobs(jobs) {
+        /*
         var _this = this;
         if (!jobs) {
             this.getJobs()
@@ -265,7 +285,7 @@ class Authentication
         
         if (!done)
             this.setJobsTimeout();
-    
+    */
     }
     
     setJobsTimeout() {

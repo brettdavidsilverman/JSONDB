@@ -32,7 +32,6 @@ function readFromDatabaseEx(
 )
 {
     
-    
     if (is_null($stream)) {
         $stream = fopen("php://temp", "w+");
     }
@@ -55,34 +54,38 @@ function readFromDatabaseEx(
     return json_decode($string);
 
 }
+
 function writeToDatabase(
     $credentials,
     $path,
-    $object,
-    $insertLast = true
+    $object
 )
 {
+    if (is_null($path))
+       return null;
+       
+    
     $connection = getConnection();
     $result = null;
     $listener = null;
     
-    if (pathExists(
-           $connection,
-           $credentials,
-           $path,
-           $insertLast
-        )
-    )
-    {
+    try {
+    
         $result = writeToDatabaseEx(
             $connection,
             $credentials,
             $path,
             $object,
-            null,
-            false,
-            $listener
+            null, //$stream
+            false, //$log
+            $listener,
+            true, //$throwOnInvalidPath,
+            null //$jobPath
         );
+    
+    }
+    catch (Exception $ex) {
+        $result = null;
     }
     
     $connection->close();
@@ -96,10 +99,14 @@ function writeToDatabaseEx(
     $path,
     $object = null,
     $stream = null,
-    $log = false,
-    & $listener
+    $log = true,
+    & $listener,
+    $throwOnInvalidPath,
+    $jobPath
 )
 {
+    if (is_null($path))
+       return null;
     
     $listener = new JSONDBListener(
         $connection,
@@ -107,9 +114,11 @@ function writeToDatabaseEx(
         $path,
         $object,
         $stream,
-        $log
+        $log,
+        true, //$throwOnInvalidPath,
+        $jobPath
     );
-        
+    
     $listener->writeToDatabase();
           
     return $listener->newPath;
@@ -144,13 +153,26 @@ function handleGet($connection)
         );
     
     */
-    readFromDatabaseEx(
-        $connection,
-        $credentials,
-        $path,
-        $stream,
-        false
-    );
+    try {
+        readFromDatabaseEx(
+            $connection,
+            $credentials,
+            $path,
+            $stream,
+            false
+        );
+    }
+    catch (Exception $ex) {
+        echo json_encode(
+            [
+               '"{Error}"' => [
+                  "message" => $ex->getMessage()
+               ]
+            ]
+        );
+        
+    }
+    
     /*
     if ($path != "/my/status")
         writeToDatabase(
@@ -183,10 +205,24 @@ function handlePost($connection, $file = null)
     if (is_null($file))
         $file = 'php://input';
         
-    $stream = fopen($file, 'r');
+    $inputStream = fopen($file, 'r');
     $path = getPath();
     $inError = false;
     $listener = null;
+    
+    $jobPath =
+        writeToDatabase(
+            $credentials,
+            "/my/jobs/[]",
+            [
+                "message" => "Indexing...",
+                "path" => $path,
+                "progress" => 0,
+                "cancel" => false,
+                "done" => false
+            ]
+        );
+        
     
     try {
         // Parse stream into database
@@ -194,61 +230,68 @@ function handlePost($connection, $file = null)
             $connection,
             $credentials,
             $path,
-            null,
-            $stream,
-            true,
-            $listener
+            null, //$object
+            $inputStream,
+            true, //$log
+            $listener,
+            true, //$throwOnInvalidPath
+            $jobPath
         );
-  
+
     }
-    catch (Exception $e) {
-        $jobStatus = [
-            "label" => $e->getMessage(),
-            "path" => $listener->path,
-            "newPath" => $listener->newPath,
+    catch (Exception $ex) {
+        
+
+        $error = [
+            "message" => $ex->getMessage(),
             "timeTaken" =>  (time() - $start),
-            "done" => true
+            "path" => $path,
+            "timeTaken" =>  (time() - $start),
+            "stack" => $ex->getTraceAsString()
         ];
         
-        if ($e->getMessage() !=
-            "User cancelled")
-        {
-            $jobStatus["error"] =
-               $e->getTraceAsString();
-        }
-            
         
         writeToDatabase(
             $credentials,
-            $listener->jobPath,
-            $jobStatus
+            $jobPath,
+            $error
         );
     
-
-        $inError = true;
-    }
-    
-    $newPath = $listener->newPath;
-    
-    $result = encodeString($newPath);
-    echo $result;
-          
-
-    if (!$inError)
-        writeToDatabase(
-            $credentials,
-            $listener->jobPath,
+        echo json_encode(
             [
-                "label" => "Finished ✅",
-                "path" => $listener->path,
-                "newPath" => $listener->newPath,
-                "timeTaken" => (time() - $start),
-                "done" => true
+                "{Error}" => $error
             ]
         );
         
+        return false;
+    }
     
-    return !$inError;
+    
+    $newPath = $listener->newPath;
+    
+    if (is_null($newPath))
+        echo "undefined";
+    else {
+        $result =
+            json_encode($newPath);
+    
+        echo $result;
+    }
+    
+    writeToDatabase(
+        $credentials,
+        $jobPath,
+        [
+            "message" => "Success",
+            "path" => $path,
+            "newPath" => $listener->newPath,
+            "jobPath" => $jobPath,
+            "timeTaken" =>  (time() - $start),
+            "done" => true
+        ]
+    );
+
+    return true;
             
 }
     
@@ -394,17 +437,14 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
 }
 
 // Most simple getValueIdByPath
-// If $returnError is set and the
+// If $throwOnInvalidPath is set and the
 // path doesnt exist, this sets
 // the error code to 404 and exits
 // with a formatted error description.
-// If $returnValue is false and the
-// path doesnt exist, this returns null
 function getValueIdByPath(
     $connection, 
     $credentials,
-    $path,
-    $handleInvalidPath = true
+    $path
 )
 {
     $lastPath = null;
@@ -415,7 +455,7 @@ function getValueIdByPath(
            false,
            $lastPath,
            $path,
-           $handleInvalidPath
+           true //$throwOnInvalidPath
         );
     
 }
@@ -425,13 +465,17 @@ function getValueIdByPath(
 // Posts to append a key to
 // an object. To use this feature
 // you must set $insertLast to true
+// If $throwOnInvalidPath is false and the
+// path doesnt exist, this returns null
+// Note that for new users /my also
+// returns null
 function getValueIdByPathEx(
     $connection, 
     $credentials,
     $insertLast,
     & $lastPath,
     $path,
-    $handleInvalidPath = true
+    $throwOnInvalidPath
 )
 {
     $userId = $credentials["userId"];
@@ -462,25 +506,34 @@ function getValueIdByPathEx(
         );
     }
     
-    if ($handleInvalidPath &&
+    if ($throwOnInvalidPath &&
         is_null($pathValueId) &&
-        count($paths) > 2)
+        !(
+            $path === "my" ||
+            $path === "/my" ||
+            $path === "my/" ||
+            $path === "/my/"
+        )
+    )
     {
         if (is_null($rootValueId))
            $paths[1] = "{" . $paths[1] . "}";
            
-        http_response_code(404);
-        setCredentialsCookie($credentials);
-        
-        header('Content-Type: application/json');
-        
+        $path = implode("/", $paths);
+        /*
         $error = [
-           "message" => "🛑 Path not found",
+           "message" => "Path not found",
            "status" => 404,
-           "path" => $path
+           "path" => $path,
+           "where" => "server/json/functions/getValueIdByPathEx"
         ];
         
-        echo json_encode($error);
+        $message = json_encode($error);
+        */
+        
+        $message = "Path not found " . $path;
+        
+        throw new Exception($message);
         
         exit();
     }
@@ -496,8 +549,10 @@ function pathExists(
 )
 {
     
-    if ($path === "my" ||
-        $path === "/my")
+    if ($path === "my"  ||
+        $path === "/my" ||
+        $path === "my/" ||
+        $path === "/my/")
         return true;
         
     $valueId =
@@ -551,8 +606,13 @@ function writeValues(
            false,
            $lastPath,
            $path,
-           true //$handleInvalidPath
+           false //$throwOnInvalidPath
         );
+        
+    if (is_null($pathValueId)) {
+       fwrite($stream, "undefined");
+       return;
+    }
         /*
     $pathValueId = getValueIdByPath(
         $connection,
@@ -678,12 +738,13 @@ END;
     echo "]";
     
     // Log this query
+    /*
     writeToDatabase(
        $credentials,
        '/my/queries/[]',
        urldecode($query)
     );
-
+*/
     
 }
 

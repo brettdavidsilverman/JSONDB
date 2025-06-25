@@ -691,7 +691,7 @@ exit_procedure: BEGIN
          LEAVE exit_procedure;
    END IF;
     
-   START TRANSACTION; 
+   #START TRANSACTION; 
    
  
    INSERT INTO Value(
@@ -746,7 +746,7 @@ exit_procedure: BEGIN
    SELECT   @valueId,
                       @valueId;
                       
-   COMMIT;
+   #COMMIT;
    
    SELECT @valueId AS valueId;
    
@@ -783,6 +783,7 @@ BEGIN
          SELECT *
          FROM   Word
          WHERE Word.word = @lowerWord
+         FOR UPDATE
    ) THEN
          INSERT
          INTO         Word(word)
@@ -803,6 +804,7 @@ BEGIN
                                       @valueId
          AND             ValueWord.wordId =
                                       @wordId
+         FOR UPDATE
    ) THEN
          INSERT
          INTO      ValueWord(valueId, wordId)
@@ -1086,8 +1088,12 @@ exit_procedure: BEGIN
                  FROM
                      Value as v
                  WHERE
-                     v.parentValueId =
-                         @existingValueId
+                     (@existingValueId IS NULL AND
+                       v.parentValueId IS NULL
+                      )
+                      OR
+                      (@existingValueId = 
+                      v.parentValueId)
                  FOR UPDATE;
                  
                  IF @newObjectIndex IS NULL THEN
@@ -1932,4 +1938,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-22  5:09:24
+-- Dump completed on 2025-06-26  3:38:43

@@ -277,26 +277,48 @@ fetchButton.onclick = function() {
     authentication.fetch(url)
     .then(
         function(json) {
+            
             jsonEditor.value =
-                JSON.stringify(
-                    json,
-                    null,
-                    "   "
-                );
-                
+               JSON.stringify(json, null, "  ");
+               
             fetchButton.disabled = false;
-          
+            
+            if (typeof json == "string") {
+                var string = json;
+                if (string.startsWith("{") &&
+                    string.endsWith("}"))
+                {
+                    string = eval(string);
+                }
+            }
+            
+            /*
+            var object = 
+                eval("(" + string + ")");
+               
+            if (typeof object == "function")
+                functionCheckbox.checked = true;
+            else
+                functionCheckbox.checked = false;
+            */
+          /*
             switchFunctions(
                 functionCheckbox.checked
             );
-                
+                */
             return json;
         }
     )
     .catch(
         (error) => {
             fetchButton.disabled = false;
-            displayError(error, "fetchButton.onclick");
+            alert(error);
+            /*
+            if (error.status = 404)
+               alert("🛑 Path " + error.path + " not found.");
+            else
+               displayError(error, "fetchButton.onclick");
+               */
         }
         
     )
@@ -324,8 +346,8 @@ saveButton.onclick =
         var json;
         try {
             json = jsonEditor.value;
-            var object = JSON.parse(json);
-            json = JSON.stringify(object);
+           // var object = JSON.parse(json);
+           // json = JSON.stringify(object);
         }
         catch(error) {
             displayError(error, "saveButton.onclick");
@@ -359,9 +381,11 @@ saveButton.onclick =
         
         promise
             .then(
-                (newPath) => {
-                    if (newPath)
-                        pathInput.value = newPath;
+                (result) => {
+                   if (result == undefined)
+                      alert("🛑 Invalid path");
+                   else 
+                      alert(result);
                 }
             )
             .catch(
@@ -504,8 +528,8 @@ function displayExpires() {
 
 
 
-authentication.updateStatus();
-authentication.updateJobs();
+//authentication.updateStatus();
+//authentication.updateJobs();
 
         </script>
 

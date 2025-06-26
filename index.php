@@ -346,14 +346,19 @@ saveButton.onclick =
         var json;
         try {
             json = jsonEditor.value;
-           // var object = JSON.parse(json);
-           // json = JSON.stringify(object);
+            var object = JSON.parse(json);
+            json = JSON.stringify(object);
         }
         catch(error) {
             displayError(error, "saveButton.onclick");
-            saveButton.disabled = false;
+            
             return;
         }
+        finally {
+            saveButton.disabled = false;
+        }
+        
+        alert("Saving...");
                 var promise;
         
         if (json.length > 1000) {

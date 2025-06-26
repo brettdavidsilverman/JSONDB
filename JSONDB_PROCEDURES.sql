@@ -31,14 +31,14 @@ DELIMITER ;;
       IF (NEW.objectKey IS NOT NULL) THEN
             CALL createValueWords(
                   @valueId,
-                  LOWER(NEW.objectKey)
+                  NEW.objectKey
             );
       END IF;
       
       IF (NEW.stringValue IS NOT NULL) THEN
             CALL createValueWords(
                   @valueId,
-                  LOWER(NEW.stringValue)
+                  NEW.stringValue
             );
       END IF;
       
@@ -678,7 +678,7 @@ exit_procedure: BEGIN
             @stringValue = stringValue,
             @numericValue = numericValue,
             @boolValue = boolValue;
-           
+           /*
    SET @sessionId = (
               SELECT Session.sessionId
               FROM   Session
@@ -690,14 +690,16 @@ exit_procedure: BEGIN
    THEN
          LEAVE exit_procedure;
    END IF;
-    
-   #START TRANSACTION; 
+    */
+   CREATE TEMPORARY TABLE _Word(
+           word TEXT NOT NULL
+   );
    
- 
+  
    INSERT INTO Value(
-           parentValueId,
-           ownerId,
            jobId,
+           ownerId,
+           parentValueId,
            type,
            objectIndex,
            objectKey,
@@ -708,9 +710,9 @@ exit_procedure: BEGIN
            boolValue
   )
   VALUES(
-           @parentValueId,
-           @ownerId,
            @jobId,
+           @ownerId,
+           @parentValueId,
            @type,
            @objectIndex,
            @objectKey,
@@ -723,8 +725,27 @@ exit_procedure: BEGIN
    
    SET @valueId = LAST_INSERT_ID();
    
-
-   /* Insert all parents parents */
+   INSERT
+   INTO            Word(word)
+   SELECT
+   DISTINCT  _Word.word
+   FROM         _Word
+   LEFT JOIN Word on
+                           _Word.word = Word.word
+   WHERE        Word.wordId IS NULL;
+ 
+   INSERT
+   INTO            ValueWord(valueId, wordId)
+   SELECT
+   DISTINCT          @valueId,
+                                  Word.wordId
+    FROM                 Word
+    INNER JOIN   _Word
+    ON                      _Word.word = Word.word;
+      
+   DROP TABLE _Word;
+             
+   # Insert all parents parents
    
    INSERT
    INTO       ValueParentChild(
@@ -737,7 +758,7 @@ exit_procedure: BEGIN
    WHERE  vpc.childValueId =
                             @parentValueId;
                             
-   /* Insert this value */
+   # Insert this value 
    INSERT
    INTO       ValueParentChild(
                               parentValueId,
@@ -745,8 +766,7 @@ exit_procedure: BEGIN
                       )
    SELECT   @valueId,
                       @valueId;
-                      
-   #COMMIT;
+   
    
    SELECT @valueId AS valueId;
    
@@ -769,47 +789,45 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `createValueWord`(
       valueId BIGINT,
-      lowerWord TEXT
+      word TEXT
 )
 BEGIN
-  /* This should run in the transaction
-  space of the caller */
   
    SET @valueId = valueId,
-            @lowerWord = lowerWord,
-            @wordId = NULL;
+            @lowerWord = LOWER(word),
+            @wordId = NULL,
+            @valueWordId = NULL;
             
-   IF NOT EXISTS(
-         SELECT *
-         FROM   Word
-         WHERE Word.word = @lowerWord
-         FOR UPDATE
-   ) THEN
+  SELECT Word. wordId
+  INTO      @wordId
+  FROM    Word
+  WHERE Word.word = @lowerWord
+  FOR UPDATE;
+          
+   IF @wordId IS NULL  THEN
          INSERT
          INTO         Word(word)
          VALUES   (@lowerWord);
          SET @wordId = LAST_INSERT_ID();
-   ELSE
-         SET @wordId = (
-               SELECT Word. wordId
-               FROM    Word
-               WHERE Word.word = @lowerWord
-         );
    END IF;
    
-   IF NOT EXISTS(
-         SELECT      *
-         FROM         ValueWord
-         WHERE      ValueWord.valueId = 
-                                      @valueId
-         AND             ValueWord.wordId =
-                                      @wordId
-         FOR UPDATE
-   ) THEN
+   SELECT      ValueWord.valueWordId
+   INTO            @valueWordId
+   FROM         ValueWord
+   WHERE      ValueWord.valueId = 
+                              @valueId
+   AND             ValueWord.wordId =
+                               @wordId
+   FOR UPDATE;
+   
+   
+   IF @valueWordId IS NULL THEN
          INSERT
          INTO      ValueWord(valueId, wordId)
          VALUES (@valueId, @wordId);
    END IF;
+   
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -830,7 +848,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValueWords`(
       valueId BIGINT,
       lowerText TEXT
 )
-BEGIN
+exit_procedure: BEGIN
   /* This should run in the transaction
   space of the caller */
   
@@ -839,7 +857,10 @@ BEGIN
             @word = NULL,
             @start = 1,
             @length = LENGTH(@lowerText);
-            
+           
+   DELETE
+   FROM _Word;
+   
    WHILE (@start <= @length) DO
          /* Read first character */
          SET @nchar = SUBSTR(
@@ -873,14 +894,19 @@ BEGIN
         END WHILE;
                           
         IF ( LENGTH(@word) > 0) THEN
+              INSERT
+              INTO _Word(word)
+              VALUES (@word);
+              /*
               CALL createValueWord(
                     @valueId,
                     @word
               );
+           */
         END IF;
               
    END WHILE;
-            
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1001,7 +1027,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
 )
 exit_procedure: BEGIN
 
-
+   
    SET @sessionKey = sessionKey,
             @jobId = jobId,
             @existingValueId = existingValueId,
@@ -1042,8 +1068,11 @@ exit_procedure: BEGIN
          LEAVE exit_procedure;
    END IF;
     
-   START TRANSACTION;
-  
+  # START TRANSACTION;
+  CREATE TEMPORARY TABLE _Word (
+      word TEXT NOT NULL
+   );
+   
   IF @existingValueId IS NOT NULL THEN
          
          # Insert new child values into
@@ -1144,7 +1173,8 @@ exit_procedure: BEGIN
    FROM      Job
    WHERE   Job.jobId = @jobId;
    
-   COMMIT;
+  # COMMIT;
+   DROP TABLE _Word;
    
    SELECT
        getPathByValue(v.valueId) as path
@@ -1814,11 +1844,11 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `startDocument`(
-   sessionKey VARCHAR(32),
+   userId BIGINT,
    path TEXT
 )
 exit_procedure: BEGIN
-
+/*
     SET @sessionKey = sessionKey,
              @path = path;
              
@@ -1835,6 +1865,10 @@ exit_procedure: BEGIN
     THEN
         LEAVE exit_procedure;
     END IF;
+    */
+    
+    SET @userId = userId,
+             @path = path;
     
     INSERT
     INTO
@@ -1938,4 +1972,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-26  3:38:43
+-- Dump completed on 2025-06-26 13:20:43

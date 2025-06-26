@@ -194,7 +194,6 @@ function handlePost($connection, $file = null)
     $start = time();
 
     $credentials = authenticate(true);
-    
 
     http_response_code(200);
     setCredentialsCookie($credentials);
@@ -218,8 +217,8 @@ function handlePost($connection, $file = null)
                 "message" => "Indexing...",
                 "path" => $path,
                 "progress" => 0,
-                "cancel" => false,
-                "done" => false
+                "done" => false,
+                "cancel" => false
             ]
         );
         
@@ -246,7 +245,9 @@ function handlePost($connection, $file = null)
             "message" => $ex->getMessage(),
             "timeTaken" =>  (time() - $start),
             "path" => $path,
-            "timeTaken" =>  (time() - $start),
+            "jobPath" => $jobPath,
+            "file" => $ex->getFile(),
+            "line" => $ex->getLine(),
             "stack" => $ex->getTraceAsString()
         ];
         

@@ -51,7 +51,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     {
         if (is_null($stream)) {
            
-            $stream = fopen('php://temp','r+');
+            $stream = fopen('php://temp','w+');
             
         }
         
@@ -120,8 +120,8 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             );
 
         $statement->bind_param(
-            'ss', 
-            $this->credentials['sessionKey'],
+            'is', 
+            $this->credentials['userId'],
             $this->path
         );
         
@@ -134,15 +134,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->fetch();
 
         $statement->close();
-        /*
-        if ($this->log) {
-            
-            $jobId = $this->jobId;
-            $path = urldecode($this->path);
-            
-            
-        }
-        */
+    
     }
     
     
@@ -162,12 +154,12 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
                 ]
             );
         }
-    
+    /*
         if ($this->createValueStatement) {
             $this->createValueStatement->close();
             $this->createValueStatement = null;
         }
-        
+        */
         $sessionKey =
            $this->credentials["sessionKey"];
         
@@ -194,21 +186,8 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $statement->fetch();
         
         $statement->close();
-        /*
-        if ($this->log) {
-            
-            writeToDatabase(
-                $this->credentials,
-                $this->jobPath,
-                [
-                    "label"=>"Done ✅",
-                    "path" => $this->path,
-                    "newPath" => $this->newPath,
-                    "done" => true
-                ]
-            );
-        }
-        */
+        
+        
     }
 
     public function startObject(): void
@@ -450,61 +429,53 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
        $boolValue
     )
     {
-    
-        static $_parentValueId;
-        static $_ownerId;
-        static $_sessionKey;
-        static $_type;
-        static $_objectIndex;
-        static $_objectKey;
-        static $_isNull;
-        static $_stringValue;
-        static $_numericValue;
-        static $_boolValue;
-       
-        if (is_null($this->createValueStatement)) {
-            $this->createValueStatement = 
+/*
+        $connection = getConnection();
+        
+        $connection->autocommit(false);
+        */
+
+        
+       // if (is_null($this->createValueStatement)) {
+            $statement = 
                 $this->connection->prepare(
                     "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
         
-            $this->createValueStatement->bind_param(
+            $statement->bind_param(
                 'iiissisisdi',
                 $this->jobId,
-                $_parentValueId,
-                $_ownerId,
-                $_sessionKey,
-                $_type,
-                $_objectIndex,
-                $_objectKey,
-                $_isNull,
-                $_stringValue,
-                $_numericValue,
-                $_boolValue
+                $parentValueId,
+                $ownerId,
+                $sessionKey,
+                $type,
+                $objectIndex,
+                $objectKey,
+                $isNull,
+                $stringValue,
+                $numericValue,
+                $boolValue
             );
 
-        }
+      //  }
    
-        $statement = $this->createValueStatement;
-        
-        $_parentValueId = $parentValueId;
-        $_ownerId = $ownerId;
-        $_sessionKey = $sessionKey;
-        $_type = $type;
-        $_objectIndex = $objectIndex;
-        $_objectKey = $objectKey;
-        $_isNull = $isNull;
-        $_stringValue = $stringValue;
-        $_numericValue = $numericValue;
-        $_boolValue = $boolValue;
-        
+        //$statement = $this->createValueStatement
+
         $statement->execute();
         
+
         $valueId = null;
         $statement->bind_result($valueId);
 
         $fetched = $statement->fetch();
 
+            
+        $statement->close();
+        
+        //$connection->commit();
+                
+        //$connection->close();
+        
         return $valueId;
        
     }

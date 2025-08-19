@@ -14,114 +14,6 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-/*!50032 DROP TRIGGER IF EXISTS TG_Value_Insert */;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Value_Insert` AFTER INSERT ON `Value` FOR EACH ROW BEGIN
-
-      SET @valueId = NEW.valueId;
-      
-      IF (NEW.objectKey IS NOT NULL) THEN
-            CALL createValueWords(
-                  @valueId,
-                  NEW.objectKey
-            );
-      END IF;
-      
-      IF (NEW.stringValue IS NOT NULL) THEN
-            CALL createValueWords(
-                  @valueId,
-                  NEW.stringValue
-            );
-      END IF;
-      
-      
-      
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-/*!50032 DROP TRIGGER IF EXISTS TG_Value_Update */;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Value_Update` AFTER UPDATE ON `Value` FOR EACH ROW BEGIN
-
-      SET @deleted = 0;
-      SET @valueId = NEW.valueId;
-      
-      IF ((OLD.objectKey IS NULL AND
-            NEW.objectKey IS NOT NULL) OR
-            (OLD.objectKey IS NOT NULL AND
-            NEW.objectKey IS NULL) OR
-            (OLD.objectKey != NEW.objectKey))
-      THEN
-      
-            IF (OLD.objectKey IS NOT NULL) 
-            THEN
-                  DELETE
-                  FROM       ValueWord
-                  WHERE    ValueWord.valueId = 
-                                       @valueId;
-                  SET @deleted = 1;
-            END IF;
-                              
-            IF (NEW.objectKey IS NOT NULL) 
-            THEN
-                  CALL createValueWords(
-                        @valueId,
-                        LOWER(NEW.objectKey)
-                  );
-            END IF;
-      END IF;
-      
-      IF ((OLD.stringValue IS NULL AND
-            NEW.stringValue IS NOT NULL) OR
-            (OLD.stringValue IS NOT NULL AND
-            NEW.stringValue IS NULL) OR
-            (OLD.stringValue != NEW.stringValue)
-            Or @deleted = 1)
-      THEN
-      
-            IF (OLD.stringValue IS NOT NULL 
-                  AND  @deleted = 0) 
-            THEN
-                  DELETE
-                  FROM       ValueWord
-                  WHERE    ValueWord.valueId = 
-                                       @valueId;
-            END IF;
-                              
-            IF (NEW.stringValue IS NOT NULL) 
-            THEN
-                  CALL createValueWords(
-                        @valueId,
-                        LOWER(NEW.stringValue)
-                  );
-            END IF;
-      END IF;
-      
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Dumping routines for database 'JSONDB'
@@ -571,6 +463,87 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `createNextObjectIndex` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `createNextObjectIndex`(
+    ownerId BIGINT,
+    parentValueId BIGINT
+)
+BEGIN
+   SET @parentValueId = parentValueId,
+            @ownerId = ownerId;
+   
+   SELECT
+       MAX(v.objectIndex) + 1
+   INTO
+       @objectIndex
+   FROM
+       Value as v
+   WHERE
+           v.parentValueId = @parentValueId
+   FOR UPDATE;
+   
+   
+   IF @objectIndex IS NULL THEN
+       SET @objectIndex = 0;
+   END IF;
+   
+   INSERT
+   INTO
+       Value(
+           ownerId,
+           parentValueId,
+           type,
+           objectIndex,
+           isNull
+       )
+       VALUES(
+           @ownerId,
+           @parentValueId,
+           'null', #type
+           @objectIndex,
+           1 # isNull
+        );
+        
+   SET @valueId = LAST_INSERT_ID();
+   
+   # Insert this values parents
+   INSERT
+   INTO
+       ValueParentChild
+       (parentValueId, childValueId)
+   SELECT
+       vpc.parentValueId,
+       @valueId
+   FROM
+       ValueParentChild as vpc
+   WHERE
+       vpc.childValueId = @parentValueId;
+       
+   # Insert this value
+   INSERT
+   INTO
+       ValueParentChild
+       (parentValueId, childValueId)
+   VALUES
+       (@valueId, @valueId);
+       
+   SELECT @valueId AS valueId;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `createUser` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -653,10 +626,8 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
-           jobId BIGINT,
            parentValueId BIGINT,
            ownerId BIGINT ,
-           sessionKey VARCHAR(32),
            type VARCHAR(10),
            objectIndex BIGINT,
            objectKey TEXT,
@@ -667,37 +638,71 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createValue`(
 )
 exit_procedure: BEGIN
 
-   SET @jobId = jobId,
+   SET @valueId = NULL,
             @parentValueId = parentValueId,
             @ownerId = ownerId,
-            @sessionKey = sessionKey,
             @type = type,
             @objectIndex = objectIndex,
             @objectKey = objectKey,
             @isNull = isNull,
             @stringValue = stringValue,
             @numericValue = numericValue,
-            @boolValue = boolValue;
-           /*
-   SET @sessionId = (
-              SELECT Session.sessionId
-              FROM   Session
-              WHERE Session.sessionKey =
-                               @sessionKey
-           );
-           
-   IF @sessionId IS NULL
-   THEN
-         LEAVE exit_procedure;
-   END IF;
-    */
-   CREATE TEMPORARY TABLE _Word(
-           word TEXT NOT NULL
-   );
-   
-  
+            @boolValue = boolValue,
+            @insert = NULL;
+
+IF @objectIndex IS NOT NULL THEN
+           SELECT  Value.valueId
+           INTO       @valueId
+           FROM     Value
+           WHERE    (@parentValueId IS NULL
+                            AND
+                            Value.parentValueId IS NULL)
+                            OR (Value.parentValueId =
+                            @parentValueId)
+       AND           Value.objectIndex =    
+                            @objectIndex
+       FOR UPDATE;
+ELSEIF @objectKey IS NOT NULL THEN
+       SELECT    Value.valueId,
+                           Value.objectIndex
+       INTO         @valueId,
+                           @objectIndex
+       FROM       Value
+       WHERE    (@parentValueId IS NULL
+                            AND
+                            Value.parentValueId IS NULL)
+                            OR (Value.parentValueId =
+                            @parentValueId)
+       AND           Value.objectKey =    
+                            @objectKey
+       FOR UPDATE;
+       
+       
+       
+END IF;
+                        
+IF @objectIndex IS NULL THEN
+    SELECT    MAX(Value.objectIndex)
+    INTO         @max
+    FROM       Value
+    WHERE    (@parentValueId IS NULL
+                            AND
+                         Value.parentValueId IS NULL)
+                         OR (Value.parentValueId =
+                            @parentValueId)
+    FOR UPDATE;
+    
+    IF @max IS NULL THEN
+        SET @objectIndex = 0;
+    ELSE
+        SET   @objectIndex = @max + 1;
+     END IF;
+     
+END IF;
+                        
+
+IF @valueId IS NULL THEN
    INSERT INTO Value(
-           jobId,
            ownerId,
            parentValueId,
            type,
@@ -710,7 +715,6 @@ exit_procedure: BEGIN
            boolValue
   )
   VALUES(
-           @jobId,
            @ownerId,
            @parentValueId,
            @type,
@@ -724,26 +728,40 @@ exit_procedure: BEGIN
    );
    
    SET @valueId = LAST_INSERT_ID();
+   SET @insert = true;
    
-   INSERT
-   INTO            Word(word)
-   SELECT
-   DISTINCT  _Word.word
-   FROM         _Word
-   LEFT JOIN Word on
-                           _Word.word = Word.word
-   WHERE        Word.wordId IS NULL;
- 
-   INSERT
-   INTO            ValueWord(valueId, wordId)
-   SELECT
-   DISTINCT          @valueId,
-                                  Word.wordId
-    FROM                 Word
-    INNER JOIN   _Word
-    ON                      _Word.word = Word.word;
-      
-   DROP TABLE _Word;
+ELSE
+    UPDATE     Value AS v
+    SET               v.ownerId = @ownerId,
+                           v.parentValueId = 
+                                @parentValueId,
+                           v.type = @type,
+                           v.objectIndex = @objectIndex,
+                           v.objectKey = @objectKey,
+                           v.lowerObjectKey =
+                              LOWER(@objectKey),
+                          v.isNull = @isNull,
+                          v.stringValue = @stringValue,
+                          v.numericValue =
+                             @numericValue,
+                          v.boolValue =
+                              @v.boolValue
+   WHERE      v.valueId = @valueId;
+   
+   SET @insert = false;
+END IF;
+
+   CALL startWords();
+  
+   CALL createValueWords(
+         @objectKey
+   );
+            
+   CALL createValueWords( 
+         @stringValue
+    );
+            
+   CALL endWords(@valueId);
              
    # Insert all parents parents
    
@@ -777,7 +795,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `createValueWord` */;
+/*!50003 DROP PROCEDURE IF EXISTS `createWords` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -787,80 +805,22 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `createValueWord`(
+CREATE DEFINER=`brett`@`%` PROCEDURE `createWords`(
       valueId BIGINT,
-      word TEXT
-)
-BEGIN
-  
-   SET @valueId = valueId,
-            @lowerWord = LOWER(word),
-            @wordId = NULL,
-            @valueWordId = NULL;
-            
-  SELECT Word. wordId
-  INTO      @wordId
-  FROM    Word
-  WHERE Word.word = @lowerWord
-  FOR UPDATE;
-          
-   IF @wordId IS NULL  THEN
-         INSERT
-         INTO         Word(word)
-         VALUES   (@lowerWord);
-         SET @wordId = LAST_INSERT_ID();
-   END IF;
-   
-   SELECT      ValueWord.valueWordId
-   INTO            @valueWordId
-   FROM         ValueWord
-   WHERE      ValueWord.valueId = 
-                              @valueId
-   AND             ValueWord.wordId =
-                               @wordId
-   FOR UPDATE;
-   
-   
-   IF @valueWordId IS NULL THEN
-         INSERT
-         INTO      ValueWord(valueId, wordId)
-         VALUES (@valueId, @wordId);
-   END IF;
-   
-   
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `createValueWords` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `createValueWords`(
-      valueId BIGINT,
-      lowerText TEXT
+      text TEXT
 )
 exit_procedure: BEGIN
   /* This should run in the transaction
   space of the caller */
-  
-   SET @valueId = valueId,
-            @lowerText = lowerText,
+   IF text IS NULL THEN
+       LEAVE exit_procedure;
+   END IF;
+   
+   SET @lowerText = LOWER(text),
             @word = NULL,
             @start = 1,
             @length = LENGTH(@lowerText);
            
-   DELETE
-   FROM _Word;
-   
    WHILE (@start <= @length) DO
          /* Read first character */
          SET @nchar = SUBSTR(
@@ -894,15 +854,16 @@ exit_procedure: BEGIN
         END WHILE;
                           
         IF ( LENGTH(@word) > 0) THEN
-              INSERT
-              INTO _Word(word)
-              VALUES (@word);
-              /*
-              CALL createValueWord(
-                    @valueId,
-                    @word
-              );
-           */
+              IF NOT EXISTS(
+                  SELECT * 
+                  FROM _ValueWord as vw
+                  WHERE vw.valueId = @valueId
+                  AND        vw.word = @word
+              ) THEN
+                  INSERT
+                  INTO _ValueWord(valueId, word)
+                  VALUES (@valueId, @word);
+              END IF;
         END IF;
               
    END WHILE;
@@ -1020,7 +981,6 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
-   sessionKey VARCHAR(32),
    jobId BIGINT,
    existingValueId BIGINT,
    lastPath TEXT
@@ -1028,20 +988,17 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
 exit_procedure: BEGIN
 
    
-   SET @sessionKey = sessionKey,
-            @jobId = jobId,
+   SET @jobId = jobId,
             @existingValueId = existingValueId,
             @lastPath = lastPath;
 
-   SELECT    Session.sessionId,
-                        Session.userId
-   INTO         @sessionId,
-                       @userId
-   FROM       Session
-   WHERE    Session.sessionKey =
-                       @sessionKey;
+   SELECT    Job.userId
+   INTO         @userId
+   FROM       Job
+   WHERE    Job.jobId =
+                       @jobId;
  
-   SET     @tempValueId = (
+   SET     @newValueId = (
           SELECT            Value.valueId
           FROM               Value
           WHERE            Value.parentValueId
@@ -1049,7 +1006,7 @@ exit_procedure: BEGIN
           AND                   Value.jobId = 
                                        @jobId
    );
-   
+          
   IF @existingValueId IS NOT NULL AND
        NOT EXISTS (
               SELECT          Value.valueId
@@ -1058,21 +1015,20 @@ exit_procedure: BEGIN
               AND                 Value.valueId =
                                     @existingValueId
      ) THEN
+          SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '@existingValueId invalid';
            LEAVE exit_procedure;
    END IF;
 
    IF  @userId IS NULL OR
-         @sessionId IS NULL OR
-         @tempValueId IS NULL
+         @newValueId IS NULL
    THEN
+       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '@userId or @newValueId  invalid';
          LEAVE exit_procedure;
    END IF;
     
   # START TRANSACTION;
-  CREATE TEMPORARY TABLE _Word (
-      word TEXT NOT NULL
-   );
-   
+         
+                             
   IF @existingValueId IS NOT NULL THEN
          
          # Insert new child values into
@@ -1083,20 +1039,22 @@ exit_procedure: BEGIN
                                  childValueId
                              )
          SELECT   existingParents.parentValueId,
-                            tempChildren.childValueId
+                            newChildren.childValueId
          FROM      ValueParentChild as
                                 existingParents,
                             ValueParentChild as
-                                tempChildren
+                                newChildren
          WHERE   existingParents.childValueId =
                                 @existingValueId
+                         
          AND         (
+         
              @lastPath IS NOT NULL
              OR
              existingParents.parentValueId !=
             @existingValueId)
-         AND         tempChildren.parentValueId =
-                                 @tempValueId;
+         AND         newChildren.parentValueId =
+                                 @newValueId;
                                  
          # Save existing value properties
          SELECT   Value. parentValueId,
@@ -1134,55 +1092,120 @@ exit_procedure: BEGIN
                                 @newObjectKey = NULL;
                  ELSE
                       SET @newObjectKey = @lastPath;
+                                           
                  END IF;
                 
                  SET @newParentValueId =
                               @existingValueId;
-         ELSE
+         
           
-                 # delete existing value
-                 CALL deleteValue(@existingValueId);
          END IF;
          
-         # Update temp value with
+         # delete existing value
+         CALL deleteValue(@existingValueId);
+         
+         SELECT  Value.stringValue
+         INTO        @newStringValue
+         FROM      Value
+         WHERE   Value.valueId =
+                             @newValueId;
+                             
+         # Update new value with
          # saved properties
          UPDATE
-                Value AS temp
+                Value AS new
          SET
-                  temp.parentValueId =
+                  new.parentValueId =
                          @newParentValueId,
-                  temp.objectIndex =
+                  new.objectIndex =
                           @newObjectIndex,
-                  temp.objectKey =
+                  new.objectKey =
                           @newObjectKey,
-                   temp.lowerObjectKey  =
+                   new.lowerObjectKey  =
                            LOWER(@newObjectKey)
           WHERE    
-                   temp.valueId =
-                           @tempValueId;
-         
+                   new.valueId =
+                           @newValueId;
+                           
+          CALL startWords();
+                      
+          CALL createValueWords(
+                  @newObjectKey
+          );
+                           
+          CALL createValueWords(
+                @newStringValue
+          );
+                           
+          CALL endWords(@newValueId);
+  
    END IF;
-   
-   # Upgrade temp values
-   UPDATE Value
-   SET           Value.jobId = NULL
+  
+        
+   # Upgrade new values
+   UPDATE  Value
+   SET     Value.jobId = NULL
    WHERE   Value.jobId = @jobId;
    
    # Clear the job
    DELETE
    FROM      Job
-   WHERE   Job.jobId = @jobId;
-   
-  # COMMIT;
-   DROP TABLE _Word;
+   WHERE     Job.jobId = @jobId;
    
    SELECT
        getPathByValue(v.valueId) as path
    FROM
        Value as v
    WHERE
-       v.valueId = @tempValueId;
+       v.valueId = @newValueId;
    
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `endWords` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `endWords`()
+BEGIN
+
+   INSERT
+   INTO            Word(word)
+   SELECT
+   DISTINCT  _ValueWord.word
+   FROM          _ValueWord
+   LEFT JOIN  Word on
+                           Word.word = _ValueWord.word
+   WHERE        Word.wordId IS NULL;
+ 
+   INSERT
+   INTO            ValueWord(valueId, wordId)
+   SELECT
+   DISTINCT          _ValueWord.valueId,
+                                 Word.wordId
+   FROM                 Word
+   INNER JOIN    _ValueWord
+   ON                           _ValueWord.word = 
+                                  Word.word
+   LEFT JOIN        ValueWord
+   ON                       ValueWord.valueId = 
+                                     _ValueWord.valueId
+   AND                    ValueWord.wordId = 
+                                     Word.wordId
+   WHERE             ValueWord.valueWordId
+                                      IS NULL;
+     
+   DROP TEMPORARY TABLE IF EXISTS
+       _ValueWord;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1496,6 +1519,190 @@ BEGIN
     COMMIT;
     
     SELECT @valueId as valueId;
+
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `insertValue` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
+           ownerId BIGINT ,
+           parentValueId BIGINT,
+           type VARCHAR(10),
+           objectKey TEXT,
+           isNull TINYINT,
+           stringValue TEXT,
+           numericValue DOUBLE,
+           boolValue TINYINT
+)
+BEGIN
+    SET @ownerId = ownerId,
+            @parentValueId =  parentValueId,
+            @type = type,
+           @objectKey =  objectKey,
+           @isNull =  isNull,
+           @stringValue = stringValue,
+           @numericValue = numericValue,
+          @boolValue = boolValue;
+          
+    SELECT
+        MAX(v.objectIndex) + 1
+    INTO
+         @objectIndex
+    FROM
+        Value AS v
+    WHERE
+        v.parentValueId = @parentValueId;
+        
+    IF @objectIndex IS NULL THEN
+        SET @objectIndex = 0;
+    END IF;
+    
+    INSERT INTO Value(
+           ownerId,
+           parentValueId,
+           type,
+           objectIndex,
+           objectKey,
+           lowerObjectKey,
+           isNull,
+           stringValue,
+           numericValue,
+           boolValue
+  )
+  VALUES(
+           @ownerId,
+           @parentValueId,
+           @type,
+           @objectIndex,
+           @objectKey,
+           LOWER(objectKey),
+           @isNull,
+           @stringValue,
+           @numericValue,
+           @boolValue
+   );
+   
+   SET @valueId = LAST_INSERT_ID();
+ 
+   # Insert this values parents
+   INSERT
+   INTO
+       ValueParentChild
+       (parentValueId, childValueId)
+   SELECT
+       vpc.parentValueId,
+       @valueId
+   FROM
+       ValueParentChild as vpc
+   WHERE
+       vpc.childValueId = @parentValueId;
+       
+   # Insert this value
+   INSERT
+   INTO
+       ValueParentChild
+       (parentValueId, childValueId)
+   VALUES
+       (@valueId, @valueId);
+   
+   # Index words
+   CALL createWords(@valueId, @objectKey);
+   CALL createWords(@valueId, @stringValue);
+   
+   SELECT
+       @valueId AS  valueId;
+       
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `lockValueByObjectIndex` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `lockValueByObjectIndex`(
+   parentValueId BIGINT,
+   objectIndex BIGINT
+)
+BEGIN
+
+    SET @parentValueId = parentValueId,
+             @objectIndex = objectIndex;
+    
+    SELECT
+        *
+    FROM
+        Value
+    WHERE
+        (
+            (
+                Value.parentValueId IS NULL
+                AND  @parentValueId IS NULL
+            )
+           OR
+           Value.parentValueId = @parentValueId
+        )
+       AND
+           Value.objectIndex = @objectIndex
+    FOR UPDATE;
+
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `lockValueByObjectKey` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `lockValueByObjectKey`(
+   parentValueId BIGINT,
+   objectKey TEXT
+)
+BEGIN
+
+    SET @parentValueId = parentValueId,
+             @objectKey = objectKey;
+    
+    SELECT     *
+    FROM       Value
+    WHERE      (
+               (
+                   Value.parentValueId IS NULL
+               AND  @parentValueId IS NULL
+               )
+               OR
+               Value.parentValueId = @parentValueId
+           )
+    AND        Value.objectKey = @objectKey
+    FOR UPDATE;
 
 END ;;
 DELIMITER ;
@@ -1891,6 +2098,100 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `startWords` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `startWords`()
+BEGIN
+
+   DROP TEMPORARY TABLE IF EXISTS
+       _ValueWord;
+       
+   CREATE TEMPORARY TABLE _ValueWord(
+           valueId BIGINT NOT NULL REFERENCES Value(valueId) ON DELETE CASCADE,
+           word TEXT NOT NULL
+   );
+   
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `updateValue` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `updateValue`(
+           valueId BIGINT,
+           ownerId BIGINT ,
+           type VARCHAR(10),
+           isNull TINYINT,
+           stringValue TEXT,
+           numericValue DOUBLE,
+           boolValue TINYINT
+)
+BEGIN
+    SET    @valueId = valueId,
+                @ownerId = ownerId,
+                @type = type,
+                @isNull = isNull,
+                @stringValue = stringValue,
+                @numericValue = numericValue,
+                @boolValue = boolValue;
+                
+    CALL deleteChildValues(@valueId);
+    
+    UPDATE     Value AS v
+    SET               v.ownerId = @ownerId,
+                           v.type = @type,
+                           v.isNull = @isNull,
+                           v.stringValue = @stringValue,
+                           v.numericValue =
+                             @numericValue,
+                           v.boolValue =
+                              @boolValue
+   WHERE      v.valueId = @valueId;
+   
+   # Index words
+   SELECT
+       v.objectKey
+   INTO
+       @objectKey
+   FROM
+       Value as v
+   WHERE
+       v.valueId = @valueId;
+   
+   DELETE
+   FROM
+       _ValueWord
+   WHERE
+       _ValueWord.valueId = @valueId;
+       
+   CALL createWords(@valueId, @objectKey);
+   CALL createWords(@valueId, @stringValue);
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `validateUserEmail` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1972,4 +2273,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-26 13:20:43
+-- Dump completed on 2025-07-30  1:00:54

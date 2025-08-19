@@ -2,7 +2,7 @@ class Authentication
 {
     static _uploadProgressName = null;
     static _uploadMaxFilesize = null;
-
+    
     constructor(authenticationServer = document.location.origin) {
         var creds = this.getCredentials();
         
@@ -10,6 +10,8 @@ class Authentication
         this.authenticationServer =
             authenticationServer;
         this.url = this.authenticationServer;
+        if (this.authenticated)
+            this.updateJobs();
     }
     
     authenticate() {
@@ -23,9 +25,7 @@ class Authentication
          this.redirect();
     }
     
-    onUpdateStatus(status) {
-    }
-    
+
     onUpdateJobs(jobs) {
     }
     
@@ -70,28 +70,44 @@ class Authentication
                 }
             )
             .then(
-                (string) => {
+                (text) => {
 
-                    if (string == "undefined")
+                    if (text == "undefined")
                        return undefined;
                        
-                    var json = string;
-                    var object;
+                    var json = null;
                     
                     try {
-                        json = JSON.parse(string);
+                        json = JSON.parse(text);
                     }
                     catch (ex) {
                         // Error parsing
                         throw {
                             message: ex.toString(),
-                            string: string,
                             url: url,
+                            text: text,
                             method: defaultParameters.method,
                             status: status,
                             where: "Authentication.fetch parse"
                         }
                     }
+
+                    if (json &&
+                        json["{Error}"] != undefined)
+                    {
+                        throw json["{Error}"];
+/*
+                        throw {
+                            message: json["{Error}"],
+                            url: url,
+                            text: text,
+                            method: defaultParameters.method,
+                            status: status,
+                            where: "Authentication.fetch error"
+                        }
+*/
+                    }
+
                     
                     return json;
                     
@@ -104,31 +120,16 @@ class Authentication
     
     postJSON(url, json) {
     
-
         var parameters = {
             method: "POST",
-            body: json
-        }
-        var ok = false;
-        var _this = this;
-        var status = {
-            label: "Saving...",
-            percentage: 1,
-            done: false
+            body: JSON.stringify(json)
         }
         
-        this.onUpdateStatus(status);
-        
+   
         var promise =
             this.fetch(
                url,
                parameters
-            )
-            .finally(
-                () => {
-                    status.done = true;
-                    _this.onUpdateStatus(status);
-                }
             );
 
             
@@ -140,54 +141,57 @@ class Authentication
         var _this = this;
 
         var status = {
-            label: "Uploading...",
-            percentage: 1,
-            done: false
+            label: "Uploading",
+            done: false,
+            path: url,
+            cancel: false,
+            progress: 0
         }
 
         var uploadProgressName;
+        var jobPath;
         
         var promises = [
             this.getUploadMaxFilesize(),
             this.getUploadProgressName(),
-            this.setSessionStatus(status),
-            this.setCancelLastUpload(false)
+            this.createJob(status)
         ];
         
+    
         var promise =
             Promise.all(promises)
             .then(
                 (values) => {
                     
-                    var maxFilesize = values[0];
-                    if (file.size > maxFilesize)
+                    var uploadMaxFilesize = values[0];
+                    if (file.size > uploadMaxFilesize)
                     {
                         throw new Error(
-                            "Max file size is " +
-                            maxFilesize
+                            "Uplpad Max file size is " +
+                            uploadMaxFilesize
                         );
                     }
                     uploadProgressName =
                         values[1];
-                        
-                    var setSessionStatus =
-                        values[2];
-                        
-                    if (!setSessionStatus)
-                       throw new Error("Error setting session status");
-                       
-                    var setCancelUpload =
-                        values[3];
-                        
-                    if (!setCancelUpload)
-                       throw new Error("Error setting cancel upload");
 
+                    jobPath = values[2];
+    
                     var formData = new FormData();
                     formData.append(
                         uploadProgressName,
-                        "postFile"
+                        jobPath
                     );
-                    formData.append("file", file);
+                    
+                    formData.append(
+                        "jobPath",
+                        jobPath
+                    );
+                    
+                    formData.append(
+                        "file",
+                         file
+                    );
+                    
                     var promise = _this.fetch(
                         url,
                         {
@@ -195,6 +199,9 @@ class Authentication
                             body: formData
                         }
                     );
+                    
+                    _this.updateJobs();
+
                     return promise;
                 }
             )
@@ -202,12 +209,19 @@ class Authentication
                 (error) => {
                     var status = {
                         label: error,
-                        percentage: 0,
-                        done: true
+                        path: url,
+                        done: false
                     }
-                    _this.onUpdateStatus(
+                    _this.postJSON(
+                        jobPath,
                         status
+                    )
+                    .then(
+                        () => {
+                            _this.updateJobs();
+                        }
                     );
+
                 }
             );
             
@@ -215,78 +229,66 @@ class Authentication
         
     }
     
-    updateStatus(status) {
-        /*
+    createJob(status) {
+   
         var _this = this;
-        if (!status) {
-            this.getSessionStatus()
-            .then(
-                (status) => {
-                    if (!status) {
-                        status = {
-                            label: "Ready...",
-                            done: true
-                        }
-                    }
-                    _this.updateStatus(status);
-                }
-            )
-            .catch(
-                (error) => {
-                    displayError(error, "Authentication.updateStatus");
-                }
-            );
-            
-            return;
-        }
-        
-        if (this.onUpdateStatus)
-           this.onUpdateStatus(status);
-        
-        if (!status.done)
-           this.setStatusTimeout();
-    */
+
+        return this.postJSON(
+            "/my/jobs/[]",
+            status
+        )
+        .then(
+            (jobPath) => {
+
+                _this.postJSON(
+                    jobPath + "/jobPath",
+                    jobPath
+                );
+
+                return jobPath;
+
+            }
+        );
 
     }
     
+    
     updateJobs(jobs) {
-        /*
+        
         var _this = this;
         if (!jobs) {
             this.getJobs()
             .then(
                 (jobs) => {
-                    if (!jobs) {
-                        jobs = [];
-                    }
                     _this.updateJobs(jobs);
                 }
             )
             .catch(
                 (error) => {
-                    if (error.status == 404)
-                       return;
-                    displayError(error, "Authentication.updateJobs");
+                    //displayError(error, "Authentication.updateJobs");
                 }
             );
             
             return;
         }
-        
+
         var done = true;
         for (var j in jobs) {
-            if (!jobs[j].done) {
+            var job = jobs[j];
+            if (job && !job.done) {
                 done = false;
             }
         }
         
-        if (this.onUpdateJobs)
-           this.onUpdateJobs(jobs);
-        
+        if (this.onUpdateJobs) {
+            this.onUpdateJobs(jobs);
+        }
+
         if (!done)
             this.setJobsTimeout();
-    */
+    
     }
+    
     
     setJobsTimeout() {
      
@@ -306,6 +308,7 @@ class Authentication
     
     }
     
+    /*
     setStatusTimeout() {
      
         var _this = this;
@@ -324,7 +327,7 @@ class Authentication
         
     
     }
-
+*/
     
     logon(email, secret) {
 
@@ -410,44 +413,11 @@ class Authentication
         return promise;
     }
     
-    getSessionStatus() {
-
-        var promise =
-            //this.fetch(this.url + "/my/jobs"
-            this.fetch(
-                this.url + "/server/getSessionStatus.php"
-            );
-
-        return promise;
-    }
-    
-    setSessionStatus(
-       status
-    )
-    {
-        this.updateStatus(status);
-        
-        var parameters = {
-            method: "POST",
-            body: JSON.stringify(
-                    status
-                )
-        }
-        
-        var promise =
-            this.fetch(
-                //this.url + "/my/status",
-                this.url + "/server/setSessionStatus.php",
-                parameters
-            );
-            
-        return promise;
-    }
     
     getJobs() {
 
         var promise =
-            this.fetch(this.url + "/my/jobs");
+            this.fetch(this.url + "/server/json/updateUploadStatus.php");
 
         return promise;
     }

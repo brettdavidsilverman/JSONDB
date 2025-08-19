@@ -1,5 +1,7 @@
 replace email validating links with copy/paste random number
+add thumbnail to emails
 sha512 hash
 intellisense for index.php path
 add count and paging to search
 delete and update object keys
+replace use of cookies with static member in authentication.js

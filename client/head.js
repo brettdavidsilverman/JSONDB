@@ -64,7 +64,7 @@ function displayError(error, f)
          where = f;
      else
          where = "Unknown function";
-         
+        
      window.onerror(error, where, undefined, undefined, undefined);
      
 }

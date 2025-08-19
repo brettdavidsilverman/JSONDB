@@ -5,23 +5,8 @@ require_once "Parser.php";
 class ValueCountListener implements  \JsonStreamingParser\Listener\ListenerInterface
 {
     
-    protected $result;
-
-    /**
-     * @var array
-     */
-    protected $stack;
- 
- 
-    /**
-     * @var string[]
-     */
-    protected $keys;
-    
-    protected $connection;
-    protected $credentials;
-    
     public $valueCount = 0;
+    public $result;
 
     public function __construct() {
 
@@ -29,15 +14,10 @@ class ValueCountListener implements  \JsonStreamingParser\Listener\ListenerInter
     
     
 
-    public function getResult()
-    {
-        return $this->result;
-    }
 
     public function startDocument(): void
     {
-        $this->stack = [];
-        $this->keys = [];
+        $this->valueCount = 0;
         $this->result = false;
         
     }
@@ -50,6 +30,7 @@ class ValueCountListener implements  \JsonStreamingParser\Listener\ListenerInter
 
     public function startObject(): void
     {
+         $this->valueCount++;
     }
 
     public function endObject(): void
@@ -58,6 +39,7 @@ class ValueCountListener implements  \JsonStreamingParser\Listener\ListenerInter
 
     public function startArray(): void
     {
+         $this->valueCount++;
     }
 
     public function endArray(): void
@@ -66,7 +48,6 @@ class ValueCountListener implements  \JsonStreamingParser\Listener\ListenerInter
 
     public function key(string $key): void
     {
-        $this->keys[] = $key;
         
     }
 

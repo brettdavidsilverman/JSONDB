@@ -6,12 +6,25 @@ require_once "authentication/functions.php";
 require_once "json/functions.php";
 
 function getConfig() {
-   $config = file_get_contents(__DIR__ . '/../../config.json'); 
-   $json = json_decode($config, true);
+   static $config = null;
+   static $json = null;
+
+   if (is_null($config)) {
+       $config = file_get_contents(__DIR__ . '/../../config.json'); 
+
+       $json = json_decode($config, true);
+   }
+
    return $json;
 }
 
 function getConnection() {
+
+   static $count = 0;
+   $count++;
+
+//error_log("HERE " . (string)$count);
+
    $json = getConfig();
  
    $database =     $json["Database"];
@@ -27,7 +40,13 @@ function getConnection() {
    if ($connection->connect_error) {
      die("Connection failed: " . $connection->connect_error);
    }
-   
+
+   $connection->query(
+        "SET " .
+        "TRANSACTION ISOLATION LEVEL " .
+        "READ COMMITTED"
+    );
+
    return $connection;
 }
 
@@ -201,15 +220,15 @@ function getPath() {
    
    $path = decodeSlashes($path);
 
-   $path = urldecode($path);
+   // $path = urldecode($path);
    
    /*
    if (substr($path, 0, 1) === "/")
       $path = substr($path, 1);
+*/
 
    if (substr($path, - 1) === "/")
       $path = substr($path, 0, - 1);
-*/
 
    return $path;
 }

@@ -1,14 +1,9 @@
 <?php
     require_once "server/functions.php";
-    
     $credentials = authenticate();
-    
     http_response_code(200);
-    
     header("content-type: text/html");
-    
     setCredentialsCookie($credentials);
-    
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -28,8 +23,9 @@ form > div {
     text-align: left;
 }
 
-#cancelLastUpload {
-    
+
+.progressLabel {
+   text-align: right;
 }
 
         </style>
@@ -70,7 +66,8 @@ form > div {
                              id="functionCheckbox"
                              onclick="switchFunctions(this.checked)" 
                     />
-                    <button id="clearButton">Clear</button>                </div>
+                    <button id="clearButton">Clear</button>
+                    <button id="resetButton">Reset</button>                </div>
                 <textarea id="jsonEditor"></textarea>
                 <button id="saveButton">Save</button>
                 <br/>
@@ -80,9 +77,15 @@ form > div {
                 </div>
                 
                 <div id="job" style="visibility:hidden;">
-                    <label for="progress"><span class="progressLabel"></span></label>
+                    <label for="progress">
+                        <div class="pathLabel" style="float:left;"></div>
+                        <div style="text-align:right">
+                            <div class="cancelUpload" style="float:right;"> ❌</div>
+                            <div class="progressLabel"></div>
+                        </div>
+                    </label>
                     <progress class="progress" value="0" max="100"></progress>
-                    <span class="cancelUpload">❌</span>
+                    
                 </div>
 
             </form>
@@ -119,7 +122,7 @@ logon.href += "?redirect=" + encodeURIComponent(window.location.href);
 var pathInput = document.getElementById("pathInput");
 var result = document.getElementById("result");
 var jsonEditor = document.getElementById("jsonEditor");var html = document.getElementById("html");var fetchButton = document.getElementById("fetchButton");
-var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var clearButton = document.getElementById("clearButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
+var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var clearButton = document.getElementById("clearButton");var resetButton = document.getElementById("resetButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
 var dataLink = document.getElementById("dataLink");
 var header = document.getElementById("h1");
 var title = document.getElementById("title");
@@ -152,30 +155,21 @@ authentication.onUpdateStatus =
    (status) => {
        displayExpires();
        uploadJob = status;
-       if (uploadJob.done)
-           saveButton.disabled = false;
-       authentication.updateJobs()
+      // alert(status);
+       //authentication.updateJobs()
     }
-        
+
+
 authentication.onUpdateJobs =
     (jobs) => {
         displayExpires();
+        
         jobsDiv.innerHTML = "";
         
-        if (!Array.isArray(jobs))
-            return;
-
-        if (uploadJob && uploadJob.done)
-           uploadJob = null;
-        
-        jobs.unshift(uploadJob);
-        
-        
-        var job;
         for (var j in jobs) {
-            job = jobs[j];
+            var job = jobs[j];
             if (job)
-                setJob(job, j - 1);
+                setJob(job, j);
         }
       
         
@@ -187,57 +181,66 @@ function setJob(job, index) {
     
     newJobDiv.style.visibility = "visible";
     
-    var progressLabel =
+    var label =
        newJobDiv.querySelector(".progressLabel");
+
+    var pathLabel =
+       newJobDiv.querySelector(".pathLabel");
+
     var progress =
        newJobDiv.querySelector(".progress");
+
     var cancelUpload =
        newJobDiv.querySelector(".cancelUpload");
        
-    progressLabel.innerText = job.label;
+    label.innerText = job.label;
+
+    if (job.newPath)
+        pathLabel.innerText = job.newPath;
+    else
+        pathLabel.innerText = job.path;
+
     
-    
-    if (job.percentage >= 0) {
+    if (job.progress >= 0) {
         progress.style.visibility =
             "visible";
-        progress.value = job.percentage;
+        progress.value = job.progress;
     }
     else {
         progress.style.visibility =
             "hidden";
     }
                 
-    if (job.done) {
+    if (job.cancel == undefined) {
         cancelUpload.style.visibility =
             "hidden";
     }
-    else {
+    else if (job.cancel == false) {
         cancelUpload.style.visibility =
             "visible";
+    }
+    else {
+        cancelUpload.style.visibility =
+            "hidden";
     }
     
     cancelUpload.onclick =
         function() {
             if (confirm("Press OK to stop upload ❌")) {
-               if (index === -1)
-                   authentication.cancelLastUpload();
-               else
-                   authentication.postJSON(
-                       "/my/jobs/" + index + "/cancelled",
-                       true
-                  );
+                authentication.postJSON(
+                    job.jobPath + "/cancel",
+                    true
+                );
             }
         }
 
-    
-    if (index >= 0) {
-        newJobDiv.onclick =
-            function()
-            {
-                pathInput.value = "/my/jobs/" + index;
+    newJobDiv.onclick =
+        function()
+        {
+            pathInput.value = job.jobPath;
+            if (job.jobPath)
                 fetchButton.onclick();
-            }
-    }
+        }
         
     jobsDiv.appendChild(newJobDiv);
 }
@@ -279,7 +282,7 @@ fetchButton.onclick = function() {
         function(json) {
             
             jsonEditor.value =
-               JSON.stringify(json, null, "  ");
+               JSON.stringify(json, null, "   ");
                
             fetchButton.disabled = false;
             
@@ -339,26 +342,28 @@ saveButton.onclick =
     function() {
         
         var url = getURL();
-        
+        localStorage.setItem("path", url);
         saveButton.disabled = true;        
         
         authentication.authenticate();
         var json;
         try {
             json = jsonEditor.value;
-            var object = JSON.parse(json);
-            json = JSON.stringify(object);
+
+            var object = eval("(" + json + ")");
+
+            // var object = JSON.parse(json);
+           // json = JSON.stringify(object);
         }
         catch(error) {
-            displayError(error, "saveButton.onclick");
-            
+            displayError(error, "saveButton.onclick parse");
+            saveButton.disabled = false;
             return;
         }
         finally {
-            saveButton.disabled = false;
+            
         }
         
-        alert("Saving...");
                 var promise;
         
         if (json.length > 1000) {
@@ -376,10 +381,11 @@ saveButton.onclick =
                 );
         }
         else {
+
             promise =
                 authentication.postJSON(
                     url,
-                    json
+                    object
                 );
                 
         }
@@ -388,23 +394,21 @@ saveButton.onclick =
             .then(
                 (result) => {
                    if (result == undefined)
-                      alert("🛑 Invalid path");
-                   else 
+                      alert("Invalid path");
+                   else {
                       alert(result);
+                   }
                 }
             )
             .catch(
                 (error) => {
+                    jsonEditor.value = JSON.stringify(error, null, "   ");
                     displayError(error, "saveButton.onclick");
-                    
-                }
-            )
-            .finally(
-                () => {
-                    saveButton.disabled = false;
                 }
             );
         
+        alert("Saving...");
+        saveButton.disabled = false;
         
         return promise;
     }
@@ -412,6 +416,34 @@ saveButton.onclick =
 clearButton.onclick =
     function() {
         jsonEditor.value = "";
+    }
+
+resetButton.onclick =
+    function() {
+        resetButton.disabled = true;
+        authentication.postJSON(
+           "/my",
+           {
+               jobs: [],
+               data: []
+           }
+        ).then(
+            (path) => {
+                pathInput.value = path;
+                    
+                fetchButton.onclick();
+            }
+        ).catch(
+            (error) => {
+                 displayError(error, "resetButton");
+            }
+        )
+        .finally (
+            () => {
+                resetButton.disabled = false;
+            }
+        );
+       
     }
 
 
@@ -534,7 +566,7 @@ function displayExpires() {
 
 
 //authentication.updateStatus();
-//authentication.updateJobs();
+authentication.updateJobs();
 
         </script>
 

@@ -3,6 +3,53 @@
 require_once 'JSONDBListener.php';
 require_once 'ValueCountListener.php';
 
+class PathException extends Exception
+{
+    public $path;
+    public $errorPath;
+    public $errorIndex;
+
+    public function __construct($message, $path, $errorIndex) {
+        
+        $this->path = $path;
+        $this->errorIndex = $errorIndex;
+
+        $paths = explode("/", $path);
+        $paths[$errorIndex] = 
+            "{" . $paths[$errorIndex] . "}";
+
+        $this->errorPath =
+            implode("/", $paths);
+
+        $_message = $message . " " .
+            $this->errorPath;
+
+
+        parent::__construct($_message);
+        
+        
+    }
+
+};
+
+class CancelException extends Exception
+{
+    public function __construct() {
+        parent::__construct("Cancelled");
+    }
+    
+};
+
+class LockedException extends PathException
+{
+    
+    public function __construct($message, $path, $errorIndex) {
+        parent::__construct($message, $path, $errorIndex);
+    }
+    
+    
+};
+
 function readFromDatabase(
     $credentials,
     $path
@@ -10,13 +57,19 @@ function readFromDatabase(
 {
     $connection = getConnection();
     
-    $result = readFromDatabaseEx(
-        $connection,
-        $credentials,
-        $path,
-        null,
-        true
-    );
+    $result = null;
+    
+    try {
+        $result = readFromDatabaseEx(
+            $connection,
+            $credentials,
+            $path,
+            null, // stream
+            true  // returnObject
+        );
+    }
+    catch (Exception $ex) {
+    }
     
     $connection->close();
     
@@ -36,7 +89,7 @@ function readFromDatabaseEx(
         $stream = fopen("php://temp", "w+");
     }
     
-    writeValues(
+    writeValuesToStream(
         $connection,
         $credentials,
         $path,
@@ -51,7 +104,10 @@ function readFromDatabaseEx(
     $string =
         stream_get_contents($stream);
     
-    return json_decode($string);
+    return json_decode(
+        $string,
+        true // associative
+    );
 
 }
 
@@ -61,35 +117,38 @@ function writeToDatabase(
     $object
 )
 {
+    
     if (is_null($path))
        return null;
        
     
-    $connection = getConnection();
     $result = null;
-    $listener = null;
     
-    try {
-    
+    try
+    {
+        $connection = getConnection();
+
         $result = writeToDatabaseEx(
             $connection,
             $credentials,
             $path,
             $object,
             null, //$stream
-            false, //$log
             $listener,
-            true, //$throwOnInvalidPath,
             null //$jobPath
         );
-    
+
+     
     }
-    catch (Exception $ex) {
+    catch (CancelException $ex) {
         $result = null;
     }
-    
-    $connection->close();
-    
+
+    finally {
+        $connection->close();
+    }
+
+
     return $result;
 }
 
@@ -99,10 +158,8 @@ function writeToDatabaseEx(
     $path,
     $object = null,
     $stream = null,
-    $log = true,
     & $listener,
-    $throwOnInvalidPath,
-    $jobPath
+    $jobPath = null
 )
 {
     if (is_null($path))
@@ -114,8 +171,6 @@ function writeToDatabaseEx(
         $path,
         $object,
         $stream,
-        $log,
-        true, //$throwOnInvalidPath,
         $jobPath
     );
     
@@ -127,7 +182,7 @@ function writeToDatabaseEx(
 
 
 
-function handleGet($connection)
+function handleGet()
 {
     $credentials = authenticate();
 
@@ -140,20 +195,11 @@ function handleGet($connection)
     $stream = fopen("php://output", "w");
     $path = getPath();
     
-    /*
-    if ($path != "/my/status")
-        writeToDatabase(
-            $credentials,
-            "/my/status",
-            [
-                "label" => "Reading $path ...",
-                "percentage" => 0,
-                "done" => false
-            ]
-        );
-    
-    */
+    $connection = getConnection();
+
     try {
+
+
         readFromDatabaseEx(
             $connection,
             $credentials,
@@ -161,37 +207,44 @@ function handleGet($connection)
             $stream,
             false
         );
+        
+        
+    }
+    catch(PathException $ex) {
+        
+        $error = [
+            "message" => $ex->getMessage(),
+            "path" => $ex->path
+        ];
+
+        echo json_encode($error);
+
+        // echo "undefined";
+        return;
     }
     catch (Exception $ex) {
+        $error = [
+            "label" => $ex->getMessage(),
+            "path" => $path,
+            "file" => $ex->getFile(),
+            "line" => $ex->getLine(),
+            "trace" => $ex->getTrace()
+        ];
+
         echo json_encode(
             [
-               '"{Error}"' => [
-                  "message" => $ex->getMessage()
-               ]
+               "{Error}" => $error
             ]
         );
         
     }
-    
-    /*
-    if ($path != "/my/status")
-        writeToDatabase(
-            $credentials,
-            "/my/status",
-            [
-                "label" => "Reading $path ✅",
-                "percentage" => 0,
-                "done" => true
-            ]
-        );
-    
-*/
+    finally {
+        $connection->close();
+    }
 }
 
-function handlePost($connection, $file = null)
+function handlePost()
 {
-
-    $start = time();
 
     $credentials = authenticate(true);
 
@@ -199,103 +252,120 @@ function handlePost($connection, $file = null)
     setCredentialsCookie($credentials);
         
     
-    header('Content-Type: application/json');
-     
-    if (is_null($file))
-        $file = 'php://input';
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $file = "php://input";
+
+    if (array_key_exists("file", $_FILES)) {
+            
+        if ($_FILES["file"]["error"] == 0) {
+            $file = $_FILES["file"]["tmp_name"];
+        }
+            
+    }
         
-    $inputStream = fopen($file, 'r');
-    $path = getPath();
-    $inError = false;
+    $newPath = null;
+    $error = null;
+    $jobPath = null;
+    $jobStatus = null;
+    $path = null;
     $listener = null;
-    
-    $jobPath =
-        writeToDatabase(
-            $credentials,
-            "/my/jobs/[]",
-            [
-                "message" => "Indexing...",
-                "path" => $path,
-                "progress" => 0,
-                "done" => false,
-                "cancel" => false
-            ]
-        );
+    $startTime = time();
+
+
+    if (array_key_exists("jobPath", $_POST))
+        $jobPath = $_POST["jobPath"];
         
-    
+
     try {
+
+        $connection = getConnection();
+        
+        $inputStream = fopen($file, 'r');
+        $path = getPath();
+        
+        
         // Parse stream into database
-        writeToDatabaseEx(
+        $newPath = writeToDatabaseEx(
             $connection,
             $credentials,
             $path,
             null, //$object
             $inputStream,
-            true, //$log
             $listener,
-            true, //$throwOnInvalidPath
             $jobPath
         );
 
+        // Result is the new path
+        echo encodeString($newPath);
+    
+        return true;
+    
+    }
+    catch (PathException $ex) {
+        $error = [
+            "label" => $ex->getMessage(),
+            "timeTaken" =>  (time() - $startTime),
+            "path" => $ex->path,
+            "jobPath" => $jobPath
+        ];
+    }
+    catch (CancelException $ex) {
+        $error = [
+            "label" => "Cancelled",
+            "timeTaken" =>  (time() - $startTime),
+            "path" => $path,
+            "jobPath" => $jobPath
+        ];
     }
     catch (Exception $ex) {
-        
 
         $error = [
-            "message" => $ex->getMessage(),
-            "timeTaken" =>  (time() - $start),
+            "label" => $ex->getMessage(),
             "path" => $path,
             "jobPath" => $jobPath,
+            "timeTaken" =>  (time() - $startTime),
             "file" => $ex->getFile(),
             "line" => $ex->getLine(),
-            "stack" => $ex->getTraceAsString()
+            "trace" => $ex->getTrace()
         ];
-        
-        
-        writeToDatabase(
-            $credentials,
-            $jobPath,
-            $error
-        );
-    
-        echo json_encode(
-            [
-                "{Error}" => $error
-            ]
-        );
-        
-        return false;
+
+
     }
-    
-    
-    $newPath = $listener->newPath;
-    
-    if (is_null($newPath))
-        echo "undefined";
-    else {
-        $result =
-            json_encode($newPath);
-    
-        echo $result;
+    finally {
+
+        $connection->close();
     }
-    
-    writeToDatabase(
-        $credentials,
-        $jobPath,
+
+    echo json_encode(
         [
-            "message" => "Success",
-            "path" => $path,
-            "newPath" => $listener->newPath,
-            "jobPath" => $jobPath,
-            "timeTaken" =>  (time() - $start),
-            "done" => true
+            "{Error}" => $error
         ]
     );
 
-    return true;
-            
-}
+    return false;
     
+}
+
+
+
+
+function getPathByValueId(
+    $connection,
+    $valueId
+)
+{
+    $sql = "SELECT getPathByValue(?) AS path;";
+
+    $result = $connection->execute_query(
+        $sql,
+        [$valueId]
+    );
+
+    $data = $result->fetch_all(MYSQLI_ASSOC);
+
+    return $data[0]["path"];
+}
 
 function getRootValueId($connection, $userId, & $lastType, $path)
 {
@@ -438,10 +508,6 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
 }
 
 // Most simple getValueIdByPath
-// If $throwOnInvalidPath is set and the
-// path doesnt exist, this sets
-// the error code to 404 and exits
-// with a formatted error description.
 function getValueIdByPath(
     $connection, 
     $credentials,
@@ -455,8 +521,7 @@ function getValueIdByPath(
            $credentials,
            false,
            $lastPath,
-           $path,
-           true //$throwOnInvalidPath
+           $path
         );
     
 }
@@ -466,20 +531,16 @@ function getValueIdByPath(
 // Posts to append a key to
 // an object. To use this feature
 // you must set $insertLast to true
-// If $throwOnInvalidPath is false and the
-// path doesnt exist, this returns null
-// Note that for new users /my also
-// returns null
 function getValueIdByPathEx(
     $connection, 
     $credentials,
     $insertLast,
     & $lastPath,
-    $path,
-    $throwOnInvalidPath
+    $path
 )
 {
     $userId = $credentials["userId"];
+    $paths = explode("/", $path);
 
     $rootValueId = getRootValueId(
         $connection,
@@ -488,10 +549,7 @@ function getValueIdByPathEx(
         $path
     );
     
-
     $pathValueId = null;
-    
-    $paths = explode("/", $path);
     $lastPath = null;
     
     if (!is_null($rootValueId)) {
@@ -506,38 +564,32 @@ function getValueIdByPathEx(
             $paths
         );
     }
+
+    $found = false;
+    if (!is_null($pathValueId))
+        $found = true;
+    else {
+        if (is_null($rootValueId) &&
+            $insertLast)
+           $found = true;
+    }
     
-    if ($throwOnInvalidPath &&
-        is_null($pathValueId) &&
-        !(
-            $path === "my" ||
-            $path === "/my" ||
-            $path === "my/" ||
-            $path === "/my/"
-        )
-    )
+    if (!$found)
     {
         if (is_null($rootValueId))
-           $paths[1] = "{" . $paths[1] . "}";
+            $i = 1;
+        else
+            // Dont know how to set this yet
+            $i = 0;
            
-        $path = implode("/", $paths);
-        /*
-        $error = [
-           "message" => "Path not found",
-           "status" => 404,
-           "path" => $path,
-           "where" => "server/json/functions/getValueIdByPathEx"
-        ];
+        $message = "Path not found";
+
+        throw new PathException("Path not found", $path, $i);
         
-        $message = json_encode($error);
-        */
-        
-        $message = "Path not found " . $path;
-        
-        throw new Exception($message);
-        
-        exit();
     }
+
+    if (is_null($pathValueId))
+        return $rootValueId;
     
     return $pathValueId;
 }
@@ -550,10 +602,7 @@ function pathExists(
 )
 {
     
-    if ($path === "my"  ||
-        $path === "/my" ||
-        $path === "my/" ||
-        $path === "/my/")
+    if ($path === "/my")
         return true;
         
     $valueId =
@@ -562,8 +611,7 @@ function pathExists(
             $credentials,
             $insertLast,
             $lastPath,
-            $path,
-            false//$returnError = true
+            $path
         );
         
     return !is_null($valueId);
@@ -593,35 +641,25 @@ function getValueCount($stream) {
 
 
 
-function writeValues(
+function writeValuesToStream(
     $connection,
     $credentials,
     $path,
     $stream
 )
 {
+    $pathValueId = null;
+
     $pathValueId =
         getValueIdByPathEx(
-           $connection, 
-           $credentials,
-           false,
-           $lastPath,
-           $path,
-           false //$throwOnInvalidPath
+            $connection, 
+            $credentials,
+            false, // $insertLast
+            $lastPath,
+            $path
         );
-        
-    if (is_null($pathValueId)) {
-       fwrite($stream, "undefined");
-       return;
-    }
-        /*
-    $pathValueId = getValueIdByPath(
-        $connection,
-        $credentials,
-        $path,
-        true
-    );
-    */
+   
+
     $rootStatement = $connection->prepare(
         "CALL getValuesById(?);"
     );
@@ -639,10 +677,11 @@ function writeValues(
     
 }
 
-function handleSearch($connection)
+function handleSearch()
 {
     $credentials = authenticate();
-    
+    $connection = getConnection();
+
     $query = getQuery();
     
     $sql = <<<END
@@ -657,7 +696,7 @@ on
 and
     vpc.childValueId = v.valueId
 where
-    v.jobId is null
+    v.locked = 0
 
 END;
 
@@ -738,6 +777,8 @@ END;
     
     echo "]";
     
+    $connection->close();
+
     // Log this query
     /*
     writeToDatabase(
@@ -783,6 +824,7 @@ function printValues($stream, $statement, $values, $tabCount = 0, $isFirst = tru
     {
         $valueId = $value['valueId'];
         $type = $value['type'];
+        $locked = $value['locked'];
         $objectKey = $value['objectKey'];
         $objectIndex = $value['objectIndex'];
         $isNull = $value['isNull'];
@@ -792,6 +834,9 @@ function printValues($stream, $statement, $values, $tabCount = 0, $isFirst = tru
         $childCount = $value["childCount"];
         $isEmpty = ($childCount === 0);
         $isLast = (++$counter === $valueCount);
+
+        if ($locked)
+            $type = "null";
 
         fwrite($stream, tabs($tabCount));
         

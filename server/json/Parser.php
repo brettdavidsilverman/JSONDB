@@ -147,6 +147,9 @@ class Parser
 
     public function parse(): void
     {
+// BEGIN MOD BDS
+        $this->listener->startDocument();
+// END MOD
         $this->lineNumber = 1;
         $this->charNumber = 1;
         $eof = false;
@@ -357,7 +360,9 @@ class Parser
                 break;
 
             case self::STATE_START_DOCUMENT:
-                $this->listener->startDocument();
+// BEGIN MOD BDS
+               // $this->listener->startDocument();
+// END MOD
                 if ('[' === $char) {
                     $this->startArray();
                 } elseif ('{' === $char) {

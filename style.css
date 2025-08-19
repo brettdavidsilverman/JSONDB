@@ -52,7 +52,7 @@ input, textarea, progress {
 }
 
 progress {
-   width: calc(100% - 30px);
+   width: 100%;
 }
 
 

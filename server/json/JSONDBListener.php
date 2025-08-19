@@ -10,31 +10,24 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     public $path = null;
     public $newPath = null;
     public $jobPath = null;
+    public $credentials = null;
     
-    
-    protected $result;
-
-    /**
-     * @var array
-     */
     protected $stack;
- 
- 
-    /**
-     * @var string[]
-     */
-    protected $keys;
-    
+    protected $objectKey;
     protected $connection;
-    protected $credentials;
+    
     protected $stream;
-    protected $createValueStatement = null;
-    protected $pathValueId;
-    protected $lastPath;
+    protected $updateValueId;
+    protected $stagingValueId;
+    protected $lockedValueId;
+    protected $lock = true;
+    protected $appendToArray;
+
+    protected $startTime = null;
+    protected $nextTime = null;
     
     
     protected $totalValueCount;
-    protected $jobId;
     protected $startTimer;
     
     
@@ -44,11 +37,14 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $path,
         $object = null,
         $stream = null,
-        $log = true,
-        $throwOnInvalidPath,
         $jobPath
     )
     {
+        $this->connection = $connection;
+        $this->jobPath = $jobPath;
+        $this->path = $path;
+        $this->credentials = $credentials;
+     
         if (is_null($stream)) {
            
             $stream = fopen('php://temp','w+');
@@ -61,36 +57,19 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             fwrite($stream, $string);
             rewind($stream);
         }
-        
-        $this->path = $path;
-        $this->connection = $connection;
-        $this->credentials = $credentials;
+              
         $this->stream = $stream;
-        $this->jobPath = $jobPath;
+        
+
         $this->totalValueCount =
            $this->getTotalValueCount($stream);
 
-        $this->lastPath = null;
-    
-        $this->pathValueId =
-            getValueIdByPathEx(
-                $connection,
-                $credentials,
-                true, //$insertLast
-                $this->lastPath,
-                $this->path,
-                $throwOnInvalidPath //$throwOnInvalidPath
-            );
-    
-        
-
-        $this->startTimer = time();
-        $this->log = $log;
-
-        
+        if ($this->cancelled()) {
+            $this->cancelDocument();
+        }
         
     }
-    
+
     public function writeToDatabase() {
         
         $parser = new \JsonStreamingParser\Parser(
@@ -100,41 +79,102 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
         $parser->parse();
         
+        if (!empty($this->stack))
+           throw new Exception("Invalid stack");
+     
         return $this->newPath;
     }
     
-    
-    public function getJson()
+    public function writeToJob(
+        $path,
+        $object
+    )
     {
-        return $this->result;
+
+        if (!is_null($this->jobPath)) {
+
+            writeToDatabase(
+                $this->credentials,
+                $this->jobPath . $path,
+                $object
+            );
+        }
+
+    }
+
+    public function readFromJob(
+        $path
+    )
+    {
+        $object = null;
+
+        if (!is_null($this->jobPath)) {
+
+            $object = readFromDatabase(
+                $this->credentials,
+                $this->jobPath . $path
+            );
+        }
+
+        return $object;
+
+    }
+
+    protected function cancelled() {
+
+        $cancel = $this->readFromJob(
+            "/cancel"
+        );
+        
+        return ($cancel === true);
+        
     }
 
     public function startDocument(): void
     {
-        $this->stack = [];
-        $this->keys = [];
+
+     
+        $this->writeToJob(
+            "/label",
+            "Indexing"
+        );
+
+        $this->writeToJob(
+            "/progress",
+            0.0
+        );
+
+
+        $this->writeToJob(
+            "/jobPath",
+            $this->jobPath
+        );
         
-        $statement =
-            $this->connection->prepare(
-                "CALL startDocument(?,?);"
+        $this->startTime = time();
+        $this->nextTime = time();
+        $this->newPath = $this->path;
+        $this->lock = ($this->totalValueCount > 1);
+
+        $this->connection->begin_transaction();
+
+       
+        $this->getPathValueId(
+            $this->connection
+        );
+ 
+        if ($this->totalValueCount > 1) {
+
+            $statement = $this->connection->prepare(
+                "CALL startDocument();"
             );
 
-        $statement->bind_param(
-            'is', 
-            $this->credentials['userId'],
-            $this->path
-        );
-        
-        $statement->execute();
+            $statement->execute();
     
-        $statement->bind_result(
-            $this->jobId
-        );
-    
-        $statement->fetch();
+            $statement->close();
+            
+            $this->connection->commit();
+       }
 
-        $statement->close();
-    
     }
     
     
@@ -143,53 +183,518 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
         set_time_limit(30);
         
-        if ($this->log) {
-            writeToDatabase(
-                $this->credentials,
-                $this->jobPath,
-                [
-                    "message"=>"Finalizing...",
-                    "path"=>$this->path,
-                    "done" => false
-                ]
-            );
-        }
-    /*
-        if ($this->createValueStatement) {
-            $this->createValueStatement->close();
-            $this->createValueStatement = null;
-        }
-        */
-        $sessionKey =
-           $this->credentials["sessionKey"];
-        
-        $statement =
-           $this->connection->prepare(
-              "CALL endDocument(?, ?, ?, ?);"
-           );
-          
-        $statement->bind_param(
-           'siis',
-           $sessionKey,
-           $this->jobId,
-           $this->pathValueId,
-           $this->lastPath
-        );
-   
-        $statement->execute();
+        array_pop($this->stack);
 
-        $statement->bind_result(
-            $this->newPath
-        );
-    
+        if ($this->totalValueCount > 1) {
+            $this->writeToJob(
+                "/label",
+                "Committing"
+            );
+
+            $this->connection->begin_transaction();
+
+            $statement = $this->connection->prepare(
+                "CALL endDocument(?, ?, ?, ?);"
+            );
+
+            $statement->bind_param(
+                'iiii',
+                $this->credentials["userId"],
+                $this->lockedValueId,
+                $this->stagingValueId,
+                $this->appendToArray
+            );
+
+$msg = "lockedValueId: " . $this->lockedValueId . ", " .
+       "stagingValueId: " . $this->stagingValueId ;
+
+// throw new Exception("here: " . $msg);
+
+            $statement->execute();
+       
+            $statement->close();
+        }
+
+
+        if (is_null($this->newPath))
+        {
+            $this->newPath =
+                getPathByValueId(
+                    $this->connection,
+                    $this->stagingValueId
+                );
+        }
+  
+        $this->connection->commit();
+
+        if ($this->totalValueCount > 1) {
+            $jobStatus =
+                $this->readFromJob(
+                    ""
+                );
         
-        $statement->fetch();
-        
-        $statement->close();
-        
-        
+            if (!is_null($jobStatus)) {
+               $jobStatus = array_merge(
+                   $jobStatus,
+                   [
+                    "label" => "Success",
+                    "path" => $this->path,
+                    "newPath" => $this->newPath,
+                    "jobPath" => $this->jobPath,
+                    "timeTaken" => 
+                       (time() - $this->startTime),
+                    "done" => true
+                   ]
+                );
+                
+                unset($jobStatus["progress"]);
+                unset($jobStatus["cancel"]);
+            
+                $this->writeToJob(
+                    "",
+                   $jobStatus
+                );
+            }
+            
+        }
+   
+
     }
 
+    protected function cancelDocument()
+    {
+        $this->writeToJob(
+            "/label",
+            "Cancelling"
+        );
+
+
+        $this->connection->begin_transaction();
+        
+        $statement = $this->connection->prepare(
+            "CALL deleteStaging(?);"
+        );
+
+        $statement->bind_param(
+            'i',
+            $this->lockedValueId
+        );
+
+        $statement->execute();
+    
+        $statement->close();
+    
+        $this->connection->commit();
+
+        $jobStatus =
+            $this->readFromJob(
+                ""
+            );
+        
+        if (!is_null($jobStatus)) {
+        
+            unset($jobStatus["progress"]);
+            unset($jobStatus["cancel"]);
+        
+            $this->writeToJob(
+                "",
+                $jobStatus
+            );
+            
+        }
+
+        throw new CancelException();
+    
+    }
+
+
+    public function getPathValueId($connection) {
+
+        $parentValueId = null;
+
+        $this->appendToArray = false;
+        $this->newPath = $this->path;
+        $this->updateValueId = null;
+    
+        $parentValueId =
+            $this->firstSegment(
+                $connection
+            );
+
+        $parentValueId =
+            $this->middleSegments(
+                $connection,
+                $parentValueId
+            );
+
+        $parentValueId =
+           $this->lastSegment(
+               $connection,
+               $parentValueId
+           );
+
+       // $this->pathValueId = $parentValueId;
+
+        $this->stack = [
+            [
+                "parentValueId" => $parentValueId,
+                "objectIndex" => null
+            ]
+        ];
+        
+
+        return $parentValueId;
+
+
+    }
+
+    protected function firstSegment(
+        $connection
+    )
+    {
+
+
+        $paths = explode('/', $this->path);
+
+        $count = count($paths);
+        $segment = $paths[1];
+
+        $ownerId = null;
+        $userId = 
+            $this->credentials["userId"];
+
+
+        if ($count >= 2)
+        {
+            if ($segment === 'my') {
+                $ownerId = $userId;
+            }
+            else if (is_numeric($segment))
+                $ownerId = (int)($segment);
+        }
+        else
+            $ownerId = $userId;
+        
+        $statement = $connection->prepare(
+            "CALL getRootValueId(?,?);"
+        );
+
+        $statement->bind_param(
+            'ii', 
+            $userId,
+            $ownerId
+        );
+
+        $statement->execute();
+    
+        $statement->bind_result(
+            $valueId,
+            $type
+        );
+
+        $statement->fetch();
+    
+        $statement->close();
+    
+        if (is_null($valueId) &&
+            $count > 2)
+        {
+            $this->lock =
+               ($this->totalValueCount > 1);
+
+            $valueId =
+                $this->insertValue(
+                    $connection,
+                    $userId, # $ownerId
+                    null, # $parentValueId,
+                    $this->lock, //$locked,
+                    "object", # $type
+                    $objectIndex, # & objectIndex
+                    null,  # $objectKey,
+                    false, # $isNull,
+                    null,  # $stringValue,
+                    null,  # $numericValue,
+                    null   # $boolValue
+               );
+
+
+        }
+
+        if ($count === 2) {
+            if ($this->totalValueCount === 1)
+                $this->updateValueId = $valueId;
+
+            return null;
+        }
+
+        return $valueId;
+    }
+    
+    protected function middleSegments(
+        $connection,
+        $parentValueId
+    )
+    {
+        $segment = null;
+        $ownerId = $this->credentials["userId"];
+
+        $paths = explode("/", $this->path);
+        $count = count($paths);
+        $valueId = $parentValueId;
+
+
+        for($i = 2; $i < $count - 1; ++$i) {
+            $segment = urldecode($paths[$i]);
+            $nextSegment = urldecode($paths[$i + 1]);
+
+            if ($segment === "")
+                throw new PathException("Empty path", $this->path, $i);
+
+            if ($segment === "[]") {
+                $this->newPath = null;
+                $type = null;
+                if (is_numeric($nextSegment) ||
+                    $paths[$nextSegment] === "[]")
+                {
+                    $type = "array";
+                }
+                else
+                    $type = "object";
+
+                $valueId =
+                    $this->insertValue(
+                        $connection,
+                        $ownerId,
+                        $parentValueId, // $parentValueId
+                        $this->lock, // $locked
+                        $type, // $type,
+                        $objectIndex,
+                        null, // $objectKey,
+                        false, //$isNull,
+                        null, //$stringValue,
+                        null, //$numericValue,
+                        null  //$boolValue
+                    );
+
+            }
+            else {
+                $valueId =
+                    $this->getOrInsertValue(
+                        $connection,
+                        $parentValueId,
+                        $i
+                    );
+            }
+
+            $parentValueId = $valueId;
+        }
+
+    
+        return $valueId;
+
+    }
+
+    protected function lastSegment(
+        $connection,
+        $parentValueId
+    )
+    {
+        $userId = $this->credentials["userId"];
+
+        $paths = explode("/", $this->path);
+        $count = count($paths);
+
+        if ($count <= 2)
+            return $parentValueId;
+
+        $valueId = $parentValueId;
+
+        $segment = urldecode($paths[$count - 1]);
+        $objectKey = null;
+        $objectIndex = null;
+  
+        if (is_numeric($segment))
+            $objectIndex = (int)$segment;
+        else
+            $objectKey = $segment;
+
+        if ($segment === "[]")
+        {
+            $this->newPath = null;
+            $this->appendToArray = true;
+        }
+        else {
+            /*
+            $valueId =
+                $this->getValueId(
+                    $connection,
+                    $parentValueId,
+                    $objectIndex,
+                    $objectKey,
+                    $type,
+                    $locked
+                );
+
+            if ($locked)
+                throw new LockedException("Path locked", $this->path, $count - 1);
+
+
+            if ($this->totalValueCount === 1)
+            {
+                $this->updateValueId =
+                    $valueId;
+            }
+            */
+        }
+       
+        if (is_null($valueId))
+            $valueId = $parentValueId;
+
+
+        $this->objectKey = $objectKey;
+
+        return $valueId;
+
+    }
+
+    protected function getOrInsertValue(
+        $connection,
+        $parentValueId,
+        $i
+    )
+    {
+        $paths = explode("/", $this->path);
+        $count = count($paths);
+        $last = ($i === ($count - 1));
+        
+        $segment = urldecode($paths[$i]);
+        $nextSegment = null;
+        if (!$last)
+            $nextSegment = urldecode($paths[$i + 1]);
+
+        $ownerId = $this->credentials["userId"];
+
+        $objectIndex = null;
+        $objectKey = null;
+   
+
+        if (is_numeric($segment)) {
+            $objectIndex = (int)$segment;
+        }
+        else {
+            $objectKey = $segment;
+        }
+
+        $valueId = $this->getValueId(
+            $connection,
+            $parentValueId,
+            $objectIndex,
+            $objectKey,
+            $type,
+            $locked
+        );
+
+        if ($locked)
+            throw new LockedException("Path locked", $this->path, $i);
+
+        if (is_null($valueId) &&
+            is_numeric($segment))
+        {
+            $objectIndex = (int)$segment;
+        }
+
+        if (!is_null($valueId) && !$last)
+        {
+            if (is_numeric($nextSegment))
+            {
+                if ($type != "array" &&
+                    $type != "object")
+                    throw new PathException("Expected array or object type", $this->path, $i);
+            }
+            else if ($nextSegment === "[]")  {
+                if ($type != "array")
+                    throw new PathException("Expecting array", $this->path, $i);
+            }
+            else {
+                if ($type != "object")
+                    throw new PathException("Expected object type", $this->path, $i);
+            }
+        }
+
+        if (is_null($valueId) && !$last)
+        {
+            $type = "object";
+            $objectIndex = null;
+            $valueId =
+                $this->insertValue(
+                    $connection,
+                    $ownerId,
+                    $parentValueId, // $parentValueId
+                    $this->lock, // $locked
+                    $type, // $type,
+                    $objectIndex,
+                    $objectKey, // $objectKey,
+                    false, //$isNull,
+                    null, //$stringValue,
+                    null, //$numericValue,
+                    null  //$boolValue
+                );
+
+
+        }
+
+    
+        $this->objectKey = $objectKey;
+        
+        if (is_null($valueId))
+            return $parentValueId;
+        
+        return $valueId;
+
+          
+    }
+
+    protected function getValueId(
+        $connection,
+        $parentValueId,
+        & $objectIndex,
+        & $objectKey,
+        & $type,
+        & $locked
+    )
+    {
+        $statement = $connection->prepare(
+            "CALL getValueId(?,?,?,?);"
+        );
+
+        $userId =
+            $this->credentials["userId"];
+
+        $statement->bind_param(
+            'iiis', 
+            $userId,
+            $parentValueId,
+            $objectIndex,
+            $objectKey
+        );
+
+        $statement->execute();
+    
+        $statement->bind_result(
+            $valueId,
+            $type,
+            $locked,
+            $objectIndex,
+            $objectKey
+        );
+    
+        $statement->fetch();
+
+        $statement->close();
+    
+        return $valueId;
+    }
+    
     public function startObject(): void
     {
         $this->startComplexValue('object');
@@ -212,53 +717,44 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
     public function key(string $key): void
     {
-        $this->keys[] = $key;
+        $this->objectKey = $key;
         
     }
 
     public function value($value): void
     {
-        $this->insertValue($value);
+        $this->createValue($value);
         
-        $endTime = time();
-        $elapsed =
-            $endTime - $this->startTimer;
-           
         $this->valueCount++;
         
-        if ($elapsed >= 5)
+        if (is_null($this->jobPath)) {
+            return;
+        }
+            
+        if (time() > $this->nextTime)
         {
             set_time_limit(30);
-           
-            if (is_null($this->jobPath)) {
-               $this->startTimer = time();
-               return;
+
+            if ($this->cancelled()) {
+                $this->cancelDocument();
             }
-            
-            $cancel = readFromDatabase(
-                $this->credentials,
-                $this->jobPath . "/cancel"
-            );
-            
-            if ($cancel) {
-                throw new Exception("Cancelled");
-            }
-            
+
             $progress = (
                 $this->valueCount /
                 $this->totalValueCount *
                 100.0
             );
-        
-            writeToDatabase(
-                $this->credentials,
-                $this->jobPath . "/progress",
+
+ 
+            $this->writeToJob(
+                "/progress",
                 $progress
             );
 
-            $this->startTimer = time();
-           
+            $this->nextTime = time() + 5;
+
         }
+   
         
     }
     
@@ -266,70 +762,18 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
     protected function startComplexValue($type)
     {
-        $parentValueId = null;
-        $parent = null;
-        $objectKey = null;
-        $objectIndex = null;
-        
-        if (!empty($this->stack)) {
-           $parent = array_pop($this->stack);
-           $parentValueId = $parent['valueId'];
-        }
-        
-        if (!is_null($parent) &&
-            ('object' === $parent['type']))
-        {
-            $objectKey = array_pop($this->keys);
-        }
-        
-        if (is_null($parent))
-           $objectIndex = 0;
-        else
-           $objectIndex = $parent["count"];//++;
-        
-        $valueId = $this->createValue(
-           $parentValueId,
-           $this->credentials["userId"],
-           $this->credentials["sessionKey"],
-           $type,
-           $objectIndex,
-           $objectKey,
-           false,
-           null,
-           null,
-           null
-        );
-        
-        // We keep a stack of complex values (i.e. arrays and objects) as we build them,
-        // tagged with the type that they are so we know how to add new values.
-        $currentItem = [
-           'type' => $type,
-           'value' => [], 
-           'count' => 0,
-           'valueId' => $valueId
+        $valueId = $this->createValue(null, $type);
+        $this->stack[] = [
+           "parentValueId" => $valueId,
+           "objectIndex" => 0
         ];
         
-        if (!is_null($parent))
-           $this->stack[] = $parent;
         
-        $this->stack[] = $currentItem;
-        
-        return $valueId;
-       
     }
 
     protected function endComplexValue(): void
     {
-        $obj = array_pop($this->stack);
-
-        // If the value stack is now empty, we're done parsing the document, so we can
-        // move the result into place so that getJson() can return it. Otherwise, we
-        // associate the value
-        if (empty($this->stack)) {
-            $this->result = $obj['value'];
-        } else {
-            $this->insertValue($obj['value']);
-        }
+        array_pop($this->stack);
     }
     
     public function whitespace(string $whitespace): void
@@ -338,88 +782,269 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
     // Inserts the given value into the top value on the stack in the appropriate way,
     // based on whether that value is an array or an object.
-    protected function insertValue($value)
+    protected function createValue($value, $type = null)
     {
+        
         $valueId = null;
         
         // Grab the top item from the stack that we're currently parsing.
-        $currentItem = array_pop($this->stack);
 
-        // Examine the current item, and then:
-        //   - if it's an object, associate the newly-parsed value with the most recent key
-        //   - if it's an array, push the newly-parsed value to the array
-
-        $objectIndex = null;
-        $objectKey = null;
-        $parentValueId = null;
-        
-        if (!is_null($currentItem)) {
-            $objectIndex = $currentItem['count']++;
-            if ('object' === $currentItem['type']) {
-                $objectKey = array_pop($this->keys);
-            }
-            $parentValueId = $currentItem["valueId"];
-        }
-        else {
-           $parentValueId = null;
-           $objectIndex = 0;
-        }
+        $top = array_pop($this->stack);
+        $parentValueId = $top["parentValueId"];
+        $objectIndex = $top["objectIndex"]++;
+        $ownerId =
+            $this->credentials["userId"];
        
+            
+        $objectKey = $this->objectKey;
+
         $boolValue = null;
         $isNull = null;
         $stringValue = null;
         $numericValue = null;
-        $type = null;
-       
-        if (is_null($value)) {
-           $isNull = true;
-           $type = "null";
+        
+        if (is_null($type)) {
+            if (is_null($value)) {
+                $isNull = true;
+                $type = "null";
+            }
+            else {
+                $isNull = false;
+                if (is_numeric($value)) {
+                    $numericValue = $value;
+                    $type = "number";
+                }
+                else if (is_string($value)) {
+                    $stringValue = $value;
+                    $type = "string";
+                }
+                else if (is_bool($value)) {
+                    $boolValue = $value;
+                    $type = "bool";
+                }
+            }
+        }
+        else
+            $isNull = false;
+        
+        if ($this->totalValueCount > 1)
+            $this->connection->begin_transaction();
+     
+        if (!is_null($this->updateValueId))
+        {
+            // update
+            $valueId = $this->updateValueId;
+
+            $this->updateValue(
+                $this->connection,
+                $valueId,
+                $ownerId,
+                false, # $locked
+                $type,
+                $isNull,
+                $stringValue,
+                $numericValue,
+                $boolValue
+            );
+            
+            
         }
         else {
-           $isNull = false;
-           if (is_numeric($value)) {
-              $numericValue = $value;
-              $type = "number";
-           }
-           else if (is_string($value)) {
-              $stringValue = $value;
-              $type = "string";
-           }
-           else if (is_bool($value)) {
-              $boolValue = $value;
-              $type = "bool";
-           }
-           else
-              $type = null;
+            // Insert
+            $valueId =
+                $this->insertValue(
+                    $this->connection,
+                    $ownerId,
+                    $parentValueId,
+                    $this->lock, //$locked,
+                    $type,
+                    $objectIndex,
+                    $objectKey,
+                    $isNull,
+                    $stringValue,
+                    $numericValue,
+                    $boolValue
+               );
         }
-       
-        if (!is_null($type)) {
-           $valueId = $this->createValue(
-              $parentValueId,
-              $this->credentials["userId"],
-              $this->credentials["sessionKey"],
-              $type,
-              $objectIndex,
-              $objectKey,
-              $isNull,
-              $stringValue,
-              $numericValue,
-              $boolValue
-           );
-        
-        }
-        
-        if (!is_null($currentItem)) {
-            $this->stack[] = $currentItem;
-        }
-        
+
+        if ($this->totalValueCount > 1)
+            $this->connection->commit();
+
+        if (is_null($this->stagingValueId))
+            $this->stagingValueId = $valueId;
+
+        $this->objectKey = null;
+      
+        $this->stack[] = $top;
+
         return $valueId;
     }
+
+
+    protected function lockValueByObjectIndex(
+        $parentValueId,
+        $objectIndex
+    )
+    {
+        $sql = "CALL lockValueByObjectIndex(?, ?);";
+        
+        $this->connection->execute_query(
+           $sql,
+           [$parentValueId, $objectIndex]
+        );
+    }
+
+    protected function lockValueByObjectKey(
+        $parentValueId,
+        $objectKey
+    )
+    {
+        $sql = "CALL lockValueByObjectKey(?, ?);";
+        
+        $this->connection->execute_query(
+           $sql,
+           [$parentValueId, $objectKey]
+        );
+    }
+
     
-    protected function createValue(
-       $parentValueId,
+    protected function deleteChildValues(
+        $valueId
+    )
+    {
+        $sql = "CALL deleteChildValues(?)";
+        
+        $this->connection->execute_query(
+           $sql,
+           [$valueId]
+        );
+    
+    }
+
+    protected function startWords($connection)
+    {
+        $sql = "CALL startWords()";
+        
+        $connection->execute_query(
+           $sql,
+           []
+        );
+    
+    }
+
+    protected function endWords($connection)
+    {
+
+        $this->writeToJob(
+            "/label",
+            "Indexing words"
+        );
+            
+
+        $sql = "CALL endWords()";
+        
+        $connection->execute_query(
+           $sql,
+           []
+        );
+    
+    }
+
+    protected function createNextObjectIndex(
+        $connection,
+        $parentValueId
+    )
+    {
+        $ownerId =
+            $this->credentials["userId"];
+
+        $statement = 
+            $connection->prepare(
+                "CALL createNextObjectIndex(?, ?)"
+            );
+        
+        $statement->bind_param(
+            "ii",
+            $ownerId,
+            $parentValueId
+        );
+
+        $statement->execute();
+
+        $statement->bind_result(
+            $valueId
+        );
+    
+        $statement->fetch();
+ 
+        $statement->close();
+
+        
+        return $valueId;
+       
+    }
+
+    protected function insertValue(
+       $connection,
        $ownerId,
-       $sessionKey,
+       $parentValueId,
+       $lock,
+       $type,
+       & $objectIndex,
+       $objectKey,
+       $isNull,
+       $stringValue,
+       $numericValue,
+       $boolValue
+    )
+    {
+
+ 
+        $statement = 
+            $connection->prepare(
+                "CALL insertValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+        
+        $statement->bind_param(
+            "iiisisisdi",
+            $ownerId,
+            $parentValueId,
+            $lock,
+            $type,
+            $objectIndex,
+            $objectKey,
+            $isNull,
+            $stringValue,
+            $numericValue,
+            $boolValue
+        );
+
+        $statement->execute();
+
+        $statement->bind_result(
+            $valueId,
+            $objectIndex
+        );
+    
+        $statement->fetch();
+
+        $statement->close();
+
+        if ($lock) {
+            $this->lockedValueId = $valueId;
+            $this->lock = false;
+        }
+
+  
+
+        return $valueId;
+       
+    }
+
+    protected function insertStagingValue(
+       $connection,
+       $ownerId,
+       $parentValueId,
        $type,
        $objectIndex,
        $objectKey,
@@ -429,56 +1054,77 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
        $boolValue
     )
     {
-/*
-        $connection = getConnection();
-        
-        $connection->autocommit(false);
-        */
 
-        
-       // if (is_null($this->createValueStatement)) {
-            $statement = 
-                $this->connection->prepare(
-                    "CALL createValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                );
-        
-            $statement->bind_param(
-                'iiissisisdi',
-                $this->jobId,
-                $parentValueId,
-                $ownerId,
-                $sessionKey,
-                $type,
-                $objectIndex,
-                $objectKey,
-                $isNull,
-                $stringValue,
-                $numericValue,
-                $boolValue
+        $statement = 
+            $connection->prepare(
+                "CALL insertStagingValue(?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
+        
+        $statement->bind_param(
+            "iisisisdi",
+            $ownerId,
+            $parentValueId,
+            $type,
+            $objectIndex,
+            $objectKey,
+            $isNull,
+            $stringValue,
+            $numericValue,
+            $boolValue
+        );
 
-      //  }
-   
-        //$statement = $this->createValueStatement
+        $statement->execute();
+
+        $statement->bind_result(
+            $valueId
+        );
+    
+        $statement->fetch();
+
+        $statement->close();
+
+        return $valueId;
+       
+    }
+
+    protected function updateValue(
+       $connection,
+       $valueId,
+       $ownerId,
+       $locked,
+       $type,
+       $isNull,
+       $stringValue,
+       $numericValue,
+       $boolValue
+    )
+    {
+
+        $statement = 
+            $connection->prepare(
+                "CALL updateValue(?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+        
+
+        $statement->bind_param(
+            'iiisisdi',
+            $valueId,
+            $ownerId,
+            $locked,
+            $type,
+            $isNull,
+            $stringValue,
+            $numericValue,
+            $boolValue
+        );
 
         $statement->execute();
         
-
-        $valueId = null;
-        $statement->bind_result($valueId);
-
-        $fetched = $statement->fetch();
-
-            
         $statement->close();
-        
-        //$connection->commit();
-                
-        //$connection->close();
-        
-        return $valueId;
-       
-    }
+
+    }
+
+    
     protected function getTotalValueCount($stream) {
         
         $valueCountListener = new ValueCountListener();
@@ -489,7 +1135,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
         $valueCountParser->parse();
     
-        if (!$valueCountListener->getResult())
+        if (!$valueCountListener->result)
             throw new Exception(
                 "Unexpected end of data"
             );
@@ -499,7 +1145,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     
         // Reset the stream to start inserting
         rewind($stream);
-    
+
         return $totalValueCount;
     }
     

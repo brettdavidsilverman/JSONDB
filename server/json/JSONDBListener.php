@@ -937,33 +937,6 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         return $valueId;
     }
 
-
-    protected function lockValueByObjectIndex(
-        $parentValueId,
-        $objectIndex
-    )
-    {
-        $sql = "CALL lockValueByObjectIndex(?, ?);";
-        
-        $this->connection->execute_query(
-           $sql,
-           [$parentValueId, $objectIndex]
-        );
-    }
-
-    protected function lockValueByObjectKey(
-        $parentValueId,
-        $objectKey
-    )
-    {
-        $sql = "CALL lockValueByObjectKey(?, ?);";
-        
-        $this->connection->execute_query(
-           $sql,
-           [$parentValueId, $objectKey]
-        );
-    }
-
     
     protected function deleteChildValues(
         $valueId
@@ -1006,41 +979,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         );
     
     }
-
-    protected function createNextObjectIndex(
-        $connection,
-        $parentValueId
-    )
-    {
-        $ownerId =
-            $this->credentials["userId"];
-
-        $statement = 
-            $connection->prepare(
-                "CALL createNextObjectIndex(?, ?)"
-            );
-        
-        $statement->bind_param(
-            "ii",
-            $ownerId,
-            $parentValueId
-        );
-
-        $statement->execute();
-
-        $statement->bind_result(
-            $valueId
-        );
     
-        $statement->fetch();
- 
-        $statement->close();
-
-        
-        return $valueId;
-       
-    }
-
     protected function insertValue(
        $connection,
        $ownerId,
@@ -1098,52 +1037,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
        
     }
 
-    protected function insertStagingValue(
-       $connection,
-       $ownerId,
-       $parentValueId,
-       $type,
-       $objectIndex,
-       $objectKey,
-       $isNull,
-       $stringValue,
-       $numericValue,
-       $boolValue
-    )
-    {
-
-        $statement = 
-            $connection->prepare(
-                "CALL insertStagingValue(?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            );
-        
-        $statement->bind_param(
-            "iisisisdi",
-            $ownerId,
-            $parentValueId,
-            $type,
-            $objectIndex,
-            $objectKey,
-            $isNull,
-            $stringValue,
-            $numericValue,
-            $boolValue
-        );
-
-        $statement->execute();
-
-        $statement->bind_result(
-            $valueId
-        );
     
-        $statement->fetch();
-
-        $statement->close();
-
-        return $valueId;
-       
-    }
-
     protected function updateValue(
        $connection,
        $valueId,

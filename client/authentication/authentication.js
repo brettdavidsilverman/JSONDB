@@ -111,7 +111,6 @@ class Authentication
 */
                     }
 
-                    
                     return json;
                     
                     
@@ -253,7 +252,7 @@ class Authentication
         
         var _this = this;
         if (!jobs) {
-            this.getJobs()
+            var promise = this.getJobs()
             .then(
                 (jobs) => {
                     _this.updateJobs(jobs);
@@ -265,7 +264,7 @@ class Authentication
                 }
             );
             
-            return;
+            return promise;
         }
 
         var done = true;

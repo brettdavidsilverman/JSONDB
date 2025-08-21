@@ -11,11 +11,14 @@ class PathException extends Exception
 
     public function __construct($message, $listenerOrPath, $errorIndex) {
         $path = null;
+        $listener = null;
+        
         if (is_string($listenerOrPath))
             $path = $listenerOrPath;
-        else
-            $path = $listenerOrPath->path;
-            
+        else {
+            $listener = $listenerOrPath;
+            $path = $listener->path;
+        }
         $this->path = encodeSlashes($path);
         
         $this->errorIndex = $errorIndex;
@@ -33,8 +36,8 @@ class PathException extends Exception
 
         parent::__construct($_message);
         
-        if (is_object($listenerOrPath))
-            $listenerOrPath->cancelDocument();
+        if (!is_null($listener))
+            $listener->cancelDocument();
         
     }
 

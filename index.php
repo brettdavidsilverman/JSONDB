@@ -162,6 +162,7 @@ authentication.onUpdateStatus =
 
 authentication.onUpdateJobs =
     (jobs) => {
+
         displayExpires();
         
         jobsDiv.innerHTML = "";
@@ -356,6 +357,7 @@ saveButton.onclick =
            // json = JSON.stringify(object);
         }
         catch(error) {
+            
             displayError(error, "saveButton.onclick parse");
             saveButton.disabled = false;
             return;

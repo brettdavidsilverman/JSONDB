@@ -66,15 +66,18 @@ class Authentication
                     _this.saveCredentials(response);
                     ok = response.ok;
                     status = response.status;
-                    return response.text();
+                    if (ok)
+                        return response.text();
+                    
                 }
             )
             .then(
                 (text) => {
 
-                    if (text == "undefined")
+                    if (text == "undefined") {
                        return undefined;
-                       
+                    }
+    
                     var json = null;
                     
                     try {
@@ -131,7 +134,6 @@ class Authentication
                url,
                parameters
             );
-
             
         return promise;
     }
@@ -205,23 +207,17 @@ class Authentication
                     return promise;
                 }
             )
-            .catch(
-                (error) => {
-                    var status = {
-                        label: error,
-                        path: url,
-                        done: false
-                    }
-                    _this.postJSON(
-                        jobPath,
-                        status
-                    )
+            .then(
+                (result) => {
+                    var promise =
+                    _this.updateJobs()
                     .then(
                         () => {
-                            _this.updateJobs();
+                            return result;
                         }
                     );
-
+                    
+                    return promise;
                 }
             );
             
@@ -308,26 +304,6 @@ class Authentication
     
     }
     
-    /*
-    setStatusTimeout() {
-     
-        var _this = this;
-        
-        if (this.timeoutId)
-            window.clearTimeout(
-                this.timeoutId
-            );
-  
-        this.timeoutId = window.setTimeout(
-            () => {
-                _this.updateStatus();
-            },
-            1000 * 5
-        );
-        
-    
-    }
-*/
     
     logon(email, secret) {
 
@@ -421,41 +397,7 @@ class Authentication
 
         return promise;
     }
-    
-    getCancelLastUpload() {
 
-            
-        var promise =
-            this.fetch(this.url + "/server/getCancelLastUpload.php");
-            
-        return promise;
-    }
-    
-    setCancelLastUpload(
-       cancelLastUpload
-    )
-    {
-        var parameters = {
-            method: "POST",
-            body: JSON.stringify(
-                cancelLastUpload
-            )
-        }
-
-        var promise =
-            this.fetch(
-                this.url + "/server/setCancelLastUpload.php",
-                parameters
-            );
-            
-        return promise;
-    }
-    
-    cancelLastUpload()
-    {
-        return this.setCancelLastUpload(true);
-    }
-    
     getUserEmailExists(email) {
 
         var parameters = {

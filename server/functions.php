@@ -96,6 +96,20 @@ function startSession() {
 
 }
 
+function _urldecode($path) {
+    $path = urldecode($path);
+    
+    if (str_starts_with($path, "\"") &&
+        str_ends_with($path, "\""))
+    {
+        return substr($path, 1, -2);
+    }
+    else if (is_numeric($path))
+       return (int)$path;
+    else
+       return $path;
+}
+
 function encodeQueryString ($data) {
    $req = "";
    foreach ( $data as $key => $value )

@@ -9,12 +9,16 @@ class PathException extends Exception
     public $errorPath;
     public $errorIndex;
 
-    public function __construct($message, $path, $errorIndex) {
+    public function __construct($message, $listenerOrPath, $errorIndex) {
         
-        $this->path = $path;
+        if (is_string($listenerOrPath))
+            $this->path = $listenerOrPath;
+        else
+            $this->path = $listenerOrPath->path;
+        
         $this->errorIndex = $errorIndex;
 
-        $paths = explode("/", $path);
+        $paths = explode("/", $this->path);
         $paths[$errorIndex] = 
             "{" . $paths[$errorIndex] . "}";
 
@@ -27,6 +31,8 @@ class PathException extends Exception
 
         parent::__construct($_message);
         
+        if (is_object($listenerOrPath))
+            $listenerOrPath->cancelDocument();
         
     }
 
@@ -34,8 +40,10 @@ class PathException extends Exception
 
 class CancelException extends Exception
 {
-    public function __construct() {
+    public function __construct($listener = null) {
         parent::__construct("Cancelled");
+        if (!is_null($listener))
+            $listener->cancelDocument();
     }
     
 };
@@ -43,8 +51,8 @@ class CancelException extends Exception
 class LockedException extends PathException
 {
     
-    public function __construct($message, $path, $errorIndex) {
-        parent::__construct($message, $path, $errorIndex);
+    public function __construct($message, $listener, $errorIndex) {
+        parent::__construct($message, $listener, $errorIndex);
     }
     
     
@@ -181,7 +189,6 @@ function writeToDatabaseEx(
 }
 
 
-
 function handleGet()
 {
     $credentials = authenticate();
@@ -217,9 +224,12 @@ function handleGet()
             "path" => $ex->path
         ];
 
-        echo json_encode($error);
+       echo json_encode(
+            [
+               "{Error}" => $error
+            ]
+        );
 
-        // echo "undefined";
         return;
     }
     catch (Exception $ex) {
@@ -254,36 +264,36 @@ function handlePost()
     
     header('Content-Type: application/json; charset=utf-8');
     
-    $file = "php://input";
-
-    if (array_key_exists("file", $_FILES)) {
-            
-        if ($_FILES["file"]["error"] == 0) {
-            $file = $_FILES["file"]["tmp_name"];
-        }
-            
-    }
-        
     $newPath = null;
     $error = null;
     $jobPath = null;
     $jobStatus = null;
-    $path = null;
+    $path = getPath();
     $listener = null;
     $startTime = time();
-
-
+    
     if (array_key_exists("jobPath", $_POST))
         $jobPath = $_POST["jobPath"];
-        
+     
+    $file = "php://input";
 
     try {
-
+        
         $connection = getConnection();
         
-        $inputStream = fopen($file, 'r');
-        $path = getPath();
+        if (array_key_exists("file", $_FILES)) {
+            
+            if ($_FILES["file"]["error"] == 0) {
+                $file = $_FILES["file"]["tmp_name"];
+            }
+            else {
+               throw new CancelException();
+            }
+        }
         
+        //throw new CancelException();
+        
+        $inputStream = fopen($file, 'r');
         
         // Parse stream into database
         $newPath = writeToDatabaseEx(
@@ -300,6 +310,7 @@ function handlePost()
         echo encodeString($newPath);
     
         return true;
+        
     
     }
     catch (PathException $ex) {
@@ -336,13 +347,22 @@ function handlePost()
 
         $connection->close();
     }
+    
+    if (!is_null($jobPath))
+    {
+        writeToDatabase(
+            $credentials,
+            $jobPath,
+            $error
+        );
+    }
 
     echo json_encode(
         [
             "{Error}" => $error
         ]
     );
-
+    
     return false;
     
 }
@@ -412,7 +432,7 @@ function getRootValueId($connection, $userId, & $lastType, $path)
 }
 
 
-function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, $lastType, & $lastPath, & $paths)
+function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, $lastType, & $lastPath, & $paths, & $errorIndex)
 {
      
     $lastPath = null;
@@ -457,8 +477,6 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
             
         $path = urldecode($path);
         
-
-
         if (is_numeric($path)) {
             $pathIndex = (int)($path);
             $pathKey = null;
@@ -491,7 +509,7 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
                 $valueId = $parentValueId;
             }
             else {
-                $paths[$i] = "{" . urldecode($path) . "}";
+                $errorIndex = $i;
                 $valueId = null;
             }
             return $valueId;
@@ -551,6 +569,7 @@ function getValueIdByPathEx(
     
     $pathValueId = null;
     $lastPath = null;
+    $errorIndex = null;
     
     if (!is_null($rootValueId)) {
         
@@ -561,7 +580,8 @@ function getValueIdByPathEx(
             $insertLast,
             $lastType,
             $lastPath,
-            $paths
+            $paths,
+            $errorIndex
         );
     }
 
@@ -579,8 +599,7 @@ function getValueIdByPathEx(
         if (is_null($rootValueId))
             $i = 1;
         else
-            // Dont know how to set this yet
-            $i = 0;
+            $i = $errorIndex;
            
         $message = "Path not found";
 

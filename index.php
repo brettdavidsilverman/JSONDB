@@ -393,11 +393,12 @@ saveButton.onclick =
         promise
             .then(
                 (result) => {
-                   if (result == undefined)
-                      alert("Invalid path");
-                   else {
-                      alert(result);
-                   }
+                    if (result == undefined) {
+                        alert("Invalid path");
+                    }
+                    else {
+                        alert(result);
+                    }
                 }
             )
             .catch(
@@ -410,7 +411,8 @@ saveButton.onclick =
         alert("Saving...");
         saveButton.disabled = false;
         
-        return promise;
+        return
+            promise;
     }
     
 clearButton.onclick =

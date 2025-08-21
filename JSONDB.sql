@@ -84,7 +84,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=725 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=731 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -93,7 +93,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (723,'2bb6bde7919019d63e7dfe79c8765d49',118,'2025-08-19 19:29:39','49.183.112.147','2025-08-19 19:55:38'),(724,'6d43a041c29741c6d2b232bfb1f46ee4',118,'2025-08-19 19:55:56','49.183.112.147','2025-08-19 20:30:42');
+INSERT INTO `Session` VALUES (730,'b86ebb4c26b09ce8c0f5211186e095f7',118,'2025-08-21 12:39:06','49.183.112.147','2025-08-21 13:50:59');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -112,7 +112,7 @@ CREATE TABLE `SessionStatus` (
   PRIMARY KEY (`sessionStatusId`),
   UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9540 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9546 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -121,7 +121,7 @@ CREATE TABLE `SessionStatus` (
 
 LOCK TABLES `SessionStatus` WRITE;
 /*!40000 ALTER TABLE `SessionStatus` DISABLE KEYS */;
-INSERT INTO `SessionStatus` VALUES (9538,723,'{\"label\":\"Logged in\",\"percentage\":0,\"done\":true,\"error\":null}',0),(9539,724,'{\"label\":\"Logged in\",\"percentage\":0,\"done\":true,\"error\":null}',0);
+INSERT INTO `SessionStatus` VALUES (9545,730,'{\"label\":\"Logged in\",\"percentage\":0,\"done\":true,\"error\":null}',0);
 /*!40000 ALTER TABLE `SessionStatus` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -232,7 +232,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','9CdXKtfk5C7EDihCmG/1iaVSAkmHFYmIykZN2GeDvq4YvG+l0ogSwDF+vV447IIFHPpJ7fO4+fxz3EETzjggug==',NULL,NULL,1);
+INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','29alyvJDJvHiE/w99Ov/Afr/YJWAHkhBUrDAUZYQ4LDxNMCUoAKrnlrBm++vzrKsWJvla/tuXjHC7VDg3cdo2g==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -265,7 +265,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_lowerObjectKey_stringValue` (`lowerObjectKey`(20),`stringValue`(20)) USING BTREE,
   KEY `I_Value_parentValueId_lowerObjectKey` (`parentValueId`,`lowerObjectKey`(100)) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5219699 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7494646 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -274,7 +274,7 @@ CREATE TABLE `Value` (
 
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (5219691,NULL,118,0,'string',0,NULL,NULL,NULL,'here',NULL,0),(5219692,5219691,118,0,'string',0,'a','a',NULL,'b',NULL,0),(5219693,5219691,118,0,'object',1,'c','c',NULL,NULL,NULL,0),(5219694,5219693,118,0,'string',0,'c','c',NULL,'d',NULL,0),(5219695,5219693,118,0,'string',1,'❤️','❤️',NULL,'heart',NULL,0),(5219696,5219691,118,0,'object',2,'d','d',NULL,NULL,NULL,0),(5219697,5219696,118,0,'object',0,'e','e',NULL,NULL,NULL,0),(5219698,5219697,118,0,'string',0,'f','f',NULL,'g',NULL,0);
+INSERT INTO `Value` VALUES (7494637,NULL,118,0,'object',0,NULL,NULL,NULL,NULL,NULL,0),(7494638,7494637,118,0,'array',0,'boo','boo',NULL,NULL,NULL,0),(7494639,7494638,118,0,'object',0,NULL,NULL,NULL,NULL,NULL,0),(7494640,7494639,118,0,'object',0,'boo2','boo2',NULL,NULL,NULL,0),(7494641,7494640,118,0,'array',0,'boo','boo',NULL,NULL,NULL,0),(7494642,7494641,118,0,'object',0,NULL,NULL,NULL,NULL,NULL,0),(7494643,7494642,118,0,'string',0,'boo2','boo2',NULL,'hi',NULL,0),(7494644,7494637,118,0,'string',1,'one','one',NULL,'Hello world',NULL,0),(7494645,7494637,118,0,'string',2,'two','two',NULL,'💕',NULL,0);
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1234,7 +1234,7 @@ BEGIN
    DELETE
    FROM      Value
    WHERE   Value.valueId IN (
-             WITH RECURSIVE cte (valueId) AS
+             WITH RECURSIVE parent(valueId) AS
              (
                  SELECT
                      @valueId
@@ -1242,15 +1242,15 @@ BEGIN
                  SELECT
                      children.valueId
                  FROM
-                     cte
+                     parent
                  JOIN
                      Value AS
                           children
                  WHERE
                      children.parentValueId =
-                        cte.valueId
+                        parent.valueId
                )
-               SELECT * FROM cte
+               SELECT * FROM parent
    )
    AND      Value.valueId != @valueId;
   
@@ -1260,7 +1260,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `deleteStaging` */;
+/*!50003 DROP PROCEDURE IF EXISTS `deleteLockedValues` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -1270,18 +1270,18 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `deleteStaging`(
+CREATE DEFINER=`brett`@`%` PROCEDURE `deleteLockedValues`(
     lockedValueId BIGINT
 )
 BEGIN
-    SET @lockedValueId = lockedValueId;
+     SET @lockedValueId = lockedValueId;
    
      DELETE
      FROM
          Value
      WHERE
          Value.valueId IN (
-             WITH RECURSIVE cte (valueId) AS
+             WITH RECURSIVE parent (valueId) AS
              (
                  SELECT
                      @lockedValueId
@@ -1289,24 +1289,17 @@ BEGIN
                  SELECT
                      children.valueId
                  FROM
-                     cte
+                     parent
                  JOIN
                      Value AS
                           children
                  WHERE
                      children.parentValueId =
-                        cte.valueId
+                        parent.valueId
                )
-               SELECT * FROM cte
+               SELECT * FROM parent
          );
-        /*
-    DELETE
-    FROM
-        StagingValueParentChild
-    WHERE
-        StagingValueParentChild.
-            parentValueId = @stagingValueId;
- */
+
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1388,6 +1381,7 @@ DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
     ownerId BIGINT,
     lockedValueId  BIGINT,
+    parentValueId BIGINT,
     stagingValueId BIGINT,
     appendToArray BIGINT
 )
@@ -1395,6 +1389,7 @@ BEGIN
 
     SET  @ownerId = ownerId,
               @lockedValueId = lockedValueId,
+              @parentValueId = parentValueId,
               @stagingValueId = stagingValueId,
               @appendToArray = appendToArray,
               @objectIndex = NULL;
@@ -1407,7 +1402,7 @@ BEGIN
         FROM
             Value
         WHERE
-            Value.parentValueId = @pathValueId
+            Value.parentValueId = @parentValueId
         AND
             Value.locked = 0
         FOR UPDATE;
@@ -1667,15 +1662,40 @@ BEGIN
    SET @ownerId = ownerId,
             @parentValueId = parentValueId,
             @objectIndex = objectIndex,
-            @objectKey = objectKey;
+            @objectKey = objectKey,
+            @locked = NULL,
+            @valueId = NULL;
             
     IF @objectKey IS NOT NULL THEN
         SELECT
-            v.valueId,
-            v.type,
-            v.locked,
-            v.objectIndex,
-            v.objectKey
+            v.locked
+        INTO
+            @locked
+        FROM
+            Value AS v
+        WHERE 
+            v.ownerId = @ownerId
+        AND
+        (
+            (
+               @parentValueId IS NULL
+               AND
+               v.parentValueId IS NULL
+            )
+           OR
+               v.parentValueId = 
+               @parentValueId
+        )
+       AND
+           v.objectKey = @objectKey
+       AND
+           v.locked = 1;
+       
+
+       SELECT
+            v.valueId
+        INTO
+            @valueId
         FROM
             Value AS v
         WHERE
@@ -1698,11 +1718,33 @@ BEGIN
        FOR UPDATE;
    ELSE
         SELECT
-            v.valueId,
-            v.type,
-            v.locked,
-            v.objectIndex,
-            v.objectKey
+            v.locked
+        INTO
+            @locked
+        FROM
+            Value AS v
+        WHERE 
+            v.ownerId = @ownerId
+        AND
+        (
+            (
+               @parentValueId IS NULL
+               AND
+               v.parentValueId IS NULL
+            )
+           OR
+               v.parentValueId = 
+               @parentValueId
+       )
+       AND
+              v.objectIndex = @objectIndex
+       AND
+              v.locked = 1;
+
+       SELECT
+            v.valueId
+        INTO
+            @valueId
         FROM
             Value AS v
         WHERE
@@ -1725,7 +1767,30 @@ BEGIN
        FOR UPDATE;
    END IF;
    
-   
+   SELECT
+            v.type,
+            v.objectIndex,
+            v.objectKey
+   INTO
+           @type,
+           @objectIndex,
+           @objectKey
+   FROM
+           Value AS v
+   WHERE
+           v.valueId = @valueId;
+           
+   IF @locked IS NULL THEN
+           SET @locked = 0;
+   END IF;
+       
+   SELECT
+            @valueId AS valueId,
+            @type AS type,
+            @locked as locked,
+            @objectIndex AS objectIndex,
+            @objectKey AS objectKey;
+            
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1782,6 +1847,7 @@ BEGIN
                           OR
                          Value.lowerObjectKey =
                            @lowerObjectKey)
+  AND            Value.locked = 0
    -- THIS SECURITY CHECK WILL COME LATER
    AND           @ownerId = @userId;
    
@@ -2660,13 +2726,13 @@ BEGIN
              @boolValue = boolValue;
           
 
+   CALL deleteChildValues(@valueId);
+   
    UPDATE Value
    SET
            ownerId = @ownerId,
            locked = @locked,
            type = @type,
-           lowerObjectKey =
-               LOWER(@objectKey),
            isNull = @isNull,
            stringValue = @stringValue,
            numericValue = @numericValue,
@@ -2768,4 +2834,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-19 20:30:42
+-- Dump completed on 2025-08-21 13:52:15

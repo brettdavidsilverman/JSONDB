@@ -13,7 +13,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     public $credentials = null;
     
     protected $stack;
-    protected $objectKey;
+    
     protected $connection;
     
     protected $stream;
@@ -22,7 +22,9 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $lockedValueId;
     protected $lock = true;
     protected $appendToArray;
-
+    protected $objectKey;
+    protected $objectIndex;
+    
     protected $startTime = null;
     protected $nextTime = null;
     
@@ -65,7 +67,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
            $this->getTotalValueCount($stream);
 
         if ($this->cancelled()) {
-            $this->cancelDocument();
+            throw new CancelException($this);
         }
         
     }
@@ -183,8 +185,9 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
         set_time_limit(30);
         
-        array_pop($this->stack);
-
+        $top = array_pop($this->stack);
+        $parentValueId = $top["parentValueId"];
+    
         if ($this->totalValueCount > 1) {
             $this->writeToJob(
                 "/label",
@@ -194,18 +197,20 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             $this->connection->begin_transaction();
 
             $statement = $this->connection->prepare(
-                "CALL endDocument(?, ?, ?, ?);"
+                "CALL endDocument(?, ?, ?, ?, ?);"
             );
 
             $statement->bind_param(
-                'iiii',
+                'iiiii',
                 $this->credentials["userId"],
                 $this->lockedValueId,
+                $parentValueId,
                 $this->stagingValueId,
                 $this->appendToArray
             );
 
 $msg = "lockedValueId: " . $this->lockedValueId . ", " .
+       "parentValueId: " . $parentValueId . ", " .
        "stagingValueId: " . $this->stagingValueId ;
 
 // throw new Exception("here: " . $msg);
@@ -227,16 +232,19 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
   
         $this->connection->commit();
 
-        if ($this->totalValueCount > 1) {
+        if ($this->totalValueCount > 1 &&
+            !is_null($this->jobPath)) {
             $jobStatus =
                 $this->readFromJob(
                     ""
                 );
         
-            if (!is_null($jobStatus)) {
-               $jobStatus = array_merge(
-                   $jobStatus,
-                   [
+            if (is_null($jobStatus))
+               $jobStatus = [];
+               
+            $jobStatus = array_merge(
+                $jobStatus,
+                [
                     "label" => "Success",
                     "path" => $this->path,
                     "newPath" => $this->newPath,
@@ -244,58 +252,64 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
                     "timeTaken" => 
                        (time() - $this->startTime),
                     "done" => true
-                   ]
-                );
+                ]
+            );
                 
-                unset($jobStatus["progress"]);
-                unset($jobStatus["cancel"]);
+            unset($jobStatus["progress"]);
+            unset($jobStatus["cancel"]);
             
-                $this->writeToJob(
-                    "",
-                   $jobStatus
-                );
-            }
+            $this->writeToJob(
+                "",
+                $jobStatus
+            );
+            
             
         }
    
 
     }
 
-    protected function cancelDocument()
+    public function cancelDocument()
     {
+    /*
         $this->writeToJob(
             "/label",
             "Cancelling"
         );
-
-
-        $this->connection->begin_transaction();
+        */
         
-        $statement = $this->connection->prepare(
-            "CALL deleteStaging(?);"
-        );
+        if (!is_null($this->lockedValueId)) {
+            $this->connection->begin_transaction();
+        
+            $statement = $this->connection->prepare(
+                "CALL deleteLockedValues(?);"
+            );
 
-        $statement->bind_param(
-            'i',
-            $this->lockedValueId
-        );
+            $statement->bind_param(
+                'i',
+                $this->lockedValueId
+            );
 
-        $statement->execute();
+            $statement->execute();
+        
+            $statement->close();
     
-        $statement->close();
-    
-        $this->connection->commit();
-
+            $this->connection->commit();
+        }
+        /*
         $jobStatus =
             $this->readFromJob(
                 ""
             );
-        
+            
+
         if (!is_null($jobStatus)) {
         
             unset($jobStatus["progress"]);
             unset($jobStatus["cancel"]);
-        
+            
+            $jobStatus["label"] = "Cancelled";
+            
             $this->writeToJob(
                 "",
                 $jobStatus
@@ -303,7 +317,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
             
         }
 
-        throw new CancelException();
+        */
     
     }
 
@@ -315,22 +329,26 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         $this->appendToArray = false;
         $this->newPath = $this->path;
         $this->updateValueId = null;
-    
+        $this->objectIndex = null;
+        
         $parentValueId =
             $this->firstSegment(
-                $connection
+                $connection,
+                $type
             );
 
         $parentValueId =
             $this->middleSegments(
                 $connection,
-                $parentValueId
+                $parentValueId,
+                $type
             );
 
         $parentValueId =
            $this->lastSegment(
                $connection,
-               $parentValueId
+               $parentValueId,
+               $type
            );
 
        // $this->pathValueId = $parentValueId;
@@ -338,7 +356,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         $this->stack = [
             [
                 "parentValueId" => $parentValueId,
-                "objectIndex" => null
+                "objectIndex" => $this->objectIndex
             ]
         ];
         
@@ -349,7 +367,8 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
     }
 
     protected function firstSegment(
-        $connection
+        $connection,
+        & $type
     )
     {
 
@@ -357,8 +376,15 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         $paths = explode('/', $this->path);
 
         $count = count($paths);
+        
+        if ($count <= 1)
+           throw new PathException("Invalid path", $this, 0);
+           
         $segment = $paths[1];
-
+        $nextSegment = null;
+        if ($count > 2)
+            $nextSegment = $paths[2];
+            
         $ownerId = null;
         $userId = 
             $this->credentials["userId"];
@@ -402,13 +428,18 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
             $this->lock =
                ($this->totalValueCount > 1);
 
+            if ($nextSegment === "[]")
+                $type = "array";
+            else
+                $type = "object";
+                
             $valueId =
                 $this->insertValue(
                     $connection,
                     $userId, # $ownerId
                     null, # $parentValueId,
                     $this->lock, //$locked,
-                    "object", # $type
+                    $type, # $type
                     $objectIndex, # & objectIndex
                     null,  # $objectKey,
                     false, # $isNull,
@@ -432,7 +463,8 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
     
     protected function middleSegments(
         $connection,
-        $parentValueId
+        $parentValueId,
+        & $type
     )
     {
         $segment = null;
@@ -443,23 +475,25 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         $valueId = $parentValueId;
 
 
-        for($i = 2; $i < $count - 1; ++$i) {
+        for($i = 2; $i < ($count - 1); ++$i) {
+            
             $segment = urldecode($paths[$i]);
             $nextSegment = urldecode($paths[$i + 1]);
 
             if ($segment === "")
-                throw new PathException("Empty path", $this->path, $i);
+                throw new PathException("Empty path", $this, $i);
 
+            if (is_numeric($nextSegment) ||
+                $nextSegment === "[]")
+            {
+                $type = "array";
+            }
+            else
+                $type = "object";
+                    
+                    
             if ($segment === "[]") {
                 $this->newPath = null;
-                $type = null;
-                if (is_numeric($nextSegment) ||
-                    $paths[$nextSegment] === "[]")
-                {
-                    $type = "array";
-                }
-                else
-                    $type = "object";
 
                 $valueId =
                     $this->insertValue(
@@ -482,7 +516,8 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
                     $this->getOrInsertValue(
                         $connection,
                         $parentValueId,
-                        $i
+                        $i,
+                        $type
                     );
             }
 
@@ -496,7 +531,8 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
 
     protected function lastSegment(
         $connection,
-        $parentValueId
+        $parentValueId,
+        $preceedingType
     )
     {
         $userId = $this->credentials["userId"];
@@ -506,10 +542,13 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
 
         if ($count <= 2)
             return $parentValueId;
-
-        $valueId = $parentValueId;
-
+            
         $segment = urldecode($paths[$count - 1]);
+        
+        if ($segment === "")
+            throw new PathException("Empty path", $this, $i);
+                
+                
         $objectKey = null;
         $objectIndex = null;
   
@@ -522,9 +561,10 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         {
             $this->newPath = null;
             $this->appendToArray = true;
+            $objectKey = null;
         }
         else {
-            /*
+            // Get the object key
             $valueId =
                 $this->getValueId(
                     $connection,
@@ -534,33 +574,44 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
                     $type,
                     $locked
                 );
-
-            if ($locked)
-                throw new LockedException("Path locked", $this->path, $count - 1);
-
-
-            if ($this->totalValueCount === 1)
-            {
-                $this->updateValueId =
-                    $valueId;
+                
+            if ($locked) {
+                throw new LockedException("Path locked", $this, $count - 1);
             }
-            */
-        }
-       
-        if (is_null($valueId))
-            $valueId = $parentValueId;
 
+            if (!is_null($valueId)) {
+
+                // If only one value,
+                // update
+                if ($this->totalValueCount === 1)
+                {
+                    $this->updateValueId =
+                        $valueId;
+                }
+                
+                if (!is_numeric($segment) &&
+                     $preceedingType != "object")
+                {
+                    throw new PathException("Expecting object", $this, $count - 1);
+                }
+                
+            }
+            
+        }
+    
 
         $this->objectKey = $objectKey;
-
-        return $valueId;
+        $this->objectIndex = $objectIndex;
+        
+        return $parentValueId;
 
     }
 
     protected function getOrInsertValue(
         $connection,
         $parentValueId,
-        $i
+        $i,
+        & $type
     )
     {
         $paths = explode("/", $this->path);
@@ -595,7 +646,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         );
 
         if ($locked)
-            throw new LockedException("Path locked", $this->path, $i);
+            throw new LockedException("Path locked", $this, $i);
 
         if (is_null($valueId) &&
             is_numeric($segment))
@@ -609,21 +660,28 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
             {
                 if ($type != "array" &&
                     $type != "object")
-                    throw new PathException("Expected array or object type", $this->path, $i);
+                    throw new PathException("Expected array or object type", $this, $i);
             }
             else if ($nextSegment === "[]")  {
                 if ($type != "array")
-                    throw new PathException("Expecting array", $this->path, $i);
+                    throw new PathException("Expecting array", $this, $i);
             }
             else {
                 if ($type != "object")
-                    throw new PathException("Expected object type", $this->path, $i);
+                    throw new PathException("Expected object type", $this, $i);
             }
         }
 
         if (is_null($valueId) && !$last)
         {
-            $type = "object";
+            if (is_numeric($nextSegment) ||
+                $nextSegment === "[]")
+            {
+                $type = "array";
+            }
+            else
+                $type = "object";
+   
             $objectIndex = null;
             $valueId =
                 $this->insertValue(
@@ -736,7 +794,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
             set_time_limit(30);
 
             if ($this->cancelled()) {
-                $this->cancelDocument();
+                throw new CancelException($this);
             }
 
             $progress = (

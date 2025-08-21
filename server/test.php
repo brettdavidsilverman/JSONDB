@@ -8,6 +8,16 @@
     setCredentialsCookie($credentials);
     header("Content-Type: application/json");
     
+    $path = "/my/1";
+    $paths = explode("/", $path);
+    $path = $paths[2];
+    $path = _urldecode($path);
+    $type = gettype($path);
+    
+    echo encodeString($type);
+    
+    exit();
+    
     $result = writeToDatabase(
         $credentials,
         "/my",

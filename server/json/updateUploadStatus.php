@@ -36,7 +36,7 @@ foreach($_SESSION as $key => $value) {
             $upload["cancel_upload"]
                 = true;
                 
-            $jobStatus["label"] = "Cancelled";
+            $jobStatus["label"] = "Cancelling";
             $jobStatus["jobPath"] = $jobPath;
             unset($jobStatus["progress"]);
             
@@ -47,8 +47,7 @@ foreach($_SESSION as $key => $value) {
             );
             
         }
-        
-        if ( !is_null($jobStatus) ) {
+        else if ( !is_null($jobStatus) ) {
            
 
             $progress =
@@ -89,7 +88,8 @@ try {
 
     $connection->close();
 }
-catch(Exception $ex) {
+catch(PathException $ex) {
+    //var_dump($ex);
     echo "undefined";
 }
 

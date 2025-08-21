@@ -10,17 +10,19 @@ class PathException extends Exception
     public $errorIndex;
 
     public function __construct($message, $listenerOrPath, $errorIndex) {
-        
+        $path = null;
         if (is_string($listenerOrPath))
-            $this->path = $listenerOrPath;
+            $path = $listenerOrPath;
         else
-            $this->path = $listenerOrPath->path;
+            $path = $listenerOrPath->path;
+            
+        $this->path = encodeSlashes($path);
         
         $this->errorIndex = $errorIndex;
 
-        $paths = explode("/", $this->path);
+        $paths = explode("/", $path);
         $paths[$errorIndex] = 
-            "{" . $paths[$errorIndex] . "}";
+            "{" . urldecode($paths[$errorIndex]) . "}";
 
         $this->errorPath =
             implode("/", $paths);
@@ -320,6 +322,16 @@ function handlePost()
             "path" => $ex->path,
             "jobPath" => $jobPath
         ];
+        
+         $error = [
+            "label" => $ex->getMessage(),
+            "path" => $path,
+            "jobPath" => $jobPath,
+            "timeTaken" =>  (time() - $startTime),
+            "file" => $ex->getFile(),
+            "line" => $ex->getLine(),
+            "trace" => $ex->getTrace()
+        ];
     }
     catch (CancelException $ex) {
         $error = [
@@ -475,10 +487,10 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
         if ($path === "")
             continue;
             
-        $path = urldecode($path);
+        $path = _urldecode($path);
         
-        if (is_numeric($path)) {
-            $pathIndex = (int)($path);
+        if (is_int($path)) {
+            $pathIndex = $path;
             $pathKey = null;
         }
         else {

@@ -8,13 +8,16 @@
     setCredentialsCookie($credentials);
     header("Content-Type: application/json");
     
-    $path = "/my/1";
+    $path = decodeSlashes("/my/%252F");
+    
     $paths = explode("/", $path);
     $path = $paths[2];
     $path = _urldecode($path);
-    $type = gettype($path);
     
-    echo encodeString($type);
+   // $path = _urldecode($path);
+    //$type = gettype($path);
+    
+    echo ($path);
     
     exit();
     

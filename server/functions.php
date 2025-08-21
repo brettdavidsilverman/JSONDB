@@ -96,19 +96,6 @@ function startSession() {
 
 }
 
-function _urldecode($path) {
-    $path = urldecode($path);
-    
-    if (str_starts_with($path, "\"") &&
-        str_ends_with($path, "\""))
-    {
-        return substr($path, 1, -2);
-    }
-    else if (is_numeric($path))
-       return (int)$path;
-    else
-       return $path;
-}
 
 function encodeQueryString ($data) {
    $req = "";
@@ -223,6 +210,45 @@ function decodeSlashes($path) {
    
 }
 
+function encodeSlashes($path) {
+   // Apache doesnt allow encoded
+   // slashes {/}
+   // So we double encode them
+   // from {%2F} to {%252F}
+   // on the client.
+   // Here we encode the slashes to
+   // double encoded {%252F} to match
+   // the client
+   
+   // upper case
+   $path = str_replace(
+       "%2F", "%252F", $path
+   );
+   
+   // lower case
+   $path = str_replace(
+       "%2f", "%252f", $path
+   );
+   
+   return $path;
+   
+}
+
+function _urldecode($path) {
+    //$path = urldecode($path);
+    //$path = decodeSlashes($path);
+    $path = rawurldecode($path);
+    if (str_starts_with($path, "\"") &&
+        str_ends_with($path, "\""))
+    {
+        return substr($path, 1, -1);
+    }
+    else if (is_numeric($path))
+       return (int)$path;
+    else
+       return $path;
+}
+
 function getPath() {
     
     
@@ -234,15 +260,12 @@ function getPath() {
    
    $path = decodeSlashes($path);
 
-   // $path = urldecode($path);
+   //$path = rawurldecode($path);
    
-   /*
-   if (substr($path, 0, 1) === "/")
-      $path = substr($path, 1);
-*/
-
-   if (substr($path, - 1) === "/")
-      $path = substr($path, 0, - 1);
+   // remove trailing slash
+   if (str_ends_with($path, "/")) {
+      $path = substr($path, 0, -1);
+   }
 
    return $path;
 }
@@ -288,152 +311,6 @@ function getHeader($name) {
    
 }
 
-function getSessionStatus($credentials)
-{
 
-   if (is_null($credentials) ||
-       is_null($credentials["sessionKey"]))
-   {
-      return null;
-   }
-   
-   $connection = getConnection();
-   
-   $statement = $connection->prepare(
-     'CALL getSessionStatus(?);'
-   );
-   
-   $statement->bind_param(
-      's',
-      $credentials["sessionKey"]
-   );
-   
-   $status = null;
-   
-   $statement->execute();
-
-   $statement->bind_result(
-      $status
-   );
-   
-   
-   if (!$statement->fetch())
-      $status = null;
-      
-   $statement->close();
-   
-   $connection->close();
-  
-   if (is_null($status))
-      return null;
-      
-   return json_decode($status, true);
-}
-
-function setSessionStatus($credentials, $status)
-{
-    
-   if (is_null($credentials) ||
-       is_null($credentials["sessionKey"]))
-   {
-      return false;
-   }
-   
-   $connection = getConnection();
-   
-   $statement = $connection->prepare(
-     'CALL setSessionStatus(?,?);'
-   );
-   
-   $statement->bind_param(
-      'ss',
-      $credentials["sessionKey"],
-      $statusString
-   );
-   
-   $statusString = json_encode($status);
-   
-   $statement->execute();
-
-      
-   $statement->close();
-   
-   $connection->close();
-  
-   return true;
-}
-
-function getCancelLastUpload($credentials)
-{
-
-   if (is_null($credentials) ||
-       is_null($credentials["sessionKey"]))
-   {
-      return null;
-   }
-   
-   $connection = getConnection();
-   
-   $statement = $connection->prepare(
-     'CALL getCancelLastUpload(?);'
-   );
-   
-   $statement->bind_param(
-      's',
-      $credentials["sessionKey"]
-   );
-   
-   $cancelLastUpload = null;
-   
-   $statement->execute();
-
-   $statement->bind_result(
-      $cancelLastUpload
-   );
-   
-   
-   if (!$statement->fetch())
-      $cancelLastUpload = null;
-      
-   $statement->close();
-   
-   $connection->close();
-  
-   if (is_null($cancelLastUpload))
-      return null;
-      
-   return (bool)$cancelLastUpload;
-}
-
-function setCancelLastUpload($credentials, $cancelLastUpload)
-{
-    
-   if (is_null($credentials) ||
-       is_null($credentials["sessionKey"]))
-   {
-      return false;
-   }
-   
-   $connection = getConnection();
-   
-   $statement = $connection->prepare(
-     'CALL setCancelLastUpload(?,?);'
-   );
-   
-   $statement->bind_param(
-      'si',
-      $credentials["sessionKey"],
-      $cancelLastUpload
-   );
-   
-   $statement->execute();
-
-      
-   $statement->close();
-   
-   $connection->close();
-  
-   return true;
-}
 
 ?>

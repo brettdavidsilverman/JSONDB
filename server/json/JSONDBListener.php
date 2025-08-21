@@ -380,10 +380,10 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         if ($count <= 1)
            throw new PathException("Invalid path", $this, 0);
            
-        $segment = $paths[1];
+        $segment = _urldecode($paths[1]);
         $nextSegment = null;
         if ($count > 2)
-            $nextSegment = $paths[2];
+            $nextSegment = _urldecode($paths[2]);
             
         $ownerId = null;
         $userId = 
@@ -395,8 +395,8 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
             if ($segment === 'my') {
                 $ownerId = $userId;
             }
-            else if (is_numeric($segment))
-                $ownerId = (int)($segment);
+            else if (is_int($segment))
+                $ownerId = $segment;
         }
         else
             $ownerId = $userId;
@@ -477,13 +477,13 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
 
         for($i = 2; $i < ($count - 1); ++$i) {
             
-            $segment = urldecode($paths[$i]);
-            $nextSegment = urldecode($paths[$i + 1]);
+            $segment = _urldecode($paths[$i]);
+            $nextSegment = _urldecode($paths[$i + 1]);
 
             if ($segment === "")
                 throw new PathException("Empty path", $this, $i);
 
-            if (is_numeric($nextSegment) ||
+            if (is_int($nextSegment) ||
                 $nextSegment === "[]")
             {
                 $type = "array";
@@ -543,17 +543,16 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         if ($count <= 2)
             return $parentValueId;
             
-        $segment = urldecode($paths[$count - 1]);
+        $segment = _urldecode($paths[$count - 1]);
         
         if ($segment === "")
-            throw new PathException("Empty path", $this, $i);
-                
+            throw new PathException("Empty path", $this, $count - 1);
                 
         $objectKey = null;
         $objectIndex = null;
   
-        if (is_numeric($segment))
-            $objectIndex = (int)$segment;
+        if (is_int($segment))
+            $objectIndex = $segment;
         else
             $objectKey = $segment;
 
@@ -589,7 +588,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
                         $valueId;
                 }
                 
-                if (!is_numeric($segment) &&
+                if (!is_int($segment) &&
                      $preceedingType != "object")
                 {
                     throw new PathException("Expecting object", $this, $count - 1);
@@ -618,10 +617,10 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         $count = count($paths);
         $last = ($i === ($count - 1));
         
-        $segment = urldecode($paths[$i]);
+        $segment = _urldecode($paths[$i]);
         $nextSegment = null;
         if (!$last)
-            $nextSegment = urldecode($paths[$i + 1]);
+            $nextSegment = _urldecode($paths[$i + 1]);
 
         $ownerId = $this->credentials["userId"];
 
@@ -629,8 +628,8 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
         $objectKey = null;
    
 
-        if (is_numeric($segment)) {
-            $objectIndex = (int)$segment;
+        if (is_int($segment)) {
+            $objectIndex = $segment;
         }
         else {
             $objectKey = $segment;
@@ -649,14 +648,14 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
             throw new LockedException("Path locked", $this, $i);
 
         if (is_null($valueId) &&
-            is_numeric($segment))
+            is_int($segment))
         {
-            $objectIndex = (int)$segment;
+            $objectIndex = $segment;
         }
 
         if (!is_null($valueId) && !$last)
         {
-            if (is_numeric($nextSegment))
+            if (is_int($nextSegment))
             {
                 if ($type != "array" &&
                     $type != "object")
@@ -674,7 +673,7 @@ $msg = "lockedValueId: " . $this->lockedValueId . ", " .
 
         if (is_null($valueId) && !$last)
         {
-            if (is_numeric($nextSegment) ||
+            if (is_int($nextSegment) ||
                 $nextSegment === "[]")
             {
                 $type = "array";

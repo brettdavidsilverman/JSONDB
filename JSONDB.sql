@@ -84,7 +84,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=731 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=764 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -93,7 +93,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (730,'b86ebb4c26b09ce8c0f5211186e095f7',118,'2025-08-21 12:39:06','49.183.112.147','2025-08-21 13:50:59');
+INSERT INTO `Session` VALUES (763,'af95d380dce5a33db3a54810f4cd75de',118,'2025-09-05 16:23:21','49.183.79.164','2025-09-05 19:11:18');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -112,7 +112,7 @@ CREATE TABLE `SessionStatus` (
   PRIMARY KEY (`sessionStatusId`),
   UNIQUE KEY `UI_SessionStatus_sessionId` (`sessionId`) USING BTREE,
   CONSTRAINT `FK_SessionStatus_sessionId` FOREIGN KEY (`sessionId`) REFERENCES `Session` (`sessionId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9546 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9548 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -121,7 +121,6 @@ CREATE TABLE `SessionStatus` (
 
 LOCK TABLES `SessionStatus` WRITE;
 /*!40000 ALTER TABLE `SessionStatus` DISABLE KEYS */;
-INSERT INTO `SessionStatus` VALUES (9545,730,'{\"label\":\"Logged in\",\"percentage\":0,\"done\":true,\"error\":null}',0);
 /*!40000 ALTER TABLE `SessionStatus` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -232,7 +231,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','29alyvJDJvHiE/w99Ov/Afr/YJWAHkhBUrDAUZYQ4LDxNMCUoAKrnlrBm++vzrKsWJvla/tuXjHC7VDg3cdo2g==',NULL,NULL,1);
+INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','85dxVQmasblY6wqZ/zPbxiWCA3M5KE4c22LhcP/sapuPm/HZU4XQVKTnA1SkbgfD55qkvmDHEooey8A0+CTA2g==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -264,8 +263,9 @@ CREATE TABLE `Value` (
   KEY `I_Value_lowerObjectKey_numericValue` (`lowerObjectKey`(20),`numericValue`) USING BTREE,
   KEY `I_Value_lowerObjectKey_stringValue` (`lowerObjectKey`(20),`stringValue`(20)) USING BTREE,
   KEY `I_Value_parentValueId_lowerObjectKey` (`parentValueId`,`lowerObjectKey`(100)) USING BTREE,
-  CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7494646 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
+  CONSTRAINT `FK_Value_parentValueId` FOREIGN KEY (`parentValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=10342062 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -274,7 +274,7 @@ CREATE TABLE `Value` (
 
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (7494637,NULL,118,0,'object',0,NULL,NULL,NULL,NULL,NULL,0),(7494638,7494637,118,0,'array',0,'boo','boo',NULL,NULL,NULL,0),(7494639,7494638,118,0,'object',0,NULL,NULL,NULL,NULL,NULL,0),(7494640,7494639,118,0,'object',0,'boo2','boo2',NULL,NULL,NULL,0),(7494641,7494640,118,0,'array',0,'boo','boo',NULL,NULL,NULL,0),(7494642,7494641,118,0,'object',0,NULL,NULL,NULL,NULL,NULL,0),(7494643,7494642,118,0,'string',0,'boo2','boo2',NULL,'hi',NULL,0),(7494644,7494637,118,0,'string',1,'one','one',NULL,'Hello world',NULL,0),(7494645,7494637,118,0,'string',2,'two','two',NULL,'💕',NULL,0);
+INSERT INTO `Value` VALUES (10342059,NULL,118,0,'object',1,NULL,NULL,NULL,NULL,NULL,0),(10342060,10342059,118,0,'array',1,'jobs','jobs',NULL,NULL,NULL,0),(10342061,10342059,118,0,'array',2,'data','data',NULL,NULL,NULL,0);
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1230,10 +1230,16 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `deleteChildValues`(
 BEGIN
 
    SET @valueId = valueId;
+   /*
+   set @msg = CAST(@valueId AS CHAR);
    
+   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @msg;
+   */
    DELETE
    FROM      Value
-   WHERE   Value.valueId IN (
+   WHERE   Value.parentValueId = @valueId;
+   
+   /* IN (
              WITH RECURSIVE parent(valueId) AS
              (
                  SELECT
@@ -1253,7 +1259,7 @@ BEGIN
                SELECT * FROM parent
    )
    AND      Value.valueId != @valueId;
-  
+  */
   END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1280,25 +1286,7 @@ BEGIN
      FROM
          Value
      WHERE
-         Value.valueId IN (
-             WITH RECURSIVE parent (valueId) AS
-             (
-                 SELECT
-                     @lockedValueId
-                 UNION
-                 SELECT
-                     children.valueId
-                 FROM
-                     parent
-                 JOIN
-                     Value AS
-                          children
-                 WHERE
-                     children.parentValueId =
-                        parent.valueId
-               )
-               SELECT * FROM parent
-         );
+         Value.valueId = @lockedValueId;
 
 END ;;
 DELIMITER ;
@@ -1380,35 +1368,47 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
     ownerId BIGINT,
+    replaceValueId BIGINT,
     lockedValueId  BIGINT,
     parentValueId BIGINT,
     stagingValueId BIGINT,
     appendToArray BIGINT
 )
 BEGIN
-
+ 
     SET  @ownerId = ownerId,
+              @replaceValueId = replaceValueId,
               @lockedValueId = lockedValueId,
               @parentValueId = parentValueId,
               @stagingValueId = stagingValueId,
               @appendToArray = appendToArray,
               @objectIndex = NULL;
-   
-   IF (@appendToArray = 1) THEN
+              
+   IF (@appendToArray = 0) THEN
+       DELETE
+       FROM      Value
+       WHERE   Value.valueId = @replaceValueId;
+
+  END IF;
+    
+  IF (@appendToArray = 1) THEN
         SELECT
-            MAX(Value.objectIndex) + 1
+            COUNT(Value.objectIndex) + 1
         INTO
             @objectIndex
         FROM
             Value
         WHERE
-            Value.parentValueId = @parentValueId
+            Value.ownerId = @ownerId
+        AND
+            Value.parentValueId =
+                @parentValueId
         AND
             Value.locked = 0
         FOR UPDATE;
         
         IF (@objectIndex IS NULL) THEN
-            SET @objectIndex = 0;
+            SET @objectIndex = 1;
         END IF;
         
         UPDATE
@@ -1417,77 +1417,17 @@ BEGIN
             Value.objectIndex = @objectIndex
         WHERE
             Value.valueId = @stagingValueId;
+            
    END IF;
    
-   IF (@appendToArray = 0) THEN
-       DELETE
-       FROM      Value
-       WHERE   Value.valueId IN (
-             WITH RECURSIVE parentChild
-              (valueId) AS
-             (
-                 SELECT
-                     parent.valueId
-                 FROM
-                     Value AS parent,
-                     Value AS locked
-                 WHERE
-                     locked.valueId = @lockedValueId
-                 AND
-                     parent.ownerId = @ownerId
-                 AND (
-                         (
-                             parent.parentValueId =
-                             locked.parentValueId
-                         )
-                         OR
-                         (
-                             parent.parentValueId IS NULL
-                             AND
-                             locked.parentValueId IS NULL
-                         )
-                 )
-                 AND
-                     parent.objectIndex =
-                         locked.objectIndex
-                 AND (
-                     (
-                         parent.objectKey = 
-                         locked.objectKey
-                     )
-                     OR
-                     (
-                         parent.objectKey IS NULL
-                         AND
-                         locked.objectKey IS NULL
-                     )
-                 )
-                 AND
-                     parent.locked = 0
-                 UNION
-                 SELECT
-                     children.valueId
-                 FROM
-                     parentChild
-                 JOIN
-                     Value AS children
-                 WHERE
-                     children.ownerId = @ownerId
-                 AND
-                     children.parentValueId =
-                            parentChild.valueId
-           )
-           SELECT * FROM parentChild
-       );
-
-  END IF;
-    
+   
     UPDATE
         Value
     SET
         Value.locked = 0
     WHERE
         Value.valueId = @lockedValueId;
+        
  
 END ;;
 DELIMITER ;
@@ -1714,8 +1654,7 @@ BEGIN
        AND
            v.objectKey = @objectKey
        AND
-           v.locked = 0
-       FOR UPDATE;
+           v.locked = 0;
    ELSE
         SELECT
             v.locked
@@ -1763,8 +1702,7 @@ BEGIN
        AND
               v.objectIndex = @objectIndex
        AND
-              v.locked = 0
-       FOR UPDATE;
+              v.locked = 0;
    END IF;
    
    SELECT
@@ -1778,7 +1716,8 @@ BEGIN
    FROM
            Value AS v
    WHERE
-           v.valueId = @valueId;
+           v.valueId = @valueId
+    FOR UPDATE;
            
    IF @locked IS NULL THEN
            SET @locked = 0;
@@ -1868,20 +1807,25 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesById`(
+   ownerId BIGINT,
    valueId BIGINT
 )
 BEGIN
-   SET @valueId = valueId;
+   SET @ownerId = ownerId,
+            @valueId = valueId;
             
    SELECT         Value.*,
                             (
                                   SELECT COUNT(*)
                                   FROM    Value
                                   WHERE  
-                                        Value.locked = 0
-                                  AND
-                                        Value.parentValueId = 
+                                       Value.ownerId = 
+                                       @ownerId
+                                 AND
+                                       Value.parentValueId = 
                                         @valueId
+                                  AND
+                                        Value.locked = 0
                             ) as childCount
    FROM            Value
    WHERE         Value.valueId = 
@@ -1904,25 +1848,32 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesByParentId`(
+   ownerId BIGINT,
    parentValueId BIGINT
 )
 BEGIN
-   SET @parentValueId = parentValueId;
+   SET @parentValueId = parentValueId,
+            @ownerId = ownerId;
    
    SELECT         Value.*,
                             (
                                SELECT      COUNT(*)
                                FROM         Value AS Child
                                WHERE      
+                                       Child.ownerId = 
+                                       @ownerId
+                               AND
                                         Child.parentValueId =
                                         Value.valueId
                                AND
                                         Child.locked = 0
                             ) AS childCount
    FROM            Value
-   WHERE         Value.locked = 0
-   AND               Value.parentValueId = 
+   WHERE        Value.ownerId = @ownerId
+   AND
+                            Value.parentValueId = 
                             @parentValueId
+   AND               Value.locked = 0
    ORDER BY   Value.objectIndex;
    
 END ;;
@@ -2118,6 +2069,7 @@ DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
            ownerId BIGINT,
            parentValueId BIGINT,
+           replaceValueId BIGINT,
            locked TINYINT,
            type VARCHAR(10),
            objectIndex BIGINT,
@@ -2128,8 +2080,10 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
            boolValue TINYINT
 )
 BEGIN
+
     SET @ownerId = ownerId,
              @parentValueId =  parentValueId,
+             @replaceValueId = replaceValueId,
              @locked = locked,
              @type = type,
              @objectIndex = objectIndex,
@@ -2139,11 +2093,20 @@ BEGIN
              @numericValue = numericValue,
              @boolValue = boolValue;
     
-    # get the parents child with object key
-    # to get its object index
-    IF @objectIndex IS NULL AND
+    IF @replaceValueId IS NOT NULL AND
+            @locked = 1
+    THEN
+            SELECT
+                Value.objectIndex
+            INTO
+                @objectIndex
+            FROM
+                Value
+            WHERE 
+                Value.valueId = @replaceValueId;
+    ELSEIF @objectIndex IS NULL AND
          @objectKey IS NOT NULL
-   THEN
+    THEN
         SELECT
             Value.objectIndex
         INTO
@@ -2154,44 +2117,33 @@ BEGIN
             Value.parentValueId = @parentValueId
         AND
             Value.objectKey = @objectKey
-        AND (
-            (
-                @locked = 1
-            AND
-                Value.locked = 0
-            )
-            OR
-                @locked = 0
-        )
+        AND
+            Value.locked = 0
         FOR UPDATE;
     END IF;
     
-    IF @objectIndex IS NULL THEN
-        SELECT
-            MAX(Value.objectIndex) + 1
-        INTO
-            @objectIndex
-        FROM
-            Value
-        WHERE 
-            Value.ownerId = @ownerId
-        AND 
-             Value.parentValueId = @parentValueId
-        AND (
-            (
-                @locked = 1
-            AND
-                Value.locked = 0
-            )
-            OR
-                @locked = 0
-        )
-        FOR UPDATE;
+    IF @objectIndex IS NULL
+    THEN
+            SELECT
+                COUNT(Value.objectIndex) + 1
+            INTO
+                @objectIndex
+            FROM
+                Value
+            WHERE 
+                Value.ownerId = @ownerId
+            AND 
+                 Value.parentValueId =
+                 @parentValueId
+            FOR UPDATE;
+        
+
     END IF;
     
     IF @objectIndex IS NULL THEN
-        SET @objectIndex = 0;
+        SET @objectIndex = 1;
     END IF;
+        
     
     INSERT INTO Value(
            ownerId,
@@ -2716,6 +2668,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `updateValue`(
            boolValue TINYINT
 )
 BEGIN
+    #START TRANSACTION;
+    
     SET @valueId = valueId,
              @ownerId = ownerId,
              @locked = locked,
@@ -2746,7 +2700,8 @@ BEGIN
    CALL createWords(@valueId, @objectKey);
    CALL createWords(@valueId, @stringValue);
    */
-
+   # COMMIT;
+    
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2834,4 +2789,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-21 13:52:15
+-- Dump completed on 2025-09-05 19:24:50

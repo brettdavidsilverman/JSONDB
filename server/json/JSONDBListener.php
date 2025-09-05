@@ -204,12 +204,17 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             $this->credentials["userId"];
             
         if ($this->totalValueCount > 1) {
-            /*
+            
             $this->writeToJob(
                 "/label",
                 "Committing"
             );
-*/
+            
+            $this->writeToJob(
+                "/progress",
+                100
+            );
+
             $this->begin_transaction();
 
             $statement = $this->connection->prepare(
@@ -233,10 +238,6 @@ $msg = "ownerId: " . $ownerId . ", " .
        "stagingValueId: " . $this->stagingValueId . ", " .
        "appendToArray: " . ($this->appendToArray ? 1 : 0);
        
- error_log($msg);
-
- // throw new Exception("here: " . $msg);
-
             $statement->execute();
        
             $statement->close();
@@ -295,12 +296,12 @@ $msg = "ownerId: " . $ownerId . ", " .
 
     public function cancelDocument()
     {
-    /*
+    
         $this->writeToJob(
             "/label",
             "Cancelling"
         );
-        */
+        
         
         if (!is_null($this->lockedValueId)) {
             $this->begin_transaction();
@@ -320,7 +321,7 @@ $msg = "ownerId: " . $ownerId . ", " .
     
             $this->commit();
         }
-        /*
+        
         $jobStatus =
             $this->readFromJob(
                 ""
@@ -341,7 +342,6 @@ $msg = "ownerId: " . $ownerId . ", " .
             
         }
 
-        */
     
     }
 

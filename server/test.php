@@ -8,53 +8,28 @@
     setCredentialsCookie($credentials);
     header("Content-Type: application/json");
     
-    $path = decodeSlashes("/my/%252F");
-    
-    $paths = explode("/", $path);
-    $path = $paths[2];
-    $path = _urldecode($path);
-    
-   // $path = _urldecode($path);
-    //$type = gettype($path);
-    
-    echo ($path);
-    
-    exit();
-    
+ 
+    /*
     $result = writeToDatabase(
         $credentials,
-        "/my",
-        null
-    );
-
-    echo encodeString($result);
-/*
-    $listener1 = new JSONDBListener(
-        null, //$connection,
-        $credentials,
-        "/my/one", //$path,
-        "one", //$object,
-        null, //$stream,
-        null, //$jobPath
+        "/my/jobs",
+        json_decode("[]")
     );
     
-    $listener2 = new JSONDBListener(
-        null, //$connection,
+    $jobPath = writeToDatabase(
         $credentials,
-        "/my/two", //$path,
-        "two", //$object,
-        null, //$stream,
-        null, //$jobPath
+        "/my/jobs/[]",
+        json_decode("{}")
     );
-
-    $valueId1 = $listener1->getPathValueId();
-    $valueId2 = $listener2->getPathValueId();
-echo json_encode([$valueId1, $valueId2]);
-*/
-
+    */
 try {
     $connection = getConnection();
-    $connection->begin_transaction();
+    
+    $result = getPathByValueId(
+        $connection,
+        9179513
+    );
+    /*
     $result = writeToDatabaseEx(
         $connection,
         $credentials,
@@ -62,24 +37,23 @@ try {
         "Hello world", //$object
         null, //$stream
         $listener,
-        null, "/my/jobs/[]" //$jobPath
+        $jobPath
     );
 
     writeToDatabase(
         $credentials,
-        "/my/two",
+        "/my/one",
         "💕"
     );
 
-    $connection->commit();
-
+*/
   
     echo encodeString($result);
 
     
 }
 catch (Exception $ex) {
-    $connection->rollback();
+   # $connection->rollback();
     $error = [
         "label" => $ex->getMessage(),
         "file" => $ex->getFile(),

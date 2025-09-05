@@ -169,17 +169,7 @@ function logon($connection, $email, $secret)
          "email" => $email
       );
       
-      $status = [
-         "label" => "Logged in",
-         "percentage" => 0,
-         "done" => true,
-         "error" => null
-      ];
-      
-      setSessionStatus(
-          $credentials,
-          $status);
-      
+
    }
    else
    {

@@ -23,21 +23,26 @@ class PathException extends Exception
         
         $this->errorIndex = $errorIndex;
 
-        $paths = explode("/", $path);
-        $paths[$errorIndex] = 
-            "{" . urldecode($paths[$errorIndex]) . "}";
+        if (!is_null($errorIndex)) {
+            $paths = explode("/", $path);
+            $paths[$errorIndex] = 
+                "{" . urldecode($paths[$errorIndex]) . "}";
 
-        $this->errorPath =
-            implode("/", $paths);
+            $this->errorPath =
+                implode("/", $paths);
 
-        $_message = $message . " " .
-            $this->errorPath;
+            $_message = $message . " " .
+                $this->errorPath;
+        }
+        else
+            $_message = $message;
 
-
-        parent::__construct($_message);
-        
         if (!is_null($listener))
             $listener->cancelDocument();
+            
+        parent::__construct($_message);
+        
+
         
     }
 
@@ -57,7 +62,7 @@ class LockedException extends PathException
 {
     
     public function __construct($message, $listener, $errorIndex) {
-        parent::__construct($message, $listener, $errorIndex);
+        parent::__construct($message, $listener->path, $errorIndex);
     }
     
     
@@ -137,29 +142,20 @@ function writeToDatabase(
     
     $result = null;
     
-    try
-    {
-        $connection = getConnection();
+    $connection = getConnection();
 
-        $result = writeToDatabaseEx(
-            $connection,
-            $credentials,
-            $path,
-            $object,
-            null, //$stream
-            $listener,
-            null //$jobPath
-        );
+    $result = writeToDatabaseEx(
+        $connection,
+        $credentials,
+        $path,
+        $object,
+        null, //$stream
+        $listener,
+        null //$jobPath
+    );
 
      
-    }
-    catch (CancelException $ex) {
-        $result = null;
-    }
-
-    finally {
-        $connection->close();
-    }
+    $connection->close();
 
 
     return $result;
@@ -175,6 +171,7 @@ function writeToDatabaseEx(
     $jobPath = null
 )
 {
+    
     if (is_null($path))
        return null;
     
@@ -188,7 +185,9 @@ function writeToDatabaseEx(
     );
     
     $listener->writeToDatabase();
-          
+    
+    
+    
     return $listener->newPath;
     
 }
@@ -286,17 +285,17 @@ function handlePost()
         
         $connection = getConnection();
         
-        if (array_key_exists("file", $_FILES)) {
+        if (isset($_FILES["uploadFile"])) {
             
-            if ($_FILES["file"]["error"] == 0) {
-                $file = $_FILES["file"]["tmp_name"];
+            if ($_FILES["uploadFile"]["error"] == UPLOAD_ERR_OK) {
+                $file = $_FILES["uploadFile"]["tmp_name"];
             }
             else {
                throw new CancelException();
             }
         }
+
         
-        //throw new CancelException();
         
         $inputStream = fopen($file, 'r');
         
@@ -318,15 +317,9 @@ function handlePost()
         
     
     }
-    catch (PathException $ex) {
+    catch (mysqli_sql_exception $ex) {
+
         $error = [
-            "label" => $ex->getMessage(),
-            "timeTaken" =>  (time() - $startTime),
-            "path" => $ex->path,
-            "jobPath" => $jobPath
-        ];
-        
-         $error = [
             "label" => $ex->getMessage(),
             "path" => $path,
             "jobPath" => $jobPath,
@@ -334,6 +327,14 @@ function handlePost()
             "file" => $ex->getFile(),
             "line" => $ex->getLine(),
             "trace" => $ex->getTrace()
+        ];
+    }
+    catch (PathException $ex) {
+        $error = [
+            "label" => $ex->getMessage(),
+            "timeTaken" =>  (time() - $startTime),
+            "path" => $ex->path,
+            "jobPath" => $jobPath
         ];
     }
     catch (CancelException $ex) {
@@ -355,7 +356,6 @@ function handlePost()
             "line" => $ex->getLine(),
             "trace" => $ex->getTrace()
         ];
-
 
     }
     finally {
@@ -487,9 +487,10 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
         
         $path = $paths[$i];
         
-        if ($path === "")
-            continue;
-            
+        if ($path === "") {
+            throw new PathException("Empty path", implode("/", $paths), $i);
+        }
+        
         $path = _urldecode($path);
         
         if (is_int($path)) {
@@ -695,19 +696,30 @@ function writeValuesToStream(
    
 
     $rootStatement = $connection->prepare(
-        "CALL getValuesById(?);"
+        "CALL getValuesById(?, ?);"
     );
     
-    $values = loadValues($rootStatement, $pathValueId);
+    $ownerId =  $credentials["userId"];
+    
+    $values = loadValues(
+        $rootStatement,
+        $ownerId,
+        $pathValueId
+    );
      
     $rootStatement->close();
     
     $statement = $connection->prepare(
-        "CALL getValuesByParentId(?);"
+        "CALL getValuesByParentId(?, ?);"
     );
     
 
-    printValues($stream, $statement, $values);
+    printValues(
+        $stream,
+        $statement, 
+        $ownerId,
+        $values
+    );
     
 }
 
@@ -849,7 +861,15 @@ END;
    return $sql;
 }
     
-function printValues($stream, $statement, $values, $tabCount = 0, $isFirst = true) {
+function printValues(
+    $stream,
+    $statement, 
+    $ownerId, 
+    $values,
+    $tabCount = 0, 
+    $isFirst = true
+)
+{
      
     $counter = 0;
     $valueCount = count($values);
@@ -895,6 +915,7 @@ function printValues($stream, $statement, $values, $tabCount = 0, $isFirst = tru
                 printChildValues(
                     $stream,
                     $statement,
+                    $ownerId,
                     $valueId,
                     $tabCount,
                     $isFirst
@@ -912,6 +933,7 @@ function printValues($stream, $statement, $values, $tabCount = 0, $isFirst = tru
                 printChildValues(
                     $stream,
                     $statement,
+                    $ownerId,
                     $valueId,
                     $tabCount,
                     $isFirst
@@ -953,6 +975,7 @@ function printValues($stream, $statement, $values, $tabCount = 0, $isFirst = tru
 function printChildValues(
     $stream,
     $statement,
+    $ownerId,
     $valueId,
     $tabCount,
     $isFirst
@@ -962,6 +985,7 @@ function printChildValues(
                 
      $childValues = loadValues(
          $statement,
+         $ownerId,
          $valueId
      );
      
@@ -969,6 +993,7 @@ function printChildValues(
      printValues(
           $stream,
           $statement,
+          $ownerId,
           $childValues,
           $tabCount + 1,
           $isFirst
@@ -978,9 +1003,10 @@ function printChildValues(
                 
 }
   
-function loadValues($statement, $parentValueId) {
+function loadValues($statement, $ownerId, $parentValueId) {
     $statement->bind_param(
-        'i', 
+        'ii', 
+        $ownerId,
         $parentValueId
     );
         

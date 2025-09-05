@@ -23,7 +23,7 @@ RewriteRule ^(client|server|archive)/(.*)$ $1/$2 [END]
 # redirect server to same and exit
 #RewriteRule ^server/(.*)$ server/$1 [END]
 # redirect all root files to same and exit
-RewriteRule ^((.*)\.(php|css|html|js|ico))$ /$1 [END]
+RewriteRule ^((.*)\.(php|css|html|js|ico|jpg))$ /$1 [END]
 
 # Redirect all else to JSON.php
 RewriteRule (.*) server/json/JSON.php [END]

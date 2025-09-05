@@ -1,9 +1,8 @@
 <?php
 
-startSession();
-
 require_once "authentication/functions.php";
 require_once "json/functions.php";
+
 
 function getConfig() {
    static $config = null;
@@ -23,8 +22,6 @@ function getConnection() {
    static $count = 0;
    $count++;
 
-//error_log("HERE " . (string)$count);
-
    $json = getConfig();
  
    $database =     $json["Database"];
@@ -32,6 +29,14 @@ function getConnection() {
    $userName =     $database["username"];
    $password =     $database["password"];
    $databaseName = $database["database"];
+   
+   /* activate reporting */
+   $driver = new mysqli_driver();
+   $driver->report_mode = 
+      // MYSQLI_REPORT_ERROR |
+      // MYSQLI_REPORT_STRICT;
+   
+   MYSQLI_REPORT_ALL;
 
    // Create connection
    $connection = new mysqli($serverName, $userName, $password, $databaseName);
@@ -40,13 +45,13 @@ function getConnection() {
    if ($connection->connect_error) {
      die("Connection failed: " . $connection->connect_error);
    }
-
+/*
    $connection->query(
         "SET " .
         "TRANSACTION ISOLATION LEVEL " .
         "READ COMMITTED"
     );
-
+*/
    return $connection;
 }
 
@@ -235,8 +240,6 @@ function encodeSlashes($path) {
 }
 
 function _urldecode($path) {
-    //$path = urldecode($path);
-    //$path = decodeSlashes($path);
     $path = rawurldecode($path);
     if (str_starts_with($path, "\"") &&
         str_ends_with($path, "\""))

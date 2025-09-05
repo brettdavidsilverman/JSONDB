@@ -207,11 +207,12 @@ function setup3d() {
 function initTextures() {
     if (program.image == undefined) { 
         program.image = new Image();
-        program.image.onload = function() {
-       
-           program.image.loaded = true; setupTextures3d(program.image);
+        program.image.onload = function()
+        {
+           program.image.loaded = true; 
+           setupTextures3d(program.image);
         }
-        program.image.src = "../art-small.jpg";
+        program.image.src = "/art-small.jpg";
      }
      else if (program.image.loaded) {
      setupTextures3d(program.image);

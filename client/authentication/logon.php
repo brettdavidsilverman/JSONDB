@@ -51,7 +51,7 @@
                   <br />
                   <img id="thumbnail" width="100" height="100"></img>
                </label>
-               <input type="file" id="secretFile" onchange="return onSecretFile();" accept="image/*" style="display:none;" ></input>
+               <input type="file" id="secretFile" onchange="return onSecretFile();" accept="image/*"  style="display:none;" ></input>
             </div>
          </div>
          <br />

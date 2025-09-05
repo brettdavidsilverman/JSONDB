@@ -1,8 +1,10 @@
 <?php
+session_start();
 
 require_once "../functions.php";
 
 $credentials = authenticate();
+$enabled = ini_get("session.upload_progress.enabled");
 
 $prefix = ini_get("session.upload_progress.prefix");
 
@@ -12,13 +14,13 @@ setCredentialsCookie($credentials);
 
 header("content-type: application/json");
 
-$uploads = [];
 
 foreach($_SESSION as $key => $value) {
+
     if (str_starts_with($key, $prefix)) {
         $jobPath = substr($key, strlen($prefix));
-        $upload = $_SESSION[$key];
-
+        $jobPath = $jobPath;
+        
         $jobStatus = readFromDatabase(
             $credentials,
             $jobPath
@@ -32,13 +34,18 @@ foreach($_SESSION as $key => $value) {
              $jobStatus["cancel"] === true
            )
         {
-
-            $upload["cancel_upload"]
-                = true;
-                
+            
+            if (!isset(
+                $_SESSION[$key]["cancel_upload"]))
+            {
+                $_SESSION[$key]["cancel_upload"]
+                    = true;
+                session_commit(); 
+            }
+            
             $jobStatus["label"] = "Cancelling";
             $jobStatus["jobPath"] = $jobPath;
-            unset($jobStatus["progress"]);
+            //unset($jobStatus["progress"]);
             
             writeToDatabase(
                 $credentials,
@@ -46,10 +53,13 @@ foreach($_SESSION as $key => $value) {
                 $jobStatus
             );
             
+            
         }
-        else if ( !is_null($jobStatus) ) {
+        
+        if ( !is_null($jobStatus) ) {
            
-
+            $upload = $_SESSION[$key];
+            
             $progress =
                 $upload["bytes_processed"] /
                 $upload["content_length"]  *
@@ -67,12 +77,6 @@ foreach($_SESSION as $key => $value) {
             
     }
 }
-/*
-if (count($uploads) === 0)
-   $uploads = null;
-   
-echo json_encode($uploads);
-*/
 
 try {
     $stream = fopen("php://output", "w");

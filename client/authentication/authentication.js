@@ -66,8 +66,7 @@ class Authentication
                     _this.saveCredentials(response);
                     ok = response.ok;
                     status = response.status;
-                    if (ok)
-                        return response.text();
+                    return response.text();
                     
                 }
             )
@@ -176,7 +175,7 @@ class Authentication
                         values[1];
 
                     jobPath = values[2];
-    
+                    
                     var formData = new FormData();
                     formData.append(
                         uploadProgressName,
@@ -184,13 +183,13 @@ class Authentication
                     );
                     
                     formData.append(
-                        "jobPath",
-                        jobPath
+                        "uploadFile",
+                         file
                     );
                     
                     formData.append(
-                        "file",
-                         file
+                        "jobPath",
+                        jobPath
                     );
                     
                     var promise = _this.fetch(
@@ -235,12 +234,17 @@ class Authentication
         .then(
             (jobPath) => {
 
-                _this.postJSON(
+                var promise = _this.postJSON(
                     jobPath + "/jobPath",
                     jobPath
+                )
+                .then (
+                    () => {
+                        return jobPath;
+                    }
                 );
-
-                return jobPath;
+                
+                return promise;
 
             }
         );

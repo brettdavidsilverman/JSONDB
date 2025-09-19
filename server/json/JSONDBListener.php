@@ -237,7 +237,7 @@ $msg = "ownerId: " . $ownerId . ", " .
        "parentValueId: " . $this->parentValueId . ", " .
        "stagingValueId: " . $this->stagingValueId . ", " .
        "appendToArray: " . ($this->appendToArray ? 1 : 0);
-error_log("here " . $msg);
+
             $statement->execute();
        
             $statement->close();

@@ -1733,7 +1733,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
 )
 BEGIN
 
-    SET @ownerId = ownerId,
+    SET @ownerId = ownerId, 
              @isSingleValue = isSingleValue,
              @parentValueId =  parentValueId,
              @replaceValueId = replaceValueId,
@@ -1829,7 +1829,7 @@ BEGIN
    SET @valueId = LAST_INSERT_ID();
    
    
-   IF (@isSingleValue = 1) THEN
+   IF (@isSingleValue = 1) THEN 
        INSERT
        INTO
            ValueParentChild(
@@ -2623,4 +2623,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-20  5:43:59
+-- Dump completed on 2025-09-20  6:51:04

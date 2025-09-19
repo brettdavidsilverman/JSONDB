@@ -93,7 +93,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (789,'97cfda0ccf64b103b55ccbdd355878da',118,'2025-09-20 02:41:42','49.183.110.2','2025-09-20 04:37:48'),(790,'1cb42ac6eacff3e240fff5d34768e47f',118,'2025-09-20 04:40:30','49.183.110.2','2025-09-20 05:42:05');
+INSERT INTO `Session` VALUES (789,'97cfda0ccf64b103b55ccbdd355878da',118,'2025-09-20 02:41:42','49.183.110.2','2025-09-20 04:37:48'),(790,'1cb42ac6eacff3e240fff5d34768e47f',118,'2025-09-20 04:40:30','49.183.110.2','2025-09-20 06:47:21');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -265,7 +265,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_parentValueId_lowerObjectKey` (`parentValueId`,`lowerObjectKey`(100)) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_parentValueId` FOREIGN KEY (`parentValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=14340423 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14588918 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -321,7 +321,7 @@ CREATE TABLE `ValueWord` (
   KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
   CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=20450536 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=20699190 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -345,7 +345,7 @@ CREATE TABLE `Word` (
   `word` blob NOT NULL,
   PRIMARY KEY (`wordId`),
   UNIQUE KEY `UI_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=615308 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=634667 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2075,7 +2075,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
 )
 BEGIN
 
-    SET @ownerId = ownerId,
+    SET @ownerId = ownerId, 
              @isSingleValue = isSingleValue,
              @parentValueId =  parentValueId,
              @replaceValueId = replaceValueId,
@@ -2171,7 +2171,7 @@ BEGIN
    SET @valueId = LAST_INSERT_ID();
    
    
-   IF (@isSingleValue = 1) THEN
+   IF (@isSingleValue = 1) THEN 
        INSERT
        INTO
            ValueParentChild(
@@ -2965,4 +2965,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-20  5:43:51
+-- Dump completed on 2025-09-20  6:50:59

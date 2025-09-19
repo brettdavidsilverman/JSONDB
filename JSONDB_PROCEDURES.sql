@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.4.4, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.4.6, for Linux (x86_64)
 --
 -- Host: localhost    Database: JSONDB
 -- ------------------------------------------------------
--- Server version	8.4.4
+-- Server version	8.4.6
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -463,6 +463,46 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `createJob` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `createJob`(
+    ownerId BIGINT,
+    path TEXT
+)
+BEGIN
+    SET    @ownerId = ownerId,
+                @path = path;
+                
+    INSERT
+    INTO
+        Job(
+            userId,
+            path
+        )
+    VALUES
+        (
+            @ownerId,
+            @path
+        );
+    
+    SET @jobId = LAST_INSERT_ID();
+    
+    SELECT @jobId as jobId;
+    
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `createNextObjectIndex` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -478,8 +518,9 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createNextObjectIndex`(
     parentValueId BIGINT
 )
 BEGIN
-   SET @parentValueId = parentValueId,
-            @ownerId = ownerId;
+   SET  @ownerId = ownerId,
+             @parentValueId = parentValueId,
+             @valueId = null;
    
    SELECT
        MAX(v.objectIndex) + 1
@@ -491,7 +532,6 @@ BEGIN
            v.parentValueId = @parentValueId
    FOR UPDATE;
    
-   
    IF @objectIndex IS NULL THEN
        SET @objectIndex = 0;
    END IF;
@@ -501,40 +541,23 @@ BEGIN
        Value(
            ownerId,
            parentValueId,
+           locked,
            type,
+           objectKey,
            objectIndex,
            isNull
        )
        VALUES(
            @ownerId,
            @parentValueId,
+           1, #locked
            'null', #type
+           NULL, #objectKey,
            @objectIndex,
            1 # isNull
         );
-        
-   SET @valueId = LAST_INSERT_ID();
-   
-   # Insert this values parents
-   INSERT
-   INTO
-       ValueParentChild
-       (parentValueId, childValueId)
-   SELECT
-       vpc.parentValueId,
-       @valueId
-   FROM
-       ValueParentChild as vpc
-   WHERE
-       vpc.childValueId = @parentValueId;
        
-   # Insert this value
-   INSERT
-   INTO
-       ValueParentChild
-       (parentValueId, childValueId)
-   VALUES
-       (@valueId, @valueId);
+   SET @valueId = LAST_INSERT_ID();
        
    SELECT @valueId AS valueId;
    
@@ -893,16 +916,37 @@ BEGIN
    
    DELETE
    FROM      Value
-   WHERE   Value.valueId IN (
-         SELECT ValueParentChild.childValueId
-         FROM    ValueParentChild
-         WHERE
-              ValueParentChild.parentValueId =
-              @valueId
-   )
-   AND      Value.valueId != @valueId;
-  
-  END ;;
+   WHERE   Value.parentValueId = @valueId;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `deleteLockedValues` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `deleteLockedValues`(
+    lockedValueId BIGINT
+)
+BEGIN
+     SET @lockedValueId = lockedValueId;
+   
+     DELETE
+     FROM
+         Value
+     WHERE
+         Value.valueId = @lockedValueId;
+
+END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -981,184 +1025,93 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
-   jobId BIGINT,
-   existingValueId BIGINT,
-   lastPath TEXT
+    ownerId BIGINT,
+    replaceValueId BIGINT,
+    lockedValueId  BIGINT,
+    parentValueId BIGINT,
+    stagingValueId BIGINT,
+    appendToArray BIGINT
 )
-exit_procedure: BEGIN
-
-   
-   SET @jobId = jobId,
-            @existingValueId = existingValueId,
-            @lastPath = lastPath;
-
-   SELECT    Job.userId
-   INTO         @userId
-   FROM       Job
-   WHERE    Job.jobId =
-                       @jobId;
+BEGIN
  
-   SET     @newValueId = (
-          SELECT            Value.valueId
-          FROM               Value
-          WHERE            Value.parentValueId
-                                       IS NULL
-          AND                   Value.jobId = 
-                                       @jobId
-   );
-          
-  IF @existingValueId IS NOT NULL AND
-       NOT EXISTS (
-              SELECT          Value.valueId
-              FROM             Value
-              WHERE          Value.ownerId = @userId
-              AND                 Value.valueId =
-                                    @existingValueId
-     ) THEN
-          SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '@existingValueId invalid';
-           LEAVE exit_procedure;
-   END IF;
+    SET  @ownerId = ownerId,
+              @replaceValueId = replaceValueId,
+              @lockedValueId = lockedValueId,
+              @parentValueId = parentValueId,
+              @stagingValueId = stagingValueId,
+              @appendToArray = appendToArray,
+              @objectIndex = NULL;
+              
 
-   IF  @userId IS NULL OR
-         @newValueId IS NULL
-   THEN
-       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '@userId or @newValueId  invalid';
-         LEAVE exit_procedure;
-   END IF;
     
-  # START TRANSACTION;
-         
-                             
-  IF @existingValueId IS NOT NULL THEN
-         
-         # Insert new child values into
-         # existing parents
-         INSERT
-         INTO        ValueParentChild(
-                                 parentValueId,
-                                 childValueId
-                             )
-         SELECT   existingParents.parentValueId,
-                            newChildren.childValueId
-         FROM      ValueParentChild as
-                                existingParents,
-                            ValueParentChild as
-                                newChildren
-         WHERE   existingParents.childValueId =
-                                @existingValueId
-                         
-         AND         (
-         
-             @lastPath IS NOT NULL
-             OR
-             existingParents.parentValueId !=
-            @existingValueId)
-         AND         newChildren.parentValueId =
-                                 @newValueId;
-                                 
-         # Save existing value properties
-         SELECT   Value. parentValueId,
-                            Value. objectIndex,
-                            Value.objectKey
-         INTO        @newParentValueId,
-                            @newObjectIndex,
-                            @newObjectKey
-         FROM      Value
-         WHERE   Value.valueId =
-                             @existingValueId;
-         
-          IF @lastPath IS NOT NULL THEN
-                 SELECT
-                     MAX(v.objectIndex) + 1
-                 INTO
-                     @newObjectIndex
-                 FROM
-                     Value as v
-                 WHERE
-                     (@existingValueId IS NULL AND
-                       v.parentValueId IS NULL
-                      )
-                      OR
-                      (@existingValueId = 
-                      v.parentValueId)
-                 FOR UPDATE;
-                 
-                 IF @newObjectIndex IS NULL THEN
-                     SET @newObjectIndex = 0;
-                 END IF;
-                 
-                 IF @lastPath = '[]' THEN
-                      SET @lastPath = NULL,
-                                @newObjectKey = NULL;
-                 ELSE
-                      SET @newObjectKey = @lastPath;
-                                           
-                 END IF;
-                
-                 SET @newParentValueId =
-                              @existingValueId;
-         
-          
-         END IF;
-         
-         # delete existing value
-         CALL deleteValue(@existingValueId);
-         
-         SELECT  Value.stringValue
-         INTO        @newStringValue
-         FROM      Value
-         WHERE   Value.valueId =
-                             @newValueId;
-                             
-         # Update new value with
-         # saved properties
-         UPDATE
-                Value AS new
-         SET
-                  new.parentValueId =
-                         @newParentValueId,
-                  new.objectIndex =
-                          @newObjectIndex,
-                  new.objectKey =
-                          @newObjectKey,
-                   new.lowerObjectKey  =
-                           LOWER(@newObjectKey)
-          WHERE    
-                   new.valueId =
-                           @newValueId;
-                           
-          CALL startWords();
-                      
-          CALL createValueWords(
-                  @newObjectKey
-          );
-                           
-          CALL createValueWords(
-                @newStringValue
-          );
-                           
-          CALL endWords(@newValueId);
-  
-   END IF;
-  
+  IF (@appendToArray = 1) THEN
+        SELECT
+            COUNT(*) + 1
+        INTO
+            @objectIndex
+        FROM
+            Value
+        WHERE
+            Value.ownerId = @ownerId
+        AND
+            Value.parentValueId =
+                @parentValueId
+        AND
+            Value.locked = 0
+        FOR UPDATE;
         
-   # Upgrade new values
-   UPDATE  Value
-   SET     Value.jobId = NULL
-   WHERE   Value.jobId = @jobId;
+        IF (@objectIndex IS NULL) THEN
+            SET @objectIndex = 1;
+        END IF;
+        
+        UPDATE
+            Value
+        SET
+            Value.objectIndex = @objectIndex
+        WHERE
+            Value.valueId = @stagingValueId;
+       
+   END IF;
    
-   # Clear the job
-   DELETE
-   FROM      Job
-   WHERE     Job.jobId = @jobId;
-   
-   SELECT
-       getPathByValue(v.valueId) as path
-   FROM
-       Value as v
-   WHERE
-       v.valueId = @newValueId;
-   
+    IF (@appendToArray = 0) THEN
+    
+        UPDATE
+            Value
+        SET
+            Value.locked = NULL
+        WHERE
+            Value.valueId = @replaceValueId;
+            
+    END IF;
+    
+    UPDATE
+            Value
+    SET
+            Value.locked = 0
+    WHERE
+            Value.valueId = @lockedValueId;
+            
+if @replaceValueId is null then
+    SIGNAL SQLSTATE '45000' SET
+    MESSAGE_TEXT = '@replaceValueId cant be null';
+end if;
+
+if @stagingValueId is null then
+    SIGNAL SQLSTATE '45000' SET
+    MESSAGE_TEXT = '@stagingValueId cant be null';
+end if;
+
+    CALL insertValueParentChild(
+        @replaceValueId,
+        @stagingValueId
+    );
+    
+    DELETE
+    FROM
+        Value
+    WHERE
+        Value.valueId = @replaceValueId;
+    
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1268,12 +1221,12 @@ BEGIN
    SET @userId = userId,
             @ownerId = ownerId;
    
-   SELECT valueId,
-                    type
+   SELECT Value.valueId,
+                    Value.type
    FROM   Value
    WHERE Value.ownerId = @ownerId
-   AND       Value.jobId IS NULL
-   AND       Value.parentValueId IS NULL;
+   AND       Value.parentValueId IS NULL
+   AND       Value.locked = 0;
 
 
 END ;;
@@ -1312,6 +1265,128 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `getValueId` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `getValueId`(
+   ownerId BIGINT,
+   parentValueId BIGINT,
+   objectIndex BIGINT,
+   objectKey TEXT
+)
+BEGIN
+   SET @ownerId = ownerId,
+            @parentValueId = parentValueId,
+            @objectIndex = objectIndex,
+            @objectKey = objectKey,
+            @locked = NULL,
+            @valueId = NULL;
+            
+    IF @objectKey IS NOT NULL THEN
+        SELECT
+            v.locked
+        INTO
+            @locked
+        FROM
+            Value AS v
+        WHERE 
+            v.ownerId = @ownerId
+        AND
+           v.parentValueId = 
+               @parentValueId
+       AND
+           v.objectKey = @objectKey
+       AND
+           v.locked = 1;
+       
+
+       SELECT
+            v.valueId
+        INTO
+            @valueId
+        FROM
+            Value AS v
+        WHERE
+            v.ownerId = @ownerId
+         AND
+             v.parentValueId = 
+               @parentValueId
+       AND
+           v.objectKey = @objectKey
+       AND
+           v.locked = 0;
+   ELSE
+        SELECT
+            v.locked
+        INTO
+            @locked
+        FROM
+            Value AS v
+        WHERE 
+            v.ownerId = @ownerId
+        AND
+           v.parentValueId = 
+               @parentValueId
+       AND
+              v.objectIndex = @objectIndex
+       AND
+              v.locked = 1;
+
+       SELECT
+            v.valueId
+        INTO
+            @valueId
+        FROM
+            Value AS v
+        WHERE
+            v.ownerId = @ownerId
+        AND
+            v.parentValueId = 
+               @parentValueId
+       AND
+              v.objectIndex = @objectIndex
+       AND
+              v.locked = 0;
+   END IF;
+   
+   SELECT
+            v.type,
+            v.objectIndex,
+            v.objectKey
+   INTO
+           @type,
+           @objectIndex,
+           @objectKey
+   FROM
+           Value AS v
+   WHERE
+           v.valueId = @valueId
+    FOR UPDATE;
+           
+   IF @locked IS NULL THEN
+       SET @locked = 0;
+   END IF;
+   
+   SELECT
+            @valueId AS valueId,
+            @type AS type,
+            @locked as locked,
+            @objectIndex AS objectIndex,
+            @objectKey AS objectKey;
+            
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `getValueIdByPath` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1342,7 +1417,10 @@ BEGIN
    SELECT        Value.valueId,
                            Value.type
    FROM           Value
-   WHERE      ( 
+   WHERE
+                     Value.ownerId = @ownerId
+   AND
+                     ( 
                                (
                                   @parentValueId IS NULL
                                   AND
@@ -1359,8 +1437,7 @@ BEGIN
                           OR
                          Value.lowerObjectKey =
                            @lowerObjectKey)
-   AND            Value.jobId IS NULL
-   AND           Value.ownerId = @ownerId
+  AND            Value.locked = 0
    -- THIS SECURITY CHECK WILL COME LATER
    AND           @ownerId = @userId;
    
@@ -1381,25 +1458,29 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesById`(
+   ownerId BIGINT,
    valueId BIGINT
 )
 BEGIN
-   SET @valueId = valueId;
+   SET @ownerId = ownerId,
+            @valueId = valueId;
             
    SELECT         Value.*,
                             (
                                   SELECT COUNT(*)
                                   FROM    Value
                                   WHERE  
-                                        Value.parentValueId = 
+                                       Value.ownerId = 
+                                       @ownerId
+                                 AND
+                                       Value.parentValueId = 
                                         @valueId
                                   AND
-                                      Value.jobId IS NULL
+                                        Value.locked = 0
                             ) as childCount
    FROM            Value
    WHERE         Value.valueId = 
-                            @valueId
-   AND               Value.jobId IS NULL;
+                            @valueId;
    
 END ;;
 DELIMITER ;
@@ -1418,27 +1499,32 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesByParentId`(
+   ownerId BIGINT,
    parentValueId BIGINT
 )
 BEGIN
-   SET @parentValueId = parentValueId;
-            
-    
-
+   SET @parentValueId = parentValueId,
+            @ownerId = ownerId;
+   
    SELECT         Value.*,
                             (
                                SELECT      COUNT(*)
                                FROM         Value AS Child
                                WHERE      
+                                       Child.ownerId = 
+                                       @ownerId
+                               AND
                                         Child.parentValueId =
                                         Value.valueId
-                                AND
-                                        Child.jobId IS NULL
+                               AND
+                                        Child.locked = 0
                             ) AS childCount
    FROM            Value
-   WHERE         Value.parentValueId = 
+   WHERE        Value.ownerId = @ownerId
+   AND
+                            Value.parentValueId = 
                             @parentValueId
-   AND               Value.jobId IS NULL
+   AND               Value.locked = 0
    ORDER BY   Value.objectIndex;
    
 END ;;
@@ -1526,7 +1612,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `insertValue` */;
+/*!50003 DROP PROCEDURE IF EXISTS `insertStagingValue` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -1536,10 +1622,11 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
-           ownerId BIGINT ,
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertStagingValue`(
+           ownerId BIGINT,
            parentValueId BIGINT,
            type VARCHAR(10),
+           objectIndex BIGINT,
            objectKey TEXT,
            isNull TINYINT,
            stringValue TEXT,
@@ -1548,28 +1635,17 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
 )
 BEGIN
     SET @ownerId = ownerId,
-            @parentValueId =  parentValueId,
-            @type = type,
-           @objectKey =  objectKey,
-           @isNull =  isNull,
-           @stringValue = stringValue,
-           @numericValue = numericValue,
-          @boolValue = boolValue;
+             @parentValueId =  parentValueId,
+             @type = type,
+             @objectIndex = objectIndex,
+             @objectKey =  objectKey,
+             @isNull =  isNull,
+             @stringValue = stringValue,
+             @numericValue = numericValue,
+             @boolValue = boolValue;
           
-    SELECT
-        MAX(v.objectIndex) + 1
-    INTO
-         @objectIndex
-    FROM
-        Value AS v
-    WHERE
-        v.parentValueId = @parentValueId;
-        
-    IF @objectIndex IS NULL THEN
-        SET @objectIndex = 0;
-    END IF;
-    
-    INSERT INTO Value(
+
+    INSERT INTO StagingValue(
            ownerId,
            parentValueId,
            type,
@@ -1587,7 +1663,7 @@ BEGIN
            @type,
            @objectIndex,
            @objectKey,
-           LOWER(objectKey),
+           LOWER(@objectKey),
            @isNull,
            @stringValue,
            @numericValue,
@@ -1595,35 +1671,349 @@ BEGIN
    );
    
    SET @valueId = LAST_INSERT_ID();
- 
+/*
    # Insert this values parents
    INSERT
    INTO
-       ValueParentChild
+       StagingValueParentChild
        (parentValueId, childValueId)
    SELECT
-       vpc.parentValueId,
+       svpc.parentValueId,
        @valueId
    FROM
-       ValueParentChild as vpc
+       StagingValueParentChild as svpc
    WHERE
-       vpc.childValueId = @parentValueId;
+       svpc.childValueId = @parentValueId;
        
    # Insert this value
    INSERT
    INTO
-       ValueParentChild
+       StagingValueParentChild
        (parentValueId, childValueId)
    VALUES
        (@valueId, @valueId);
-   
+       */
+   /*
    # Index words
    CALL createWords(@valueId, @objectKey);
    CALL createWords(@valueId, @stringValue);
-   
+   */
    SELECT
        @valueId AS  valueId;
        
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `insertValue` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
+           ownerId BIGINT,
+           isSingleValue TINYINT,
+           parentValueId BIGINT,
+           replaceValueId BIGINT,
+           locked TINYINT,
+           type VARCHAR(10),
+           objectIndex BIGINT,
+           objectKey TEXT,
+           isNull TINYINT,
+           stringValue TEXT,
+           numericValue DOUBLE,
+           boolValue TINYINT
+)
+BEGIN
+
+    SET @ownerId = ownerId,
+             @isSingleValue = isSingleValue,
+             @parentValueId =  parentValueId,
+             @replaceValueId = replaceValueId,
+             @locked = locked,
+             @type = type,
+             @objectIndex = objectIndex,
+             @objectKey =  objectKey,
+             @isNull =  isNull,
+             @stringValue = stringValue,
+             @numericValue = numericValue,
+             @boolValue = boolValue;
+    
+    IF @replaceValueId IS NOT NULL AND
+            @locked = 1
+    THEN
+            SELECT
+                Value.objectIndex
+            INTO
+                @objectIndex
+            FROM
+                Value
+            WHERE 
+                Value.valueId = @replaceValueId
+            FOR UPDATE;
+    ELSEIF @objectIndex IS NULL AND
+         @objectKey IS NOT NULL
+    THEN
+        SELECT
+            Value.objectIndex
+        INTO
+            @objectIndex
+        FROM
+            Value
+        WHERE
+            Value.parentValueId = @parentValueId
+        AND
+            Value.objectKey = @objectKey
+       # AND
+        #    Value.locked = 0
+        FOR UPDATE;
+    END IF;
+    
+    IF @objectIndex IS NULL
+    THEN
+            SELECT
+                COUNT(Value.objectIndex) + 1
+            INTO
+                @objectIndex
+            FROM
+                Value
+            WHERE 
+                 Value.parentValueId =
+                 @parentValueId
+           # AND
+             #    Value.locked = 0
+            FOR UPDATE;
+        
+
+    END IF;
+    
+    IF @objectIndex IS NULL THEN
+        SET @objectIndex = 1;
+    END IF;
+        
+    
+    INSERT INTO Value(
+           ownerId,
+           parentValueId,
+           locked,
+           type,
+           objectIndex,
+           objectKey,
+           lowerObjectKey,
+           isNull,
+           stringValue,
+           numericValue,
+           boolValue
+  )
+  VALUES(
+           @ownerId,
+           @parentValueId,
+           @locked,
+           @type,
+           @objectIndex,
+           @objectKey,
+           LOWER(@objectKey),
+           @isNull,
+           @stringValue,
+           @numericValue,
+           @boolValue
+   );
+  
+   SET @valueId = LAST_INSERT_ID();
+   
+   
+   IF (@isSingleValue = 1) THEN
+       INSERT
+       INTO
+           ValueParentChild(
+               parentValueId,
+               childValueId
+           )
+       SELECT
+           parent.parentValueId,
+           @valueId as childValueId
+       FROM
+           ValueParentChild as parent
+       WHERE
+           parent.childValueId = @parentValueId
+       UNION
+       SELECT
+           @valueId,
+           @valueId;
+           
+   END IF;
+   
+   SELECT
+       @valueId AS  valueId,
+       @objectIndex AS objectIndex;
+       
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `insertValueParentChild` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueParentChild`(
+    replaceValueId BIGINT,
+    stagingValueId BIGINT
+)
+BEGIN
+
+
+set @replaceValueId = replaceValueId,
+        @stagingValueId = stagingValueId;
+        
+insert into
+    ValueParentChild(
+        parentValueId,
+        childValueId
+    )
+    
+with recursive staging (valueId) as
+(
+   select
+       @stagingValueId
+   union
+   select
+       Value.valueId
+   from
+       Value
+   inner join
+       staging
+   on
+       staging.valueId = Value.parentValueId
+),
+parent(
+   parentValueId,
+   childValueId
+) as
+(
+    
+    select
+        vpc.parentValueId,
+        @stagingValueId
+    from
+        ValueParentChild as vpc
+    where
+        vpc.childValueId =
+        @replaceValueId
+        
+    union
+    
+    select
+        staging.valueId,
+        staging.valueId
+    from
+        staging
+ 
+    union
+    
+    select
+        parent.parentValueId,
+        children.valueId as childValueId
+    from
+        parent
+    inner join
+        Value as children
+    on
+        children.parentValueId =
+        parent.childValueId
+)
+
+select
+    parent.parentValueId,
+    parent.childValueId
+from
+    parent;
+    
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `insertValueWord` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWord`(
+    valueId BIGINT,
+    word BLOB
+)
+BEGIN
+
+    SET @valueId = valueId,
+             @word = word,
+             @wordId = NULL;
+             
+    SELECT
+        Word.wordId
+    INTO
+        @wordId
+    FROM
+        Word
+    WHERE
+        Word.word = @word
+    FOR UPDATE;
+     
+    IF @wordId IS NULL THEN
+       INSERT
+       INTO
+           Word(word)
+       VALUES(
+           @word
+        );
+        
+        SET @wordId = LAST_INSERT_ID();
+        
+    END IF;
+    
+    IF NOT EXISTS(
+        SELECT
+            *
+        FROM
+            ValueWord
+        WHERE
+            ValueWord.valueId = @valueId
+        AND
+            ValueWord.wordId = @wordId
+        FOR UPDATE
+    ) THEN
+        INSERT
+        INTO
+            ValueWord(
+                valueId,
+                wordId
+            )
+        VALUES(
+            @valueId,
+            @wordId
+         );
+    END IF;
+    
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2051,47 +2441,9 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `startDocument`(
-   userId BIGINT,
-   path TEXT
 )
-exit_procedure: BEGIN
-/*
-    SET @sessionKey = sessionKey,
-             @path = path;
-             
-    SET @userId = (
-        SELECT
-            Session.userId
-        FROM
-            Session
-        WHERE
-            Session.sessionKey = @sessionKey
-    );
-    
-    IF @userId IS NULL
-    THEN
-        LEAVE exit_procedure;
-    END IF;
-    */
-    
-    SET @userId = userId,
-             @path = path;
-    
-    INSERT
-    INTO
-        Job(
-            userId,
-            jobPath
-        )
-    VALUES
-        (
-            @userId,
-            @path
-        );
-        
-    SELECT
-        LAST_INSERT_ID() AS jobId;
-        
+BEGIN
+
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2138,54 +2490,50 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `updateValue`(
            valueId BIGINT,
-           ownerId BIGINT ,
+           ownerId BIGINT,
+           locked TINYINT,
            type VARCHAR(10),
+           objectKey TEXT,
            isNull TINYINT,
            stringValue TEXT,
            numericValue DOUBLE,
            boolValue TINYINT
 )
 BEGIN
-    SET    @valueId = valueId,
-                @ownerId = ownerId,
-                @type = type,
-                @isNull = isNull,
-                @stringValue = stringValue,
-                @numericValue = numericValue,
-                @boolValue = boolValue;
-                
-    CALL deleteChildValues(@valueId);
-    
-    UPDATE     Value AS v
-    SET               v.ownerId = @ownerId,
-                           v.type = @type,
-                           v.isNull = @isNull,
-                           v.stringValue = @stringValue,
-                           v.numericValue =
-                             @numericValue,
-                           v.boolValue =
-                              @boolValue
-   WHERE      v.valueId = @valueId;
+  
+    SET @valueId = valueId,
+             @ownerId = ownerId,
+             @locked = locked,
+             @type = type,
+             @objecyKey = objectKey,
+             @isNull =  isNull,
+             @stringValue = stringValue,
+             @numericValue = numericValue,
+             @boolValue = boolValue;
+          
+
+   CALL deleteChildValues(@valueId);
    
-   # Index words
-   SELECT
-       v.objectKey
-   INTO
-       @objectKey
-   FROM
-       Value as v
+   UPDATE Value
+   SET
+           Value.ownerId = @ownerId,
+           Value.locked = @locked,
+           Value.type = @type,
+           Value.objectKey = @objectKey,
+           Value.isNull = @isNull,
+           Value.stringValue = @stringValue,
+           Value.numericValue = @numericValue,
+           Value.boolValue = @boolValue
    WHERE
-       v.valueId = @valueId;
+        Value.valueId = @valueId;
    
+
    DELETE
    FROM
-       _ValueWord
+       ValueWord
    WHERE
-       _ValueWord.valueId = @valueId;
-       
-   CALL createWords(@valueId, @objectKey);
-   CALL createWords(@valueId, @stringValue);
-   
+       ValueWord.valueId = @valueId;
+    
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2273,4 +2621,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-07-30  1:00:54
+-- Dump completed on 2025-09-20  2:38:40

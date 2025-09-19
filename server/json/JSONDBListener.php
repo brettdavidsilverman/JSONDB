@@ -237,7 +237,7 @@ $msg = "ownerId: " . $ownerId . ", " .
        "parentValueId: " . $this->parentValueId . ", " .
        "stagingValueId: " . $this->stagingValueId . ", " .
        "appendToArray: " . ($this->appendToArray ? 1 : 0);
-       
+error_log("here " . $msg);
             $statement->execute();
        
             $statement->close();
@@ -466,8 +466,8 @@ $msg = "ownerId: " . $ownerId . ", " .
                 $this->insertValue(
                     $userId, # $ownerId
                     null, # $parentValueId,
-                    $this->lock, //$locked,
                     $this->replaceValueId, // $replaceValueId
+                    $this->lock, //$locked,
                     $type, # $type
                     $objectIndex, # & objectIndex
                     null,  # $objectKey,
@@ -516,10 +516,12 @@ $msg = "ownerId: " . $ownerId . ", " .
             else
                 $type = "object";
                     
-                    
+            $objectIndex = null;
+            
             if ($segment === "[]") {
                 $this->newPath = null;
                 $this->replaceValueId = null;
+                #$this->lock = false;
                 $valueId =
                     $this->insertValue(
                         $ownerId,
@@ -587,6 +589,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             $objectKey = null;
             $objectIndex = null;
             $this->replaceValueId = null;
+            #$this->lock = false;
         }
         else {
             // Get the object key
@@ -711,7 +714,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             }
             else
                 $type = "object";
-   
+
             $objectIndex = null;
             $valueId =
                 $this->insertValue(
@@ -928,6 +931,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                 $ownerId,
                 false, # $locked
                 $type,
+                $objectKey,
                 $isNull,
                 $stringValue,
                 $numericValue,
@@ -937,6 +941,8 @@ $msg = "ownerId: " . $ownerId . ", " .
             
         }
         else {
+error_log("here 2 " .   (is_null($this->lock) ? '1':'0'));
+
             // Insert
             $valueId =
                 $this->insertValue(
@@ -981,34 +987,7 @@ $msg = "ownerId: " . $ownerId . ", " .
     
     }
 
-    protected function startWords()
-    {
-        $sql = "CALL startWords()";
-        
-        $this->connection->execute_query(
-           $sql,
-           []
-        );
     
-    }
-
-    protected function endWords()
-    {
-
-        $this->writeToJob(
-            "/label",
-            "Indexing words"
-        );
-            
-
-        $sql = "CALL endWords()";
-        
-        $this->connection->execute_query(
-           $sql,
-           []
-        );
-    
-    }
     
     protected function insertValue(
        $ownerId,
@@ -1024,15 +1003,19 @@ $msg = "ownerId: " . $ownerId . ", " .
        $boolValue
     )
     {
-        
+
         $statement = 
             $this->connection->prepare(
-                "CALL insertValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "CALL insertValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
+            
+        $isSingleValue =
+            ($this->totalValueCount === 1);
         
         $statement->bind_param(
-            "iiiisisisdi",
+            "iiiiisisisdi",
             $ownerId,
+            $isSingleValue,
             $parentValueId,
             $replaceValueId,
             $lock,
@@ -1061,7 +1044,11 @@ $msg = "ownerId: " . $ownerId . ", " .
             $this->lock = false;
         }
 
-  
+        $this->insertValueWords(
+            $valueId,
+            $objectKey,
+            $stringValue
+        );
 
         return $valueId;
        
@@ -1073,6 +1060,7 @@ $msg = "ownerId: " . $ownerId . ", " .
        $ownerId,
        $locked,
        $type,
+       $objectKey,
        $isNull,
        $stringValue,
        $numericValue,
@@ -1082,16 +1070,17 @@ $msg = "ownerId: " . $ownerId . ", " .
 
         $statement = 
             $this->connection->prepare(
-                "CALL updateValue(?, ?, ?, ?, ?, ?, ?, ?)"
+                "CALL updateValue(?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
         
 
         $statement->bind_param(
-            'iiisisdi',
+            'iiissisdi',
             $valueId,
             $ownerId,
             $locked,
             $type,
+            $objectKey,
             $isNull,
             $stringValue,
             $numericValue,
@@ -1101,9 +1090,79 @@ $msg = "ownerId: " . $ownerId . ", " .
         $statement->execute();
         
         $statement->close();
+        
+        $this->insertValueWords(
+            $valueId,
+            $objectKey,
+            $stringValue
+        );
 
     }
-
+    
+    protected function insertValueWords(
+        $valueId,
+        $objectKey,
+        $stringValue
+    )
+    {
+        $words1 =
+            $this->getTokens($objectKey);
+            
+        $words2 =
+            $this->getTokens($stringValue);
+            
+        $words =
+            array_merge($words1, $words2);
+        
+        
+        // sort to avoid dead locks
+        sort($words);
+        
+        // prepare the statement
+        $statement = 
+            $this->connection->prepare(
+                "CALL insertValueWord(?, ?)"
+            );
+        
+        $statement->bind_param(
+            'is',
+            $valueId,
+            $word
+        );
+            
+ 
+        // insert each word
+        foreach ($words as $word) {
+            $statement->execute();
+        }
+        
+        $statement->close();
+    }
+    
+    protected function getTokens($string)
+    {
+        if (is_null($string))
+           return [];
+           
+        $delimiter =
+            ",“.”\'()*\'\"{}:;!?~`|[] \t\r\n\\/";
+            
+        $words = [];
+        
+        // tokenize object key
+        $token = strtok(
+            $string,
+            $delimiter
+        );
+        
+        while ($token !== false) {
+            $words[] = strtolower($token);
+            $token = strtok($delimiter);
+        }
+        
+        return $words;
+        
+    }
     
     protected function getTotalValueCount($stream) {
         

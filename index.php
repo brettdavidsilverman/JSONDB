@@ -140,7 +140,7 @@ var origin =
 header.innerText = origin;
 title.innerText = origin;
 
-fetchButton.disabled = true;
+fetchButton.disabled = false;
 
 authentication.onHandleLogon =
     function() {
@@ -399,7 +399,11 @@ saveButton.onclick =
                         alert("Invalid path");
                     }
                     else {
-                        alert(result);
+                        alert(
+                            decodeURIComponent(
+                                result
+                            )
+                        );
                     }
                 }
             )

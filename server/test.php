@@ -8,6 +8,26 @@
     setCredentialsCookie($credentials);
     header("Content-Type: application/json");
     
+        $words = [];
+        $delimiter =
+            ",“.”\'()*\'\"{}:;!?~`|[] \t\r\n\\";
+            
+        // tokenize object key
+        $token = strtok(
+            strtolower("hello to the world"),
+            $delimiter
+        );
+        
+        while ($token !== false) {
+            $words[] = $token;
+            $token = strtok($delimiter);
+        }
+        
+        sort($words);
+        
+        var_dump($words);
+        
+        exit();
  
     /*
     $result = writeToDatabase(
@@ -22,6 +42,7 @@
         json_decode("{}")
     );
     */
+    
 try {
     $connection = getConnection();
     

@@ -177,8 +177,14 @@ class Authentication
                     jobPath = values[2];
                     
                     var formData = new FormData();
+                    
                     formData.append(
                         uploadProgressName,
+                        jobPath
+                    );
+                    
+                    formData.append(
+                        "jobPath",
                         jobPath
                     );
                     
@@ -187,10 +193,7 @@ class Authentication
                          file
                     );
                     
-                    formData.append(
-                        "jobPath",
-                        jobPath
-                    );
+                    
                     
                     var promise = _this.fetch(
                         url,
@@ -233,6 +236,7 @@ class Authentication
         )
         .then(
             (jobPath) => {
+                
 
                 var promise = _this.postJSON(
                     jobPath + "/jobPath",

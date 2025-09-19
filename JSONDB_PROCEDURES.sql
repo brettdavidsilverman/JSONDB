@@ -1090,12 +1090,7 @@ BEGIN
             Value.locked = 0
     WHERE
             Value.valueId = @lockedValueId;
-            
-if @replaceValueId is null then
-    SIGNAL SQLSTATE '45000' SET
-    MESSAGE_TEXT = '@replaceValueId cant be null';
-end if;
-
+           
 if @stagingValueId is null then
     SIGNAL SQLSTATE '45000' SET
     MESSAGE_TEXT = '@stagingValueId cant be null';
@@ -1103,7 +1098,8 @@ end if;
 
     CALL insertValueParentChild(
         @replaceValueId,
-        @stagingValueId
+        @stagingValueId,
+        @parentValueId
     );
     
     DELETE
@@ -1304,7 +1300,8 @@ BEGIN
        AND
            v.objectKey = @objectKey
        AND
-           v.locked = 1;
+           v.locked = 1
+        FOR UPDATE;
        
 
        SELECT
@@ -1321,7 +1318,8 @@ BEGIN
        AND
            v.objectKey = @objectKey
        AND
-           v.locked = 0;
+           v.locked = 0
+       FOR UPDATE;
    ELSE
         SELECT
             v.locked
@@ -1337,7 +1335,8 @@ BEGIN
        AND
               v.objectIndex = @objectIndex
        AND
-              v.locked = 1;
+              v.locked = 1
+       FOR UPDATE;
 
        SELECT
             v.valueId
@@ -1353,7 +1352,8 @@ BEGIN
        AND
               v.objectIndex = @objectIndex
        AND
-              v.locked = 0;
+              v.locked = 0
+       FOR UPDATE;
    END IF;
    
    SELECT
@@ -1872,33 +1872,35 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueParentChild`(
     replaceValueId BIGINT,
-    stagingValueId BIGINT
+    stagingValueId BIGINT,
+    parentValueId BIGINT
 )
 BEGIN
 
 
 set @replaceValueId = replaceValueId,
-        @stagingValueId = stagingValueId;
-        
+        @stagingValueId = stagingValueId,
+        @parentValueId = parentValueId;
+       
 insert into
     ValueParentChild(
         parentValueId,
         childValueId
     )
-    
 with recursive staging (valueId) as
 (
    select
        @stagingValueId
    union
    select
-       Value.valueId
+       children.valueId
    from
-       Value
+       Value as children
    inner join
        staging
-   on
-       staging.valueId = Value.parentValueId
+   where
+       children.parentValueId =
+       staging.valueId
 ),
 parent(
    parentValueId,
@@ -1913,7 +1915,7 @@ parent(
         ValueParentChild as vpc
     where
         vpc.childValueId =
-        @replaceValueId
+        @parentValueId
         
     union
     
@@ -2621,4 +2623,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-20  2:38:40
+-- Dump completed on 2025-09-20  5:43:59

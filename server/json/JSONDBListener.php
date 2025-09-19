@@ -602,6 +602,7 @@ error_log("here " . $msg);
                     $locked
                 );
                 
+
             if ($locked) {
                 throw new LockedException("Path locked", $this, $count - 1);
             }
@@ -627,7 +628,7 @@ error_log("here " . $msg);
             
             $this->replaceValueId =
                 $valueId;
-            
+
         }
     
 
@@ -941,7 +942,6 @@ error_log("here " . $msg);
             
         }
         else {
-error_log("here 2 " .   (is_null($this->lock) ? '1':'0'));
 
             // Insert
             $valueId =

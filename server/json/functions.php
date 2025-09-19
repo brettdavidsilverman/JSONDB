@@ -756,7 +756,7 @@ END;
         getPath(),
         true
     );
-    
+
     $words = explode("+", $query);
 
     $wordCount = count($words);

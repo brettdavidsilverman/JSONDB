@@ -84,7 +84,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=789 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=791 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -93,7 +93,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (787,'598f772fd770a7cce2f47cace5a6f2a6',118,'2025-09-19 19:48:31','49.183.110.2','2025-09-19 23:44:43'),(788,'20afe6bab64af7644f5e73f4d8707a6d',118,'2025-09-19 23:49:09','49.183.110.2','2025-09-20 02:31:32');
+INSERT INTO `Session` VALUES (789,'97cfda0ccf64b103b55ccbdd355878da',118,'2025-09-20 02:41:42','49.183.110.2','2025-09-20 04:37:48'),(790,'1cb42ac6eacff3e240fff5d34768e47f',118,'2025-09-20 04:40:30','49.183.110.2','2025-09-20 05:42:05');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -231,7 +231,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','9TlP7488ZHUlOiGqGQeuhaWkJwd4Ws1gK1eozRKseIlHbWQwSEXyUYGuRZbnsscCXGjUKrKGj5CIGQXCSMcsvQ==',NULL,NULL,1);
+INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','pYbqZ5VA51lIo+trq9kwgClFhg6jkwu1snptORYC0Eha+xWW16v3SXScG6rddBgOGiGHgh2+hZH9ZxcTYS7aew==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -265,7 +265,7 @@ CREATE TABLE `Value` (
   KEY `I_Value_parentValueId_lowerObjectKey` (`parentValueId`,`lowerObjectKey`(100)) USING BTREE,
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_parentValueId` FOREIGN KEY (`parentValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=14328412 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14340423 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -274,7 +274,6 @@ CREATE TABLE `Value` (
 
 LOCK TABLES `Value` WRITE;
 /*!40000 ALTER TABLE `Value` DISABLE KEYS */;
-INSERT INTO `Value` VALUES (14328411,NULL,118,0,'string',1,NULL,NULL,NULL,'hello',NULL,0);
 /*!40000 ALTER TABLE `Value` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -302,7 +301,6 @@ CREATE TABLE `ValueParentChild` (
 
 LOCK TABLES `ValueParentChild` WRITE;
 /*!40000 ALTER TABLE `ValueParentChild` DISABLE KEYS */;
-INSERT INTO `ValueParentChild` VALUES (14328411,14328411);
 /*!40000 ALTER TABLE `ValueParentChild` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -323,7 +321,7 @@ CREATE TABLE `ValueWord` (
   KEY `I_ValueWord_wordId` (`wordId`) USING BTREE,
   CONSTRAINT `FK_ValueWord_valueId` FOREIGN KEY (`valueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE,
   CONSTRAINT `FK_ValueWord_wordId` FOREIGN KEY (`wordId`) REFERENCES `Word` (`wordId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=20431593 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=20450536 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -332,7 +330,6 @@ CREATE TABLE `ValueWord` (
 
 LOCK TABLES `ValueWord` WRITE;
 /*!40000 ALTER TABLE `ValueWord` DISABLE KEYS */;
-INSERT INTO `ValueWord` VALUES (20431592,14328411,614523);
 /*!40000 ALTER TABLE `ValueWord` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -348,7 +345,7 @@ CREATE TABLE `Word` (
   `word` blob NOT NULL,
   PRIMARY KEY (`wordId`),
   UNIQUE KEY `UI_Word_word` (`word`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=614524 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=615308 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -357,7 +354,6 @@ CREATE TABLE `Word` (
 
 LOCK TABLES `Word` WRITE;
 /*!40000 ALTER TABLE `Word` DISABLE KEYS */;
-INSERT INTO `Word` VALUES (614523,_binary 'hello');
 /*!40000 ALTER TABLE `Word` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1436,12 +1432,7 @@ BEGIN
             Value.locked = 0
     WHERE
             Value.valueId = @lockedValueId;
-            
-if @replaceValueId is null then
-    SIGNAL SQLSTATE '45000' SET
-    MESSAGE_TEXT = '@replaceValueId cant be null';
-end if;
-
+           
 if @stagingValueId is null then
     SIGNAL SQLSTATE '45000' SET
     MESSAGE_TEXT = '@stagingValueId cant be null';
@@ -1449,7 +1440,8 @@ end if;
 
     CALL insertValueParentChild(
         @replaceValueId,
-        @stagingValueId
+        @stagingValueId,
+        @parentValueId
     );
     
     DELETE
@@ -1650,7 +1642,8 @@ BEGIN
        AND
            v.objectKey = @objectKey
        AND
-           v.locked = 1;
+           v.locked = 1
+        FOR UPDATE;
        
 
        SELECT
@@ -1667,7 +1660,8 @@ BEGIN
        AND
            v.objectKey = @objectKey
        AND
-           v.locked = 0;
+           v.locked = 0
+       FOR UPDATE;
    ELSE
         SELECT
             v.locked
@@ -1683,7 +1677,8 @@ BEGIN
        AND
               v.objectIndex = @objectIndex
        AND
-              v.locked = 1;
+              v.locked = 1
+       FOR UPDATE;
 
        SELECT
             v.valueId
@@ -1699,7 +1694,8 @@ BEGIN
        AND
               v.objectIndex = @objectIndex
        AND
-              v.locked = 0;
+              v.locked = 0
+       FOR UPDATE;
    END IF;
    
    SELECT
@@ -2218,33 +2214,35 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueParentChild`(
     replaceValueId BIGINT,
-    stagingValueId BIGINT
+    stagingValueId BIGINT,
+    parentValueId BIGINT
 )
 BEGIN
 
 
 set @replaceValueId = replaceValueId,
-        @stagingValueId = stagingValueId;
-        
+        @stagingValueId = stagingValueId,
+        @parentValueId = parentValueId;
+       
 insert into
     ValueParentChild(
         parentValueId,
         childValueId
     )
-    
 with recursive staging (valueId) as
 (
    select
        @stagingValueId
    union
    select
-       Value.valueId
+       children.valueId
    from
-       Value
+       Value as children
    inner join
        staging
-   on
-       staging.valueId = Value.parentValueId
+   where
+       children.parentValueId =
+       staging.valueId
 ),
 parent(
    parentValueId,
@@ -2259,7 +2257,7 @@ parent(
         ValueParentChild as vpc
     where
         vpc.childValueId =
-        @replaceValueId
+        @parentValueId
         
     union
     
@@ -2967,4 +2965,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-20  2:38:35
+-- Dump completed on 2025-09-20  5:43:51

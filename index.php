@@ -151,15 +151,6 @@ authentication.onHandleLogon =
     
 var uploadJob;
 
-authentication.onUpdateStatus =
-   (status) => {
-       displayExpires();
-       uploadJob = status;
-      // alert(status);
-       //authentication.updateJobs()
-    }
-
-
 authentication.onUpdateJobs =
     (jobs) => {
 
@@ -292,7 +283,11 @@ fetchButton.onclick = function() {
                 if (string.startsWith("{") &&
                     string.endsWith("}"))
                 {
-                    string = eval(string);
+                    try {
+                        string = eval(string);
+                    }
+                    catch (error) {
+                    }
                 }
             }
             

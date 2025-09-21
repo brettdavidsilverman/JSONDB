@@ -205,15 +205,18 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
             
         if ($this->totalValueCount > 1) {
             
-            $this->writeToJob(
-                "/label",
-                "Committing"
-            );
+            $jobStatus = 
+                $this->readFromJob("");
+                
+            $jobStatus["label"] = "Committing";
+            $jobStatus["progress"] = 100;
+            unset($jobStatus["cancel"]);
             
             $this->writeToJob(
-                "/progress",
-                100
+                "",
+                $jobStatus
             );
+            
 
             $this->begin_transaction();
 
@@ -576,7 +579,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                 
         $objectKey = null;
         $objectIndex = null;
-  
+        
         if (is_int($segment))
             $objectIndex = $segment;
         else
@@ -623,7 +626,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                     throw new PathException("Expecting object", $this, $count - 1);
                 }
             
-              
+                
             }
             
             $this->replaceValueId =
@@ -732,6 +735,10 @@ $msg = "ownerId: " . $ownerId . ", " .
                     null  //$boolValue
                 );
 
+            $this->insertValueWords(
+                $valueId,
+                $objectKey
+            );
 
         }
 
@@ -760,7 +767,7 @@ $msg = "ownerId: " . $ownerId . ", " .
 
         $userId =
             $this->credentials["userId"];
-
+            
         $statement->bind_param(
             'iiis', 
             $userId,
@@ -782,7 +789,8 @@ $msg = "ownerId: " . $ownerId . ", " .
         $statement->fetch();
 
         $statement->close();
-    
+        
+
         return $valueId;
     }
     
@@ -963,6 +971,16 @@ $msg = "ownerId: " . $ownerId . ", " .
         if ($this->totalValueCount > 1)
             $this->commit();
 
+        $this->insertValueWords(
+            $valueId,
+            $objectKey
+        );
+        
+        $this->insertValueWords(
+            $valueId,
+            $stringValue
+        );
+        
         if (is_null($this->stagingValueId))
             $this->stagingValueId = $valueId;
 
@@ -1044,12 +1062,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             $this->lock = false;
         }
 
-        $this->insertValueWords(
-            $valueId,
-            $objectKey,
-            $stringValue
-        );
-
+ 
         return $valueId;
        
     }
@@ -1091,30 +1104,22 @@ $msg = "ownerId: " . $ownerId . ", " .
         
         $statement->close();
         
-        $this->insertValueWords(
-            $valueId,
-            $objectKey,
-            $stringValue
-        );
+ 
 
     }
     
     protected function insertValueWords(
         $valueId,
-        $objectKey,
-        $stringValue
+        $string
     )
     {
-        $words1 =
-            $this->getTokens($objectKey);
-            
-        $words2 =
-            $this->getTokens($stringValue);
-            
+        
+        if (is_null($string))
+            return;
+
         $words =
-            array_merge($words1, $words2);
-        
-        
+            $this->getTokens($string);
+            
         // sort to avoid dead locks
         sort($words);
         

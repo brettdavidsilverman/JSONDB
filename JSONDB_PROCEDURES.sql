@@ -1084,6 +1084,12 @@ BEGIN
             
     END IF;
     
+    CALL insertValueParentChild(
+        @replaceValueId,
+        @stagingValueId,
+        @parentValueId
+    );
+    
     UPDATE
             Value
     SET
@@ -1091,17 +1097,6 @@ BEGIN
     WHERE
             Value.valueId = @lockedValueId;
            
-if @stagingValueId is null then
-    SIGNAL SQLSTATE '45000' SET
-    MESSAGE_TEXT = '@stagingValueId cant be null';
-end if;
-
-    CALL insertValueParentChild(
-        @replaceValueId,
-        @stagingValueId,
-        @parentValueId
-    );
-    
     DELETE
     FROM
         Value
@@ -1282,8 +1277,10 @@ BEGIN
             @parentValueId = parentValueId,
             @objectIndex = objectIndex,
             @objectKey = objectKey,
-            @locked = NULL,
-            @valueId = NULL;
+            @valueId = NULL,
+            @type = NULL,
+            @locked = NULL;
+        
             
     IF @objectKey IS NOT NULL THEN
         SELECT
@@ -1300,8 +1297,8 @@ BEGIN
        AND
            v.objectKey = @objectKey
        AND
-           v.locked = 1
-        FOR UPDATE;
+           v.locked = 1;
+       # FOR UPDATE;
        
 
        SELECT
@@ -1318,8 +1315,8 @@ BEGIN
        AND
            v.objectKey = @objectKey
        AND
-           v.locked = 0
-       FOR UPDATE;
+           v.locked = 0;
+       #FOR UPDATE;
    ELSE
         SELECT
             v.locked
@@ -1335,8 +1332,8 @@ BEGIN
        AND
               v.objectIndex = @objectIndex
        AND
-              v.locked = 1
-       FOR UPDATE;
+              v.locked = 1;
+       #FOR UPDATE;
 
        SELECT
             v.valueId
@@ -1352,23 +1349,26 @@ BEGIN
        AND
               v.objectIndex = @objectIndex
        AND
-              v.locked = 0
-       FOR UPDATE;
+              v.locked = 0;
+       #FOR UPDATE;
    END IF;
    
-   SELECT
+   
+   IF @valueId IS NOT NULL THEN
+       SELECT
             v.type,
             v.objectIndex,
             v.objectKey
-   INTO
+       INTO
            @type,
            @objectIndex,
            @objectKey
-   FROM
+       FROM
            Value AS v
-   WHERE
-           v.valueId = @valueId
-    FOR UPDATE;
+       WHERE
+           v.valueId = @valueId;
+        #FOR UPDATE;
+    END IF;
            
    IF @locked IS NULL THEN
        SET @locked = 0;
@@ -1830,6 +1830,15 @@ BEGIN
    
    
    IF (@isSingleValue = 1) THEN 
+   
+       SET @stagingValueId = @valueId;
+       
+       CALL insertValueParentChild(
+            @replaceValueId,
+            @stagingValueId,
+            @parentValueId
+      );
+    /*
        INSERT
        INTO
            ValueParentChild(
@@ -1847,7 +1856,7 @@ BEGIN
        SELECT
            @valueId,
            @valueId;
-           
+           */
    END IF;
    
    SELECT
@@ -2623,4 +2632,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-20  6:51:04
+-- Dump completed on 2025-09-21 19:10:46

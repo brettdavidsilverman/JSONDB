@@ -32,10 +32,9 @@ function getConnection() {
    
    /* activate reporting */
    $driver = new mysqli_driver();
-   $driver->report_mode = 
-       MYSQLI_REPORT_ERROR;
-   
-  // MYSQLI_REPORT_ALL;
+  // $driver->report_mode = 
+      // MYSQLI_REPORT_ERROR;
+  //    MYSQLI_REPORT_ALL;
 
    // Create connection
    $connection = new mysqli($serverName, $userName, $password, $databaseName);

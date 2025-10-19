@@ -158,10 +158,13 @@ authentication.onUpdateJobs =
         
         jobsDiv.innerHTML = "";
         
-        for (var j in jobs) {
-            var job = jobs[j];
+        for (var i = jobs.length - 1;
+             i >= 0;
+             --i)
+        {
+            var job = jobs[i];
             if (job)
-                setJob(job, j);
+                setJob(job, i);
         }
       
         
@@ -394,17 +397,22 @@ saveButton.onclick =
                         alert("Invalid path");
                     }
                     else {
-                        alert(
-                            decodeURIComponent(
-                                result
-                            )
-                        );
+                        try {
+                            alert(
+                                decodeURIComponent(
+                                    result
+                                )
+                            );
+                        }
+                        catch(error) {
+                            alert("here " + result);
+                            displayError(error, "saveButton.onclick decode");
+                        }
                     }
                 }
             )
             .catch(
                 (error) => {
-                    jsonEditor.value = JSON.stringify(error, null, "   ");
                     displayError(error, "saveButton.onclick");
                 }
             );

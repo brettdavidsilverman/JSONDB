@@ -20,7 +20,7 @@ require_once "../server/functions.php";
             <a href="console/">Console</a>
          </li>
          <li>
-            <a href="authentication/logon.php?redirect=/client">Logon</a>
+            <a href="authentication/authentication.js">Authentication</a>
          </li>
          <li>
             <a href="stream/">Stream bits</a>

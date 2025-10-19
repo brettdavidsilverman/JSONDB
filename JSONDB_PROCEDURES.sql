@@ -1043,7 +1043,8 @@ BEGIN
               @objectIndex = NULL;
               
 
-    
+  START TRANSACTION;
+  
   IF (@appendToArray = 1) THEN
         SELECT
             COUNT(*) + 1
@@ -1083,13 +1084,13 @@ BEGIN
             Value.valueId = @replaceValueId;
             
     END IF;
-    
-    CALL insertValueParentChild(
-        @replaceValueId,
-        @stagingValueId,
-        @parentValueId
-    );
-    
+   
+    DELETE
+    FROM
+        Value
+    WHERE
+        Value.valueId = @replaceValueId;
+        
     UPDATE
             Value
     SET
@@ -1097,11 +1098,7 @@ BEGIN
     WHERE
             Value.valueId = @lockedValueId;
            
-    DELETE
-    FROM
-        Value
-    WHERE
-        Value.valueId = @replaceValueId;
+    
     
 END ;;
 DELIMITER ;
@@ -1366,8 +1363,8 @@ BEGIN
        FROM
            Value AS v
        WHERE
-           v.valueId = @valueId;
-        #FOR UPDATE;
+           v.valueId = @valueId
+       FOR UPDATE;
     END IF;
            
    IF @locked IS NULL THEN
@@ -1719,7 +1716,6 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
            ownerId BIGINT,
-           isSingleValue TINYINT,
            parentValueId BIGINT,
            replaceValueId BIGINT,
            locked TINYINT,
@@ -1734,7 +1730,6 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
 BEGIN
 
     SET @ownerId = ownerId, 
-             @isSingleValue = isSingleValue,
              @parentValueId =  parentValueId,
              @replaceValueId = replaceValueId,
              @locked = locked,
@@ -1771,13 +1766,12 @@ BEGIN
             Value.parentValueId = @parentValueId
         AND
             Value.objectKey = @objectKey
-       # AND
-        #    Value.locked = 0
         FOR UPDATE;
     END IF;
     
     IF @objectIndex IS NULL
     THEN
+    
             SELECT
                 COUNT(Value.objectIndex) + 1
             INTO
@@ -1787,11 +1781,8 @@ BEGIN
             WHERE 
                  Value.parentValueId =
                  @parentValueId
-           # AND
-             #    Value.locked = 0
             FOR UPDATE;
         
-
     END IF;
     
     IF @objectIndex IS NULL THEN
@@ -1827,37 +1818,13 @@ BEGIN
    );
   
    SET @valueId = LAST_INSERT_ID();
-   
-   
-   IF (@isSingleValue = 1) THEN 
-   
-       SET @stagingValueId = @valueId;
+  
+   SET @stagingValueId = @valueId;
        
-       CALL insertValueParentChild(
-            @replaceValueId,
-            @stagingValueId,
-            @parentValueId
-      );
-    /*
-       INSERT
-       INTO
-           ValueParentChild(
-               parentValueId,
-               childValueId
-           )
-       SELECT
-           parent.parentValueId,
-           @valueId as childValueId
-       FROM
-           ValueParentChild as parent
-       WHERE
-           parent.childValueId = @parentValueId
-       UNION
-       SELECT
-           @valueId,
-           @valueId;
-           */
-   END IF;
+   CALL insertValueParentChild(
+        @stagingValueId,
+        @parentValueId
+   );
    
    SELECT
        @valueId AS  valueId,
@@ -1880,79 +1847,39 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueParentChild`(
-    replaceValueId BIGINT,
     stagingValueId BIGINT,
     parentValueId BIGINT
 )
 BEGIN
 
 
-set @replaceValueId = replaceValueId,
+    SET
         @stagingValueId = stagingValueId,
         @parentValueId = parentValueId;
-       
-insert into
-    ValueParentChild(
-        parentValueId,
-        childValueId
-    )
-with recursive staging (valueId) as
-(
-   select
-       @stagingValueId
-   union
-   select
-       children.valueId
-   from
-       Value as children
-   inner join
-       staging
-   where
-       children.parentValueId =
-       staging.valueId
-),
-parent(
-   parentValueId,
-   childValueId
-) as
-(
-    
-    select
-        vpc.parentValueId,
+      
+    INSERT INTO
+        ValueParentChild(
+            parentValueId,
+            childValueId
+        )
+    SELECT
+        ValueParentChild.parentValueId,
         @stagingValueId
-    from
-        ValueParentChild as vpc
-    where
-        vpc.childValueId =
-        @parentValueId
+    FROM
+        ValueParentChild
+    WHERE
+        ValueParentChild.childValueId =
+        @parentValueId;
         
-    union
+    INSERT INTO
+        ValueParentChild(
+            parentValueId,
+            childValueId
+        )
+    SELECT
+        @stagingValueId,
+        @stagingValueId;
     
-    select
-        staging.valueId,
-        staging.valueId
-    from
-        staging
- 
-    union
-    
-    select
-        parent.parentValueId,
-        children.valueId as childValueId
-    from
-        parent
-    inner join
-        Value as children
-    on
-        children.parentValueId =
-        parent.childValueId
-)
-
-select
-    parent.parentValueId,
-    parent.childValueId
-from
-    parent;
     
 END ;;
 DELIMITER ;
@@ -2632,4 +2559,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-21 19:10:46
+-- Dump completed on 2025-10-19 13:06:51

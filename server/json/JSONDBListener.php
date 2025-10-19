@@ -1024,16 +1024,12 @@ $msg = "ownerId: " . $ownerId . ", " .
 
         $statement = 
             $this->connection->prepare(
-                "CALL insertValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "CALL insertValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
             
-        $isSingleValue =
-            ($this->totalValueCount === 1);
-        
         $statement->bind_param(
-            "iiiiisisisdi",
+            "iiiisisisdi",
             $ownerId,
-            $isSingleValue,
             $parentValueId,
             $replaceValueId,
             $lock,

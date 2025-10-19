@@ -203,7 +203,7 @@ class Authentication
                         }
                     );
                     
-                    _this.updateJobs();
+                    _this.updateJobs([status]);
 
                     return promise;
                 }
@@ -269,6 +269,7 @@ class Authentication
             .catch(
                 (error) => {
                     //displayError(error, "Authentication.updateJobs");
+                    this.setJobsTimeout();
                 }
             );
             
@@ -276,8 +277,11 @@ class Authentication
         }
 
         var done = true;
-        for (var j in jobs) {
-            var job = jobs[j];
+        for (var i = jobs.length - 1;
+             i >= 0;
+             --i)
+        {
+            var job = jobs[i];
             if (job && !job.done) {
                 done = false;
             }

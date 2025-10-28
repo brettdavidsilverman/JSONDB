@@ -14,8 +14,8 @@
 
 var playButton =
     document.getElementById("playButton");
-const audioContext = new AudioContext();
-//const audioContext = new AudioContext({ sampleRate: 44100 });
+//const audioContext = new AudioContext();
+const audioContext = new AudioContext({ sampleRate: 11.025 * 1000.0 });
 
 playButton.onclick = async function(e) {
     /*
@@ -26,7 +26,7 @@ playButton.onclick = async function(e) {
     const microphone =
         audioContext.createMediaStreamSource(stream);
     */
-    var bufferSize = 1024 * 16;
+    var bufferSize = 1024;
 
     var effect = audioContext.createScriptProcessor(bufferSize, 1, 1);
     var lastOut = 0.0;

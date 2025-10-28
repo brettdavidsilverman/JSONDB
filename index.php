@@ -551,7 +551,7 @@ function setLinks() {
     var url = getURL(true);
     goLink.href = "/go.php?" + url;
     dataLink.href = url;
-    downloadLink.href = url;
+    downloadLink.href = url + "?type=text";
     downloadLink.download = "download";
 }
 if (localStorage.getItem("path")) {

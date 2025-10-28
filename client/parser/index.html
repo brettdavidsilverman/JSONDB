@@ -867,14 +867,18 @@ class Capture extends And {
         var keys = this.#keys;
         var matches = super.matches;
         
+        // Single match, get its value
+        if (matches.length === 1) {
+            var item = matches[0];
+            this.value = item.value;
+            return;
+        }
+        
+        // Multiple matches
         for (var index in matches) {
             var item = matches[index];
             var key = keys[index];
             var parent = key.parent;
-            if (!parent) {
-                this.value = item.value;
-                return;
-            }
             parent[key.key] = item.value;
         }
 
@@ -903,7 +907,7 @@ var capture = new Capture(
         b: new Character("b"),
         c: {
             nested: {
-                n: new Character("c")
+                c: new Character("c")
             }
         }
    }
@@ -1118,7 +1122,9 @@ class TokenAnd extends And {
     constructor() {
         var token;
         super(
-            token = new Capture(new Token()),
+            token = new Capture(
+                new Token()
+            ),
             new Optional(
                 new Seperator()
             )

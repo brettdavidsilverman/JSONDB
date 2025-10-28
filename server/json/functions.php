@@ -199,7 +199,14 @@ function handleGet()
 
     http_response_code(200);
     
-    header('Content-Type: text/plain; charset=utf-8');
+    $type = "application/json; charset=utf-8";
+    if (array_key_exists("type", $_GET))
+    {
+        if ($_GET["type"] === "text")
+           $type = "text/plain; charset=utf-8";
+    }
+        
+    header("Content-Type: " . $type);
       
     setCredentialsCookie($credentials);
     
@@ -723,12 +730,11 @@ function writeValuesToStream(
     
 }
 
-function handleSearch()
+function handleSearch($query)
 {
     $credentials = authenticate();
     $connection = getConnection();
 
-    $query = getQuery();
     
     $sql = <<<END
 select distinct
@@ -753,7 +759,7 @@ END;
         true
     );
 
-    $words = explode("+", $query);
+    $words = explode(" ", $query);
 
     $wordCount = count($words);
     for ($i = 0; $i < $wordCount; ++$i) {
@@ -784,7 +790,7 @@ END;
     
     http_response_code(200);
     
-    header('Content-Type: application/json');
+    header('Content-Type: application/json; charset=utf-8');
       
     setCredentialsCookie($credentials);
     
@@ -795,21 +801,9 @@ END;
     for ($i = 0; $i < $count; ++$i) {
         $row = $data[$i];
         $path = $row["path"];
-        $paths = explode("/", $path);
-        $stringPath = "";
-        foreach ($paths as $segment)
-        {
-            $stringPath =
-                $stringPath
-                . escapeString($segment)
-                . "/";
-        }
-        
-        $stringPath =
-            substr($stringPath, 0, -1);
         
         echo tabs(1)
-            . '"' . $stringPath . '"';
+            . '"' . $path . '"';
             
         if ($i + 1 < $count)
            echo ",";

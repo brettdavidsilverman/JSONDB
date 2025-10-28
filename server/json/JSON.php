@@ -9,14 +9,17 @@
         handlePost();
     }
     else if ($method === "GET") {
-        
-        if (getQuery() === "")
+        $q = null;
+        if (array_key_exists("q", $_GET))
+           $q = $_GET["q"];
+           
+        if (is_null($q))
             handleGet();
         else
-            handleSearch();
+            handleSearch($q);
             
     }
-            flush();
+    
 
  
 ?>

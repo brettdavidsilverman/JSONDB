@@ -735,13 +735,9 @@ select distinct
     getPathByValue(v.valueId) as path
 from 
     Value as v
-inner join
-    ValueParentChild as vpc
-on
-    vpc.parentValueId = ?
-and
-    vpc.childValueId = v.valueId
 where
+    v.parentValueId = ?
+and
     v.locked = 0
 
 END;
@@ -843,16 +839,13 @@ function word() {
             vw.valueId as valueId
         from
             ValueWord as vw,
-            Word as w,
-            ValueParentChild as vpc
+            Word as w
         where
             w.word = ?
         and
-            vw.valueId = vpc.childValueId
+            vw.valueId = v.valueId
         and
             vw.wordId = w.wordId
-        and
-            vpc.parentValueId = v.valueId
             
     )
 

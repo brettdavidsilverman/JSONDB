@@ -39,7 +39,7 @@ class Authentication
         }
     }
     
-    fetch(url, parameters) {
+    async fetch(url, parameters) {
         var _this = this;
 
         var defaultParameters = {
@@ -779,6 +779,153 @@ class Authentication
         );
         
         return promise;
+    }
+    
+    async createProcess(path) {
+        var process = await this.fetch(path);
+    
+        var inputs = createInputs();
+        var variables = createVariables();
+        var processCases = createProcessCases();
+        
+        var code =
+`while (next != undefined) {
+    switch (next) {
+${processCases}
+    }
+}
+`;
+
+        var code = tab(1, code);
+        var body = variables + code;
+        
+        var f = new Function(
+            ...inputs,
+            body
+        );
+    
+        return f;
+        
+        function createInputs() {
+            var inputs = [];
+            var inputKeys = Object.keys(process.inputs);
+            for (var keyIndex in inputKeys) {
+                var key = inputKeys[keyIndex];
+                var defaultValue = process.inputs[key];
+                var input = key;
+                if (defaultValue != undefined)
+                    input +=
+                        " = " +
+                        JSON.stringify(defaultValue);
+                inputs.push(input);
+            }
+            
+            return inputs;
+        }
+        
+        function createVariables() {
+    
+            // create variables
+            var processKeys =
+                Object.keys(process.processes);
+            
+            var variables = "var next = " +
+               JSON.stringify(processKeys[0]) +
+               ";\n";
+        
+            var variableKeys =
+                Object.keys(process.variables);
+        
+            for (var variableIndex in variableKeys) {
+                var variableKey =
+                    variableKeys[variableIndex];
+                
+                variables += "var " + variableKey;
+            
+                var defaultValue =
+                    process.variables[variableKey];
+
+                if (defaultValue != undefined)
+                {
+                    variables += " = " +
+                        JSON.stringify(defaultValue);
+                }
+            
+                variables += ";\n";
+            
+            }
+
+            return tab(1, variables);
+        }
+        
+        function createProcessCases() {
+            var processCases = "";
+            var processKeys =
+                Object.keys(process.processes);
+            for (var processIndex in processKeys) {
+                var processKey = processKeys[processIndex];
+                var proc = process.processes[processKey];
+                var processCode =
+                    createProcessCode(processKey);
+                processCases +=
+`case ${JSON.stringify(processKey)}:
+${processCode}
+    break;
+`;
+            }
+            
+            return tab(1, processCases);
+        }
+        
+        function createProcessCode(processKey) {
+            var code = "";
+            var proc =
+                process.processes[processKey];
+            var processKeys =
+                Object.keys(process.processes);
+                
+            if (proc["if"] != undefined)
+            {
+                proc = proc["if"];
+                var trueNext = JSON.stringify(proc["true"]);
+
+                var falseNext = JSON.stringify(proc["false"]);
+
+                code =
+`if (${proc.test})
+    next = ${trueNext};
+else
+    next = ${falseNext};`;
+            }
+            else {
+                code = proc.code + ";";
+                var next =
+                    proc.next;
+                if (next != undefined) {
+                    code += "\nnext = " +
+                        JSON.stringify(next) +
+                        ";";
+                }
+            
+            }
+            code = tab(1, code);
+            return code;
+        }
+       
+        function tab(tabs, string) {
+            var lines = string.split("\n");
+            var output = [];
+            const tabSpaces = " ".repeat(tabs * 4);
+            for (var index in lines) {
+                var line = lines[index];
+                if (line.trim() != "")
+                    line = tabSpaces + line;
+                output.push(line);
+            }
+            
+            return output.join("\n");
+        }
+
     }
 
 }

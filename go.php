@@ -25,39 +25,37 @@
       <h1 id="h1"></h1>
       <script src="/client/origin.js"></script>
       
-      <script>
+      <script type="module">
 var authentication =
    new Authentication();
 
 setup();
 
-go();
+try {
+    await go();
+}
+catch (error) {
+    alert(error);
+}
 
-function go() {
+async function go() {
     
-   var path =
-      decodeURIComponent(
-         document.location.search.substr(1)
-      );
+    var path =
+        //decodeURIComponent(
+            document.location.search.substr(1);
+     //   );
 
-   authentication.fetch(path).
-   then(
-      function(response) {
-         return response.text()
-      }
-   ).
-   then(
-      function(text) {
-         // document.write(text);
-         return JSON.parse(text);
-      }
-   ).
-   then(
-      function(json) {
-        json = evaluate(json);
-        return json;
-      }
-   );
+    const f =
+        await authentication
+        .createProcess(path);
+        
+    document.writeln("<pre>");
+    document.writeln(f.toString());
+    document.writeln("</pre>");
+    document.close();
+    
+    alert(new f());
+
 }
 
 function setup() {   

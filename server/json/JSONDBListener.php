@@ -13,7 +13,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     public $credentials = null;
     
     protected $stack;
-    
     protected $connection;
     
     protected $stream;
@@ -78,11 +77,11 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     }
 
     protected function commit() {
-        $this->connection->commit();
+       # $this->connection->commit();
     }
     
     protected function begin_transaction() {
-        $this->connection->begin_transaction();
+       # $this->connection->begin_transaction();
     }
     
     public function writeToDatabase() {
@@ -178,15 +177,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->getPathValueId();
  
         if ($this->totalValueCount > 1) {
-/*
-            $statement = $this->connection->prepare(
-                "CALL startDocument();"
-            );
-
-            $statement->execute();
-    
-            $statement->close();
-            */
             $this->commit();
        }
 
@@ -592,7 +582,6 @@ $msg = "ownerId: " . $ownerId . ", " .
             $objectKey = null;
             $objectIndex = null;
             $this->replaceValueId = null;
-            #$this->lock = false;
         }
         else {
             // Get the object key
@@ -637,6 +626,7 @@ $msg = "ownerId: " . $ownerId . ", " .
 
         $this->objectKey = $objectKey;
         $this->objectIndex = $objectIndex;
+        
         return $parentValueId;
 
     }
@@ -734,11 +724,9 @@ $msg = "ownerId: " . $ownerId . ", " .
                     null, //$numericValue,
                     null  //$boolValue
                 );
+                
 
-            $this->insertValueWords(
-                $valueId,
-                $objectKey
-            );
+ 
 
         }
 
@@ -816,6 +804,7 @@ $msg = "ownerId: " . $ownerId . ", " .
 
     public function key(string $key): void
     {
+        $this->keys[] = $key;
         $this->objectKey = $key;
         
     }
@@ -971,21 +960,12 @@ $msg = "ownerId: " . $ownerId . ", " .
         if ($this->totalValueCount > 1)
             $this->commit();
 
-        $this->insertValueWords(
-            $valueId,
-            $objectKey
-        );
-        
-        $this->insertValueWords(
-            $valueId,
-            $stringValue
-        );
         
         if (is_null($this->stagingValueId))
             $this->stagingValueId = $valueId;
 
         $this->objectKey = null;
-      
+        
         $this->stack[] = $top;
 
         return $valueId;
@@ -1057,8 +1037,13 @@ $msg = "ownerId: " . $ownerId . ", " .
             $this->lockedValueId = $valueId;
             $this->lock = false;
         }
+        
+        $this->insertValueWords(
+            $valueId,
+            $objectKey,
+            $stringValue
+        );
 
- 
         return $valueId;
        
     }
@@ -1100,25 +1085,38 @@ $msg = "ownerId: " . $ownerId . ", " .
         
         $statement->close();
         
- 
+        $this->insertValueWords(
+            $valueId,
+            $objectKey,
+            $stringValue
+        );
+        
 
     }
     
     protected function insertValueWords(
         $valueId,
-        $string
+        $objectKey,
+        $stringValue
     )
     {
         
-        if (is_null($string))
-            return;
-
-        $words =
-            $this->getTokens($string);
+        $this->insertParentValueWords(
+            $valueId
+        );
+        
+ 
+        $words1 =
+            $this->getTokens($objectKey);
             
+        $words2 = 
+            $this->getTokens($stringValue);
+            
+        $words = array_merge($words1, $words2);
+        
         // sort to avoid dead locks
         sort($words);
-        
+            
         // prepare the statement
         $statement = 
             $this->connection->prepare(
@@ -1134,8 +1132,35 @@ $msg = "ownerId: " . $ownerId . ", " .
  
         // insert each word
         foreach ($words as $word) {
-            $statement->execute();
+            if (!is_null($word)) {
+                $word = strtolower($word);
+                $statement->execute();
+            }
         }
+        
+        $statement->close();
+        
+
+    }
+    
+    
+    protected function insertParentValueWords(
+        $valueId
+    )
+    {
+
+        // prepare the statement
+        $statement = 
+            $this->connection->prepare(
+                "CALL insertParentValueWords(?)"
+            );
+        
+        $statement->bind_param(
+            'i',
+            $valueId
+        );
+            
+        $statement->execute();
         
         $statement->close();
     }

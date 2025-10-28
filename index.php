@@ -355,7 +355,6 @@ saveButton.onclick =
            // json = JSON.stringify(object);
         }
         catch(error) {
-            
             displayError(error, "saveButton.onclick parse");
             saveButton.disabled = false;
             return;
@@ -546,7 +545,7 @@ function getJSON()
 }
 function setLinks() {
     var url = getURL(true);
-    goLink.href = "/go.php?" + encodeURIComponent(url);
+    goLink.href = "/go.php?" + url;
     dataLink.href = url;
 }
 if (localStorage.getItem("path")) {

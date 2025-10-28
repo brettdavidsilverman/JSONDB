@@ -50,6 +50,7 @@ function getConnection() {
           "READ COMMITTED"
      );
 */
+
     return $connection;
 }
 

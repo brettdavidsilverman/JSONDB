@@ -1098,7 +1098,7 @@ BEGIN
     WHERE
             Value.valueId = @lockedValueId;
            
-    
+    COMMIT;
     
 END ;;
 DELIMITER ;
@@ -1530,7 +1530,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `insertLastValue` */;
+/*!50003 DROP PROCEDURE IF EXISTS `insertParentValueWords` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -1540,69 +1540,46 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `insertLastValue`(
-    sessionKey VARCHAR(32),
-    parentValueId BIGINT ,
-    lastKey TEXT
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertParentValueWords`(
+    valueId BIGINT
 )
 BEGIN
 
-   SET @sessionKey = sessionKey,
-            @parentValueId = parentValueId,
-            @lastKey = lastKey;
-            
-   
-   SET  @sessionId = (
-           SELECT Session.sessionId
-           FROM    Session
-           WHERE Session.sessionKey =
-                             @sessionKey
-   );
-   
-   SET  @ownerId = (
-           SELECT Session.userId
-           FROM    Session
-           WHERE Session.sessionId =
-                             @sessionId
-   );
-   
-   START TRANSACTION;
-   
-   INSERT
-   INTO
-       Value(
-           parentValueId,
-           ownerId,
-           type,
-           sessionId,
-           objectIndex,
-           objectKey,
-           lowerObjectKey,
-           isNull
-       )
-   SELECT
-       @parentValueId,
-       @ownerId,
-       'dummy',
-       @sessionId ,
-       (
-           SELECT
-               MAX(Value.objectIndex) + 1
-           FROM
-               Value
-           WHERE
-               Value.parentValueId = @parentValueId
-       ),
-       @lastKey,
-       LOWER(@lastKey),
-       1;
-       
-    SET @valueId = LAST_INSERT_ID();
+    START TRANSACTION;
     
+    SET @valueId = valueId;
+    
+    INSERT
+    INTO
+            ValueWord(
+                valueId,
+                wordId
+            )
+    SELECT DISTINCT
+        @valueId,
+        ValueWord.wordId
+    FROM
+        Value
+    INNER JOIN
+        ValueWord
+    ON
+        ValueWord.valueId = Value.parentValueId
+    WHERE
+        Value.valueId = @valueId
+    AND
+        NOT EXISTS(
+            SELECT
+                *
+            FROM
+               ValueWord AS vw
+            WHERE
+                vw.valueId = @valueId
+            AND
+                vw.wordId = ValueWord.wordId
+        );
+        
     COMMIT;
     
-    SELECT @valueId as valueId;
-
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1729,6 +1706,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
 )
 BEGIN
 
+   START TRANSACTION;
+    
     SET @ownerId = ownerId, 
              @parentValueId =  parentValueId,
              @replaceValueId = replaceValueId,
@@ -1821,6 +1800,8 @@ BEGIN
   
    SET @stagingValueId = @valueId;
        
+   COMMIT;
+   
    CALL insertValueParentChild(
         @stagingValueId,
         @parentValueId
@@ -1903,6 +1884,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWord`(
 )
 BEGIN
 
+   START TRANSACTION;
+    
     SET @valueId = valueId,
              @word = word,
              @wordId = NULL;
@@ -1929,28 +1912,28 @@ BEGIN
         
     END IF;
     
-    IF NOT EXISTS(
-        SELECT
-            *
-        FROM
-            ValueWord
-        WHERE
-            ValueWord.valueId = @valueId
-        AND
-            ValueWord.wordId = @wordId
-        FOR UPDATE
-    ) THEN
-        INSERT
-        INTO
-            ValueWord(
-                valueId,
-                wordId
-            )
-        VALUES(
-            @valueId,
-            @wordId
-         );
-    END IF;
+    INSERT
+    INTO
+        ValueWord(
+            valueId,
+            wordId
+        )
+    SELECT 
+        @valueId,
+        @wordId
+   WHERE
+       NOT EXISTS(
+           SELECT
+               *
+           FROM
+               ValueWord
+           WHERE
+                ValueWord.valueId = @valueId
+            AND
+                ValueWord.wordId = @wordId
+       );
+       
+   COMMIT;
     
 END ;;
 DELIMITER ;
@@ -2439,6 +2422,8 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `updateValue`(
 )
 BEGIN
   
+    START TRANSACTION;
+    
     SET @valueId = valueId,
              @ownerId = ownerId,
              @locked = locked,
@@ -2471,6 +2456,8 @@ BEGIN
        ValueWord
    WHERE
        ValueWord.valueId = @valueId;
+    
+    COMMIT;
     
 END ;;
 DELIMITER ;
@@ -2559,4 +2546,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-19 13:06:51
+-- Dump completed on 2025-10-28 19:53:08

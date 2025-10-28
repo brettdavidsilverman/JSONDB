@@ -10,12 +10,15 @@ function (message, source, lineno, colno, error)
         
     var result = 
         {
-            "error": message,
+            "error": message.toString(),
             "source": source,
             "lineno": lineno,
             "colno": colno,
             "stack": stack
         }
+
+    if (!lineno)
+        result = message.toString();
 
     if (alert.silent)
         console.log(result);

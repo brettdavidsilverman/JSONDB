@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title id="title">Audio</title>
+        <script src="https://bee.fish/client/head.js"></script>        <script src="https://bee.fish/client/authentication/authentication.js"></script>
+        <style>
+        </style>
+    </head>
+    <body>
+        <button id="playButton">Play</button>
+        <script type="module">
+
+var playButton =
+    document.getElementById("playButton");
+const audioContext = new AudioContext();
+//const audioContext = new AudioContext({ sampleRate: 44100 });
+
+playButton.onclick = async function(e) {
+    /*
+    const stream = await
+        navigator.mediaDevices.getUserMedia(
+            { audio: true }
+        );
+    const microphone =
+        audioContext.createMediaStreamSource(stream);
+    */
+    var bufferSize = 1024 * 16;
+
+    var effect = audioContext.createScriptProcessor(bufferSize, 1, 1);
+    var lastOut = 0.0;
+    effect.onaudioprocess = function(e) {
+        var input = e.inputBuffer.getChannelData(0);
+        var output = e.outputBuffer.getChannelData(0);
+        for (var i = 0; i < bufferSize; i++) {
+            output[i] = (input[i] + lastOut) / 2.0;
+            lastOut = output[i];
+        }
+    }
+    
+    effect.connect(audioContext.destination);
+    
+    var oscillator = audioContext.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+
+    // Connect the oscillator to the scriptNode
+    oscillator.connect(effect);
+
+    // Start the oscillator
+    oscillator.start();
+    
+    audioContext.resume();
+    
+}
+        </script>
+    </body>
+</html>

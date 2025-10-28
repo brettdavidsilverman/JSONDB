@@ -46,6 +46,9 @@ require_once "../server/functions.php";
          <li>
             <a href="encryption/">Encryption</a>
          </li>
+         <li>
+            <a href="audio/">Audio</a>
+         </li>
       </ul>
    </body>
 </html>

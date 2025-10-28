@@ -97,6 +97,9 @@ form > div {
         <h2>
             <a id="dataLink" href="/">Data Link</a>
         </h2>
+        <h2>
+            <a id="downloadLink" href="/">Download Link</a>
+        </h2>
         <br />
         <br />
       
@@ -124,6 +127,7 @@ var result = document.getElementById("result");
 var jsonEditor = document.getElementById("jsonEditor");var html = document.getElementById("html");var fetchButton = document.getElementById("fetchButton");
 var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var clearButton = document.getElementById("clearButton");var resetButton = document.getElementById("resetButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
 var dataLink = document.getElementById("dataLink");
+var downloadLink = document.getElementById("downloadLink");
 var header = document.getElementById("h1");
 var title = document.getElementById("title");
 var progress = document.getElementById("progress");
@@ -547,6 +551,8 @@ function setLinks() {
     var url = getURL(true);
     goLink.href = "/go.php?" + url;
     dataLink.href = url;
+    downloadLink.href = url;
+    downloadLink.download = "download";
 }
 if (localStorage.getItem("path")) {
 

@@ -199,7 +199,7 @@ function handleGet()
 
     http_response_code(200);
     
-    header('Content-Type: application/json');
+    header('Content-Type: text/plain; charset=utf-8');
       
     setCredentialsCookie($credentials);
     

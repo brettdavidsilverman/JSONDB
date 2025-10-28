@@ -1,0 +1,25 @@
+{
+   "type": "function",
+   "inputs": {
+      "count": 100000
+   },
+   "variables": {
+      "x": 0
+   },
+   "processes": {
+      "check": {
+         "if": {
+            "test": "x < count",
+            "true": "increment",
+            "false": "exit"
+         }
+      },
+      "increment": {
+         "code": "++x",
+         "next": "check"
+      },
+      "exit": {
+         "code": "return x"
+      }
+   }
+}

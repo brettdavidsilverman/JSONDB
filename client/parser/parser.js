@@ -1,192 +1,130 @@
 class Match {
-   #success = undefined;
-   #value = "";
-   #inputs;
+    #inputs;
+    #success = undefined;
+    #value = null;
+    
+    constructor(...inputs) {
+        this.#inputs = inputs;
+    }
    
-   constructor(...inputs) {
-      this.#inputs = inputs;
-   }
+    match(character) {
+    
+    }
    
-   match(character) {
-      this.#value += character;
-   }
-   
-   read(string, end = true) {
+    read(string, end = true) {
      
-      var matched;
-      var i;
-      for (i = 0;
-           i < string.length;
-           )
-      {
-         var character = string[i];
+        var matched;
+        var i;
+        for (i = 0;
+             i < string.length;
+            )
+        {
+            var character = string[i];
          
-         var matched =
-            this.match(character);
+            var matched =
+                this.match(character);
          
-         if (matched)
-            document.write(
-               "{" + 
-               escape(character) + 
-               "}"
-            );
-      
+            if (matched) {
+                document.write(
+                   "{" + 
+                   character + 
+                   "}"
+                );
 
+            }
             
-         if (this.success !=
-             undefined)
-            return i;
+            if (this.success !=
+                undefined)
+                break;
             
-         if (matched)
-            ++i;
-      }
+            if (matched)
+                ++i;
+        }
       
-      if (end)
-         this.readEnd();
+        if (end)
+            this.readEnd();
          
-      return i;
+        return i;
       
-   }
+    }
    
-   readEnd() {
-   }
+    readEnd() {
+    }
    
-   get success() {
-      return this.#success;
-   }
+    get success() {
+        return this.#success;
+    }
    
-   set success(value) {
-      if (value != this.#success)
-      {
-         this.#success = value;
-         if (this.#success)
-            this.onsuccess();
-      }
-   }
+    set success(value) {
+        if (value != this.#success)
+        {
+            this.#success = value;
+            if (this.#success)
+                this.onsuccess();
+        }
+    }
    
-   onsuccess() {
-   }
+    onsuccess() {
+    }
+    
    
-   get value() {
-      return this.#value;
-   }
+    get inputs() {
+        return this.#inputs;
+    }
    
-   get inputs() {
-      return this.#inputs;
-   }
+    onmatch(character) {
+    }
    
-   word(items) {
-
-      var word = items.map(
-         item => {
-            if (item.success === true)
-               return item.value;
-            else
-               return null;
-         }
-      ).join("");
-      
-      return word;
-   }
-   
-   write(doc) {
-      if (!doc)
-         doc = document;
+    write(doc) {
+        if (!doc)
+            doc = document;
          
-      if (this.success)
-         doc.writeln("Match:" + this.value);
-      else
-         doc.writeln("No match");
-   }
+        if (this.success) {
+            doc.write("Match");
+            if (this.value !== null)
+                doc.write(": " + this.value);
+            doc.writeln();
+        }
+        else
+            doc.writeln("No match");
+    }
+    
+    set value(value) {
+        this.#value = value;
+    }
+    
+    get value() {
+        return this.#value;
+    }
 }
 
-
-            
 class Character extends Match {
-   #character;
+    #character;
    
-   constructor(character) {
-      super();
-      this.#character = character;
-   }
+    constructor(character) {
+        super();
+        this.#character = character;
+    }
    
-   match(character) {
-      var matched =
-         this.#character === character;
+    match(character) {
+        var matched =
+            this.#character === character;
          
-      if (matched) {
-         super.match(character);
-         this.success = true;
-      }
-      else
-         this.success = false;
-         
-      return matched;
-   }
-   
-}
-            
-class Range extends Match {
-   #minimum;
-   #maximum;
-   constructor(minimum, maximum) {
-      super();
-      this.#minimum = minimum;
-      this.#maximum = maximum;
-   }
-   
-   match(character) {
-   
-      var matched =
-         (this.#minimum <= character) &&
-         (this.#maximum >= character);
-         
-      if (matched) {
-         super.match(character);
-         this.success = true;
-      }
-      else
-         this.success = false;
-      
-      return matched;
-   }
-   
-}
-            
-class Word extends Match {
-   #index = 0;
-   #word;
-   constructor(word) {
-      super();
-      this.#word = word;
-   }
-   
-   match(character) {
-      var matched =
-         this.#word[this.#index] ===
-         character;
-         
-      if (matched)
-      {
-         super.match(character);
-         ++this.#index;
-         if (this.#index === this.#word.length) {
+        if (matched) {
+            this.onmatch(character);
             this.success = true;
-         }
-      }
-      else
-         this.success = false;
+        }
+        else
+            this.success = false;
          
-      return matched;
-   }
-   
+        return matched;
+    }
    
 }
-
-            
 class And extends Match {
    #index = 0;
    #matches = [];
+   
    constructor(...inputs) {
       super(...inputs);
       if (this.inputs.length === 0) {
@@ -205,6 +143,9 @@ class And extends Match {
          matched =
             item.match(character);
     
+         if (matched)
+             this.onmatch(character);
+             
          if (item.success) {
          
             this.#matches.push(item);
@@ -259,106 +200,262 @@ class And extends Match {
       return this.#matches;
    }
    
-   get value() {
-      return super.word(this.matches);
-   }
 }
+class Capture extends And {
+
+    #object;
+    #keys;
+
+    constructor(object) {
+        var objects;
+        if (object instanceof Match) {
+            object.value = null;
+            object.onmatch = onmatch;
+            objects = [object];
+        }
+        else
+            objects = getObjects(object);
             
-class Or extends Match {
-   #item;
-   constructor(...inputs) {
-      super(...inputs);
-   }
+        super(...objects);
+        
+        this.#object = object;
+        this.#keys = getKeys(object);
+        this.onmatch = onmatch;
+        
+        function getObjects(object) {
+            var objects = [];
+            var keys = Object.keys(object);
+            for (var index in keys) {
+                var key = keys[index];
+                var obj = object[key];
+                if (obj instanceof Match) {
+                    obj.value = null;
+                    obj.onmatch = onmatch
+                    objects.push(obj);
+                }
+                else {
+                    objects.push(...getObjects(obj));
+                }
+            }
+            return objects;
+        }
+        
+        function getKeys(object) {
+            var allKeys= [];
+            if (object instanceof Match)
+                return [
+                    {
+                        key: "value"
+                    }
+                ];
+                
+               
+            var keys = Object.keys(object);
+            for (var index in keys) {
+                var key = keys[index];
+                var obj = object[key];
+                if (obj instanceof Match) {
+                    allKeys.push(
+                        {
+                            key,
+                            parent: object
+                        }
+                    );
+                }
+                else {
+                    allKeys.push(...getKeys(obj));
+                }
+            }
+            return allKeys;
+        }
+        
+        function onmatch(character) {
+            if (this.value === null)
+                this.value = character;
+            else
+                this.value += character;
+        }
+    }
+    
+    readEnd() {
+
+        if (this.success === undefined) {
+            super.readEnd();
+        }
+        
+        if (this.success)
+            this.setValues();
+        
+    }
    
-   match(character) {
-      var matched = false;
+    setValues() {
+        var i = 0;
+        var object = this.#object;
+        var keys = this.#keys;
+        var matches = super.matches;
+        
+        for (var index in matches) {
+            var item = matches[index];
+            var key = keys[index];
+            var parent = key.parent;
+            if (!parent) {
+                this.value = item.value;
+                return;
+            }
+            parent[key.key] = item.value;
+        }
+
+        this.value = {};
+        Object.assign(this.value, object);
+    }
+    
  
-      for (var i = 0;
-           i < this.inputs.length;
-           i++)
-      {
-         var item = this.inputs[i];
-         if (item.success === undefined) {
+}
+class Range extends Match {
+    #minimum;
+    #maximum;
+    constructor(minimum, maximum) {
+        super();
+        this.#minimum = minimum;
+        this.#maximum = maximum;
+    }
+   
+    match(character) {
+   
+        var matched =
+            (this.#minimum <= character) &&
+            (this.#maximum >= character);
          
-            if (item.match(character))
-               matched = true;
-            
-            if (item.success) {
-               this.#item = item;
-               this.index = i;
-               this.success = true;
-               return matched;
-            }
-            
-         }
-      }
+        if (matched) {
+            this.onmatch(character);
+            this.success = true;
+        }
+        else
+            this.success = false;
       
-      if (!matched)
-         this.success = false;
-         
-      return matched;
-   }
-   
-   readEnd() {
-      
-      for (var i = 0;
-           i < this.inputs.length;
-           i++)
-      {
-         var item = this.inputs[i];
-         if (item.success != false) {
-            item.readEnd();
-            if (item.success) {
-               this.#item = item;
-               this.index = i;
-               this.success = true;
-               break;
-            }
-         }
-      }
-      
-      super.readEnd();
-
-   }
-   
-   get item() {
-      return this.#item;
-   }
-   
-   get value() {
-      return this.item.value;
-   }
+        return matched;
+    }
    
 }
+class Word extends Match {
+    #index = 0;
+    #word;
+    constructor(word) {
+        super();
+        this.#word = word;
+    }
+   
+    match(character) {
+        var matched =
+            this.#word[this.#index] ===
+            character;
+         
+        if (matched)
+        {
+            this.onmatch(character);
+            ++this.#index;
+            if (this.#index === this.#word.length) {
+                this.success = true;
+            }
+        }
+        else
+            this.success = false;
+         
+        return matched;
+    }
+   
+   
+}
+class Or extends Match {
+    #item;
+    constructor(...inputs) {
+        super(...inputs);
+    }
+   
+    match(character) {
+        var matched = false;
+ 
+        for (var i = 0;
+             i < this.inputs.length;
+             i++)
+        {
+            var item = this.inputs[i];
+            if (item.success === undefined) {
+         
+               if (item.match(character)) {
+                  matched = true;
+               }
+                
+               if (item.success) {
+                  this.#item = item;
+                  this.index = i;
+                  this.success = true;
+                  break;
+               }
             
+            }
+        }
+      
+        if (matched)
+            this.onmatch(character);
+        else
+            this.success = false;
+         
+        return matched;
+    }
+   
+    readEnd() {
+      
+       for (var i = 0;
+            i < this.inputs.length;
+            i++)
+       {
+           var item = this.inputs[i];
+           if (item.success != false) {
+               item.readEnd();
+               if (item.success) {
+                   this.#item = item;
+                   this.index = i;
+                   this.success = true;
+                   break;
+               }
+           }
+       }
+      
+       super.readEnd();
+
+    }
+   
+    get item() {
+        return this.#item;
+    }
+}
 class Not extends Match {
-   #match;
-   constructor(match) {
-      super();
-      this.#match = match;
-   }
+    #match;
+    constructor(match) {
+        super();
+        this.#match = match;
+    }
    
-   match(character) {
+    match(character) {
       
-      var matched =
-         this.#match.match(character);
+        var matched =
+            !this.#match.match(character);
       
-      if (!matched)
-         super.match(character);
-         
-      if (this.#match.success === false) {
-         this.success = true;
-      }
-      else if (this.#match.success)
-         this.success = false;
+        if (this.#match.success === false) {
+            this.success = true;
+        }
+        else if (this.#match.success)
+            this.success = false;
 
-      return !matched;
+        if (matched)
+           this.onmatch(character);
+           
+        return matched;
       
-   }
-   
+    }
    
 }
-            
 class Optional extends Match {
    #match;
    constructor(match) {
@@ -369,7 +466,7 @@ class Optional extends Match {
    match(character) {
       var matched =
          this.#match.match(character);
-      
+          
       if (this.#match.success !=
           undefined) {
          this.success = true;
@@ -383,83 +480,80 @@ class Optional extends Match {
       super.readEnd();
    }
    
-   get value() {
-      if (this.#match.success === true)
-         return this.#match.value;
-      return null;
-   }
  
 }
-            
 class Repeat extends Match {
-   #Match;
-   #match;
-   #items = [];
+    #Match;
+    #match;
+    #items = [];
   
-   constructor(Match) {
-      super();
-      this.#Match = Match;
-      this.#match = new this.#Match();
+    constructor(Match) {
+        super();
+        this.#Match = Match;
+        this.#match = new this.#Match();
       
-   }
+    }
    
-   match(character) {
+    match(character) {
    
-      var matched =
-         this.#match.match(character);
+        var matched =
+            this.#match.match(character);
          
-      if (this.#match.success) {
-      
-         this.#items.push(
-            this.#match
-         );
-            
-         this.#match =
-            new this.#Match();
+        if (matched)
+           this.onmatch(character);
            
-      }
-      else if (this.#match.success ===
-               false)
-      {
-         this.checkSuccess();
-         this.#match =
-            new this.#Match();
-      }
+        if (this.#match.success) {
       
-      return matched;
-      
-   }
-   
-   readEnd() {
-      if (this.#match.success ===
-          undefined)
-      {
-         this.#match.readEnd();
-         if (this.#match.success) {
-
             this.#items.push(
-               this.#match
+                this.#match
             );
-         }
-      }
-      this.checkSuccess();
-      super.readEnd();
-   }
-   
-   checkSuccess() {
+            
+            this.#match =
+               new this.#Match();
+           
+        }
+        else if (this.#match.success ===
+                 false)
+        {
+            this.checkSuccess();
+            this.#match =
+                new this.#Match();
+        }
       
-      if (this.#items.length > 0) {
-         this.success = true;
-      }
-      else {
-         this.success = false;
-      }
-   }
+        return matched;
+      
+    }
    
-   get items() {
-      return this.#items;
-   }
+    readEnd() {
+        if (this.#match.success ===
+            undefined)
+        {
+            this.#match.readEnd();
+            if (this.#match.success) {
+
+                this.#items.push(
+                    this.#match
+               );
+            }
+        }
+        this.checkSuccess();
+        super.readEnd();
+    }
    
+    checkSuccess() {
+      
+        if (this.#items.length > 0) {
+            this.success = true;
+        }
+        else {
+            this.success = false;
+         }
+    }
+   
+    get items() {
+        return this.#items;
+    }
+   /*
    get value() {
       return this.items.map(
          item => {
@@ -467,275 +561,5 @@ class Repeat extends Match {
          }
       ).join("");
    }
-   
+   */
 }
-
-
-            
-class Capture extends And {
-
-   #object;
-   #keys;
-
-   constructor(object) {
-      super(...Object.values(object));
-      this.#object = object;
-      this.#keys = Object.keys(object);
-   }
-   
-   match(character) {
-      var matched =
-         super.match(character);
-        
-      if (this.success) {
-         this.setValues();
-      }
-
-      return matched;
-
-   }
-   
-   readEnd() {
-      if (this.success === undefined) {
-         super.readEnd();
-         if (this.success)
-            this.setValues();
-      }
-   }
-   
-   setValues() {
-      var i = 0;
-      var object = this.#object;
-      var capture = this;
-      super.matches.forEach(
-         (item) => {
-            var key = capture.#keys[i++];
-            object[key] = item;
-         }
-      );
-    
-      Object.assign(this, object);
-   }
- 
-   
-}
-            
-class WhitespaceCharacter extends Or {
-   constructor() {
-      super(
-         new Character(" "),
-         new Character("\t")
-      );
-   }
-   
-   get value() {
-      return this.item.value;
-   }
-}
-
-class Whitespace extends Repeat {
-
-   constructor() {
-      super(WhitespaceCharacter);
-   }
-   
-}
-            
-class Colon extends And {
-   constructor() {
-       super(
-          new Optional(new Whitespace()),
-          new Character(":"),
-          new Optional(new Whitespace())
-       );
-   }
-   
-   get value() {
-      return ":";
-   }
-}
-            
-class NewLine extends Or {
-   static standard = "\r\n";
-   constructor() {
-      super(
-         new And(
-            new Character("\r"),
-            new Optional(
-               new Character("\n")
-            )
-         ),
-         new Character("\n")
-      )
-   }
-   
-   get value() {
-      if (this.success)
-         return NewLine.standard;
-      else
-         return null;
-   }
-}
-             
-class FirstIdentifierCharacter
-   extends Or
-{
-   constructor() {
-      super(
-         new Range("a", "z"),
-         new Range("A", "Z"),
-         new Character("_")
-      )
-   }
-}
-
-class SubsequentIdentifierCharacter
-   extends Or
-{
-   constructor() {
-      super(
-         new Range("0", "9"),
-         new Range("a", "z"),
-         new Range("A", "Z"),
-         new Character("_")
-      )
-   }
-}
-
-class Identifier extends And
-{
-   #value = "";
-   constructor() {
-      super(
-         new FirstIdentifierCharacter(),
-         new Repeat(
-            SubsequentIdentifierCharacter
-         )
-      )
-   }
-
-}
-             
-class PathCharacter extends Or {
-   constructor() {
-      super(
-         new Character("/"),
-         new Character("."),
-         new Character("-"),
-         new Character("_"),
-         new Range("a", "z"),
-         new Range("A", "Z")
-      )
-   }
-   
-   get value() {
-      return this.item.value;
-   }
-}
-
-class Path extends Repeat {
-   constructor() {
-      super(
-         PathCharacter
-      )
-   }
-
-}
-            
-class FirstLine extends Capture {
-
-   constructor() {
-      super( {
-         verb: new Identifier(),
-         whitespace1: new Whitespace(),
-         path: new Path(),
-         whitespace2: new Whitespace(),
-         version:
-            new Word("HTTP/1.1"),
-         newLine:
-            new NewLine()
-     } );
-   }
-}
-            
-class HeaderPunctuation extends Or {
-   constructor() {
-      super(
-         new Or(
-            new NewLine(),
-            new Character(":")
-         )
-      );
-   }
-}
-
-class HeaderCharacter extends Not {
-   constructor() {
-      super(
-         new HeaderPunctuation()
-      );
-   }
-}
-
-class HeaderName extends Repeat {
-   constructor() {
-      super(
-         HeaderCharacter
-      );
-   }
-}
-
-class HeaderValue extends Repeat {
-   constructor() {
-      super(
-         HeaderCharacter
-      );
-   }
-   
-}
-            
-class HeaderLine extends Capture {
-   constructor() {
-      super(
-         {
-            name: new HeaderName(),
-            colon: new Colon(),
-            _value: new HeaderValue(),
-            newLine: new NewLine()
-         }
-      );
-      
-   }
-   
-   write() {
-      document.write(
-         this.name.value
-      );
-      document.write(":\t");
-      document.writeln(
-         this._value.value
-      );
-   }
-   
-
-}
-
-class Headers extends Repeat {
-   constructor() {
-      super(HeaderLine)
-   }
-}
-
-            
-class Request extends Capture {
-   constructor() {
-      super(
-         {
-            firstLine: new FirstLine(),
-            headers: new Headers(),
-            newLine: new NewLine()
-         }
-      );
-   }
-}
-            

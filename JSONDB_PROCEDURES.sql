@@ -29,15 +29,18 @@
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` FUNCTION `getPathByValue`(
-   valueId BIGINT
+   valueId BIGINT,
+   userId BIGINT
 ) RETURNS text CHARSET utf8mb4
 BEGIN
-   SET @valueId = valueId;
+   SET @valueId = valueId,
+            @userId = userId;
    
    SET @parentValueId = (
          SELECT   Value.parentValueId
          FROM     Value
          WHERE  Value.valueId = @valueId
+         AND         Value.ownerId = @userId
       );
       
    SET @path = '';
@@ -47,19 +50,21 @@ BEGIN
                    @parentValueId IS NOT NULL) DO
                    
       SET @path = CONCAT(
-         getSegmentByValue(@valueId),
+         getSegmentByValue(@valueId, @userId),
          CONCAT('/', @path)
       );
       SET @valueId = (
          SELECT   Value.parentValueId
          FROM     Value
          WHERE  Value.valueId = @valueId
+         AND         Value.ownerId = @userId
       );
       
       SET @parentValueId = (
          SELECT   Value.parentValueId
          FROM     Value
          WHERE  Value.valueId = @valueId
+         AND        Value.ownerId = @userId
       );
     
    END WHILE;
@@ -87,11 +92,13 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` FUNCTION `getSegmentByValue`(
-   valueId BIGINT
+   valueId BIGINT,
+   userId BIGINT
 ) RETURNS text CHARSET utf8mb4
 BEGIN
 
-    SET @valueId = valueId;
+    SET @valueId = valueId,
+             @userId = userId;
     
     IF @valueId IS NULL THEN
        RETURN '';
@@ -101,6 +108,7 @@ BEGIN
        SELECT   objectKey
        FROM     Value
        WHERE   Value.valueId = @valueId
+       AND         Value.ownerId = @userId
     );
     
     SET @segment = NULL;
@@ -110,6 +118,7 @@ BEGIN
           SELECT CAST(Value.objectIndex AS CHAR)
           FROM   Value
           WHERE Value.valueId = @valueId
+          AND       Value.ownerId = @userId
        );
     ELSE
        SET @segment = urlencode(@objectKey);
@@ -251,7 +260,7 @@ BEGIN
 
   SET @text = original_text;
   
-  SET @text = REPLACE(@text, '/', '%252F');
+  SET @text = REPLACE(@text, '/', '%2F');
   SET @text = REPLACE(@text, ' ', '%20');
   
   RETURN @text;
@@ -2546,4 +2555,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-29  9:24:42
+-- Dump completed on 2025-10-29 14:03:29

@@ -267,7 +267,6 @@ function setJob(job, index) {
 fetchButton.onclick = function() {
      
     var url = getURL();
-    pathInput.value = url;
     
     fetchButton.disabled = true;
     
@@ -507,12 +506,15 @@ function getURL(publish = false) {
         
     pathInput.value = url;
     
-    if (publish && authentication.userId && !isInteger(first)) {
+    if (publish && 
+        authentication.userId &&
+        !isInteger(first)
+    ) {
         url =
             "/" + 
             authentication.userId.toString() +
             "/" +
-            url.substr(4);
+            url.substr(3);
                 
     }
     

@@ -394,10 +394,10 @@ $msg = "ownerId: " . $ownerId . ", " .
         if ($count <= 1)
            throw new PathException("Invalid path", $this, null);
            
-        $segment = _urldecode($paths[1]);
+        $segment = decodePathSegment($paths[1]);
         $nextSegment = null;
         if ($count > 2)
-            $nextSegment = _urldecode($paths[2]);
+            $nextSegment = decodePathSegment($paths[2]);
             
         $ownerId = null;
         $userId = 
@@ -495,8 +495,8 @@ $msg = "ownerId: " . $ownerId . ", " .
 
         for($i = 2; $i < ($count - 1); ++$i) {
             
-            $segment = _urldecode($paths[$i]);
-            $nextSegment = _urldecode($paths[$i + 1]);
+            $segment = decodePathSegment($paths[$i]);
+            $nextSegment = decodePathSegment($paths[$i + 1]);
 
             if ($segment === "")
                 throw new PathException("Empty path", $this, $i);
@@ -562,7 +562,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             return $parentValueId;
         }
             
-        $segment = _urldecode($paths[$count - 1]);
+        $segment = decodePathSegment($paths[$count - 1]);
         
         if ($segment === "")
             throw new PathException("Empty path", $this, $count - 1);
@@ -641,10 +641,10 @@ $msg = "ownerId: " . $ownerId . ", " .
         $count = count($paths);
         $last = ($i === ($count - 1));
         
-        $segment = _urldecode($paths[$i]);
+        $segment = decodePathSegment($paths[$i]);
         $nextSegment = null;
         if (!$last)
-            $nextSegment = _urldecode($paths[$i + 1]);
+            $nextSegment = decodePathSegment($paths[$i + 1]);
 
         $ownerId = $this->credentials["userId"];
 
@@ -1169,6 +1169,10 @@ $msg = "ownerId: " . $ownerId . ", " .
     {
         if (is_null($string))
            return [];
+           
+        
+        if (strlen($string) === 1)
+           return [$string];
            
         $delimiter =
             ",“.”\'()*\'\"{}:;!?~`|[] \t\r\n\\/";

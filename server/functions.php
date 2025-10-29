@@ -238,17 +238,21 @@ function encodeSlashes($path) {
     
 }
 
-function _urldecode($path) {
-     $path = rawurldecode($path);
-     if (str_starts_with($path, "\"") &&
-          str_ends_with($path, "\""))
+function decodePathSegment($segment) {
+    
+     $segment = urldecode(
+         decodeSlashes($segment)
+     );
+     
+     if (str_starts_with($segment, "\"") &&
+          str_ends_with($segment, "\""))
      {
-          return substr($path, 1, -1);
+          return substr($segment, 1, -1);
      }
-     else if (is_numeric($path))
-         return (int)$path;
+     else if (is_numeric($segment))
+         return (int)$segment;
      else
-         return $path;
+         return $segment;
 }
 
 function getPath() {
@@ -260,7 +264,7 @@ function getPath() {
     );
     
     
-    $path = decodeSlashes($path);
+   // $path = decodeSlashes($path);
 
     //$path = rawurldecode($path);
     
@@ -277,6 +281,27 @@ function getQuery() {
     $query = decodeSlashes($query);
     return $query;
 }
+
+function getQueryParameter($parameter) {
+    $query = getQuery();
+    
+    $arguments = explode("&", $query);
+    
+    foreach ($arguments as $argument) {
+        $keyValue = explode("=", $argument);
+        
+        if (count($keyValue) === 2 &&
+            $keyValue[0] == $parameter)
+        {
+            return decodePathSegment($keyValue[1]);
+        }
+        
+    }
+    
+    return null;
+    
+}
+
 
 function getClientIPAddress() {
     $ipAddress = $_SERVER['REMOTE_ADDR'];

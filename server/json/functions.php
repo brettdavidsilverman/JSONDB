@@ -492,21 +492,21 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
 
     for($i = 2; $i < $count; ++$i) {
         
-        $path = $paths[$i];
+        $segment = $paths[$i];
         
-        if ($path === "") {
+        if ($segment === "") {
             throw new PathException("Empty path", implode("/", $paths), $i);
         }
         
-        $path = _urldecode($path);
+        $segment = decodePathSegment($segment);
         
-        if (is_int($path)) {
-            $pathIndex = $path;
+        if (is_int($segment)) {
+            $pathIndex = $segment;
             $pathKey = null;
         }
         else {
             $pathIndex = null;
-            $pathKey = $path;
+            $pathKey = $segment;
         }
         
         $statement->execute();
@@ -522,13 +522,13 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
             $statement->close();
 
             if ($i === ($count - 1) &&
-                !is_numeric($path) &&
+                !is_numeric($segment) &&
                 $insertLast &&
                 ($lastType === "object" ||
                  $lastType === "array")
             )
             {
-                $lastPath = $path;
+                $lastPath = $segment;
                 $valueId = $parentValueId;
             }
             else {
@@ -738,7 +738,7 @@ function handleSearch($query)
     
     $sql = <<<END
 select distinct
-    getPathByValue(v.valueId) as path
+    getPathByValue(v.valueId, ?) as path
 from 
     Value as v
 where
@@ -759,12 +759,12 @@ END;
         true
     );
 
-    $words = explode(" ", $query);
+    $words = explode("+", $query);
 
     $wordCount = count($words);
     for ($i = 0; $i < $wordCount; ++$i) {
         $word = $words[$i];
-        $words[$i] = urldecode($word);
+        $words[$i] = decodePathSegment($word);
         $sql =
             $sql .
             "and\r\n" .
@@ -776,6 +776,7 @@ END;
     
     $parameters =
         array_merge(
+            [$credentials["userId"]],
             [$pathValueId],
             $words
         );

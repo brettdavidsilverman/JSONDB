@@ -1,5 +1,7 @@
+set @userId = ?;
+
 select distinct
-    getPathByValue(v.valueId) as path
+    getPathByValue(v.valueId, @userId) as path
 from 
     Value as v
 inner join

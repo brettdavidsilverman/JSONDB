@@ -9,9 +9,7 @@
         handlePost();
     }
     else if ($method === "GET") {
-        $q = null;
-        if (array_key_exists("q", $_GET))
-           $q = $_GET["q"];
+        $q = getQueryParameter("q");
            
         if (is_null($q))
             handleGet();

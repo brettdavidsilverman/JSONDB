@@ -454,9 +454,10 @@ function getRootValueId($connection, $userId, & $lastType, $path)
 }
 
 
-function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, $lastType, & $lastPath, & $paths, & $errorIndex)
+function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, $lastType, & $lastPath, & $path, & $errorIndex)
 {
-     
+    $paths = explode("/", $path);
+         
     $lastPath = null;
     
     $userId = $credentials["userId"];
@@ -494,8 +495,8 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
         
         $segment = $paths[$i];
         
-        if ($segment === "") {
-            throw new PathException("Empty path", implode("/", $paths), $i);
+        if (strlen($segment) === 0) {
+            throw new PathException("Empty path", $path, $i);
         }
         
         $segment = decodePathSegment($segment);
@@ -581,7 +582,6 @@ function getValueIdByPathEx(
 )
 {
     $userId = $credentials["userId"];
-    $paths = explode("/", $path);
 
     $rootValueId = getRootValueId(
         $connection,
@@ -603,7 +603,7 @@ function getValueIdByPathEx(
             $insertLast,
             $lastType,
             $lastPath,
-            $paths,
+            $path,
             $errorIndex
         );
     }

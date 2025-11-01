@@ -279,13 +279,16 @@ function getEmptyCredentials()
 
 function getCredentialsCookie()
 {
-   $headers = getallheaders();
-   $credentialsString = null;
+ 
+      http_response_code(200);
    
-   if (array_key_exists("x-auth-token", $headers))
+   $credentialsString = null;
+   $xAuthToken = getHeader("x-auth-token");
+   
+   if (!is_null($xAuthToken))
    {
       $credentialsString =
-         urldecode($headers["x-auth-token"]);
+          $xAuthToken;
    }
    else if (array_key_exists("credentials", $_COOKIE))
    {
@@ -296,7 +299,7 @@ function getCredentialsCookie()
    
    if (!is_null($credentialsString)) {
       $credentials = json_decode(
-         $credentialsString,
+         urldecode($credentialsString),
          true
       );
    
@@ -315,7 +318,7 @@ function getCredentials($connection, $ignoreExpires = false)
    $credentials = getCredentialsCookie();
 
    if (is_null($credentials) ||
-       is_null($credentials["sessionKey"]))
+       !array_key_exists("sessionKey", $credentials))
    {
       return getEmptyCredentials();
    }
@@ -372,7 +375,7 @@ function authenticate($ignoreExpires = false)
       $connection,
       $ignoreExpires
    );
-
+   
    $connection->close();
    
    $isFetchClient =

@@ -733,6 +733,15 @@ function writeValuesToStream(
 function handleSearch($query)
 {
     $credentials = authenticate();
+    
+        
+    http_response_code(200);
+    
+    header('Content-Type: application/json; charset=utf-8');
+      
+    setCredentialsCookie($credentials);
+    
+    
     $connection = getConnection();
 
     
@@ -750,14 +759,32 @@ END;
 
     $lastPath = null;
     
-    $pathValueId = getValueIdByPathEx(
-        $connection,
-        $credentials,
-        false,
-        $lastPath,
-        getPath(),
-        true
-    );
+    try {
+        $pathValueId = getValueIdByPathEx(
+            $connection,
+            $credentials,
+            false,
+            $lastPath,
+            getPath(),
+            true
+        );
+    }
+    catch (PathException $ex) {
+        
+        $error = [
+            "label" => $ex->getMessage(),
+            "path" => $ex->path
+        ];
+        
+        echo json_encode(
+            [
+                "{Error}" => $error
+            ]
+        );
+    
+        return false;
+        
+    }
 
     $words = explode("+", $query);
 
@@ -788,13 +815,7 @@ END;
     );
     
     $data = $result->fetch_all(MYSQLI_ASSOC);
-    
-    http_response_code(200);
-    
-    header('Content-Type: application/json; charset=utf-8');
-      
-    setCredentialsCookie($credentials);
-    
+
     $count = count($data);
 
     echo "[\r\n";
@@ -825,6 +846,7 @@ END;
     );
 */
     
+    return true;
 }
 
 function word() {

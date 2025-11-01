@@ -272,12 +272,14 @@ fetchButton.onclick = function() {
     
     authentication.authenticate();
     
-    localStorage.setItem("path", url);
+    
 
     var promise =
     authentication.fetch(url)
     .then(
         function(json) {
+            
+            localStorage.setItem("path", pathInput.value);
             
             jsonEditor.value =
                JSON.stringify(json, null, "   ");
@@ -492,30 +494,26 @@ function switchFunctions(showFunctions)
 function getURL(publish = false) {
     var url = pathInput.value;
     
-    if (url == "")
-        return "/my";
-        
-    var first;
-    if (url.includes("?")) {
-        first = url.split("?")[0];
+    if (url == "") {
+        pathInput.value = "/my";
+        return pathInput.value;
     }
-    else {
-        first = url.split("/")[1];
-    }
+
+ 
+    url = new URL(pathInput.value, authentication.url);
+
+    if (!url.pathname.endsWith("/"))
+       url.pathname += "/";
+       
+    var paths = url.pathname.split("/");
         
-        
-    pathInput.value = url;
-    
     if (publish && 
         authentication.userId &&
-        !isInteger(first)
+        !isInteger(paths[1])
     ) {
-        url =
-            "/" + 
-            authentication.userId.toString() +
-            "/" +
-            url.substr(3);
-                
+        paths[1] =
+            authentication.userId.toString();
+        url.pathname = paths.join("/");
     }
     
     // Double encode slashes to allow
@@ -523,12 +521,12 @@ function getURL(publish = false) {
     // The server similarly decodes them
     
     // upper case
-    url = url.replaceAll("%2F", "%252F");
+    url.pathname = url.pathname.replaceAll("%2F", "%252F");
     
     // lower case
-    url = url.replaceAll("%2f", "%252f");
+    url.pathname = url.pathname.replaceAll("%2f", "%252f");
     
-    return url;
+    return url.toString();
 }
 
 function isInteger(value) {

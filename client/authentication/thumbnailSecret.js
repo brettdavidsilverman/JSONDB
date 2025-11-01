@@ -81,13 +81,14 @@ function createSecret(file, thumbnail, onload)
    
    thumbnail.style.filter = "grayscale(100%)";
    
-   getFileHash(file)
+   return getFileHash(file)
    .then(
       function(secret) {
          thumbnail.style.filter = "none";
          thumbnail.secret = secret;
          if (onload)
-            onload(secret)
+            onload(secret);
+         return secret;
       }
    );
    

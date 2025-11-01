@@ -330,9 +330,18 @@ function escapeString($string) {
 function getHeader($name) {
      
     $headers = getallheaders();
+   
+   
+    $lowerCaseHeaders = null;
+   
+    if (!is_null($headers)) {
+       $lowerCaseHeaders = array_change_key_case($headers, CASE_LOWER);
+    }
     
-    if (array_key_exists($name, $headers))
-        return $headers[$name];
+    if (!is_null($lowerCaseHeaders)) {
+        if (array_key_exists($name, $lowerCaseHeaders))
+            return $lowerCaseHeaders[$name];
+    }
     
     return null;
     

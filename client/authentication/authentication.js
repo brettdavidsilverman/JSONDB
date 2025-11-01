@@ -2,11 +2,12 @@ class Authentication
 {
     static _uploadProgressName = null;
     static _uploadMaxFilesize = null;
+    #credentials = false;
     
     constructor(authenticationServer = document.location.origin) {
-        var creds = this.getCredentials();
         
-        Object.assign(this, creds);
+        this.credentials = this.getCredentials();
+        
         this.authenticationServer =
             authenticationServer;
         this.url = this.authenticationServer;
@@ -32,7 +33,11 @@ class Authentication
     redirect() {
         var currentPage = document.location.href;
         var newPage = this.url + "/client/authentication/logon.php";
-        if (currentPage != newPage) {
+        var currentURL = new URL(currentPage);
+        var newURL = new URL(newURL);
+        if (currentURL.origin != newURL.origin ||
+            currentURL.pathname != newURL.pathname) {
+
             var url = newPage + "?redirect=" + encodeURIComponent(currentPage);
   
             document.location.href = url;
@@ -47,8 +52,8 @@ class Authentication
             method: "GET",
             headers: {
                 "x-auth-token":
-                    this.getCookie(
-                        "credentials"
+                     encodeURIComponent(
+                         JSON.stringify(this.credentials)
                     )
             }
         }
@@ -347,30 +352,44 @@ class Authentication
                 }
             )
             .then(
-                function(authenticated) {
-                    _this.authenticated =
-                        authenticated;
-                        
-                    return authenticated;
+                function(credentials) {
+                    return credentials;
                 }
             );
             
         return promise;
     }
     
+    get credentials() {
+        return this.#credentials;
+    }
+    
+    set credentials(creds) {
+        if (creds) {
+            this.setCookie(creds);
+            this.authenticated =
+                 creds.authenticated;
+        }
+        else 
+            this.authenticated = false;
+            
+        this.#credentials = creds;
+    }
+    
     get authenticated() {
-        var credentials = this.getCredentials();
+        var credentials = this.credentials;
 
         if (credentials != null) {
-            var authed =
+            var authenticated =
                 credentials.authenticated;
             var now = new Date().getTime();
 
-            authed = authed && (
-                credentials.expires > now
-            );
+            authenticated =
+                authenticated && (
+                    credentials.expires > now
+                );
      
-            return authed;
+            return authenticated;
         }
       
       return false;
@@ -561,7 +580,7 @@ class Authentication
         
     }
     
-    setCredentials(credentials) {
+    setCookie(credentials) {
          
         if (!credentials) {
              document.cookie =
@@ -624,10 +643,9 @@ class Authentication
              throw new LogonError();
          }
          
-         var cookie;
          var credentialsString =
             response.headers.get("x-auth-token");
-            
+
          var credentials = null;
          if (credentialsString) {
              credentials = JSON.parse(
@@ -635,7 +653,7 @@ class Authentication
              );
          }
           
-         this.setCredentials(credentials);
+         this.credentials = credentials;
 
     }
     

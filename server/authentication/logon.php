@@ -30,8 +30,9 @@ setCredentialsCookie($credentials);
 header("content-type: application/json");
 
 if (!is_null($credentials) &&
-     $credentials["authenticated"])
-   echo "true";
+    $credentials["authenticated"] == true)
+    echo json_encode($credentials);
 else
-   echo "false";// json_encode($credentials);
+    echo "false";
+    
 ?>

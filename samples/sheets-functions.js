@@ -45,8 +45,8 @@ function GETPATH(credentials, path) {
 
     const json = JSON.parse(text);
     
-    if (typeof json == "object" ||
-        typeof json == "array")
+    if (typeof json == "object" &&
+        !Array.isArray(json))
         return text;
     
     return json;

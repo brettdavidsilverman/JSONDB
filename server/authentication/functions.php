@@ -318,7 +318,9 @@ function getCredentials($connection, $ignoreExpires = false)
    $credentials = getCredentialsCookie();
 
    if (is_null($credentials) ||
-       !array_key_exists("sessionKey", $credentials))
+      !is_array($credentials) ||
+      !array_key_exists("sessionKey", $credentials)
+      )
    {
       return getEmptyCredentials();
    }

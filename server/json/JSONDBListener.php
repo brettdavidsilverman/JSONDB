@@ -244,7 +244,8 @@ $msg = "ownerId: " . $ownerId . ", " .
             $this->newPath =
                 getPathByValueId(
                     $this->connection,
-                    $this->stagingValueId
+                    $this->stagingValueId,
+                    $ownerId
                 );
         }
   

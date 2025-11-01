@@ -22,6 +22,7 @@ function GETCREDENTIALS(email, secret) {
     return text;
 
 }
+
 function GETPATH(credentials, path) {
 
     const options = {
@@ -42,5 +43,11 @@ function GETPATH(credentials, path) {
 
     const text = response.getContentText();
 
-    return text;
+    const json = JSON.parse(text);
+    
+    if (typeof json == "object" ||
+        typeof json == "array")
+        return text;
+    
+    return json;
 }

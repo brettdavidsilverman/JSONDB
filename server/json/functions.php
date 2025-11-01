@@ -394,14 +394,15 @@ function handlePost()
 
 function getPathByValueId(
     $connection,
-    $valueId
+    $valueId,
+    $userId
 )
 {
-    $sql = "SELECT getPathByValue(?) AS path;";
+    $sql = "SELECT getPathByValue(?, ?) AS path;";
 
     $result = $connection->execute_query(
         $sql,
-        [$valueId]
+        [$valueId, $userId]
     );
 
     $data = $result->fetch_all(MYSQLI_ASSOC);

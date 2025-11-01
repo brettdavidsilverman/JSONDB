@@ -71,9 +71,9 @@ BEGIN
 
    SET @path = CONCAT('/my/', @path);
    
-   /* Remove trailing slash */
+   /* Remove trailing slash 
    SET @path = SUBSTR(@path, 1, LENGTH(@path) - 1);
-   
+   */
    RETURN @path;
 END ;;
 DELIMITER ;
@@ -261,8 +261,9 @@ BEGIN
   SET @text = original_text;
   
   SET @text = REPLACE(@text, '/', '%2F');
+  /*
   SET @text = REPLACE(@text, ' ', '%20');
-  
+  */
   RETURN @text;
   /*
 	declare new_text text DEFAULT NULL;
@@ -361,7 +362,7 @@ BEGIN
        SELECT *
        FROM    Session
        WHERE Session.sessionKey = @sessionKey
-       AND       Session.ipAddress = @ipAddress
+     #  AND       Session.ipAddress = @ipAddress
     ) THEN
        SET   @lastAccessedDate = (
           SELECT   lastAccessedDate
@@ -378,7 +379,8 @@ BEGIN
   
        IF @ignoreExpires = 1 OR @expires > NOW() THEN
           UPDATE   Session
-          SET            lastAccessedDate = NOW()
+          SET              lastAccessedDate = NOW(),
+                               ipAddress = @ipAddress
           WHERE   Session.sessionKey =  @sessionKey;
        ELSE
           SET @sessionKey = NULL;
@@ -2555,4 +2557,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-29 14:03:29
+-- Dump completed on 2025-11-01 22:53:31

@@ -32,9 +32,11 @@ class Authentication
     
     redirect() {
         var currentPage = document.location.href;
-        var newPage = this.url + "/client/authentication/logon.php";
+        var newPage = this.url + "/client/authentication/logon.php";
+        
         var currentURL = new URL(currentPage);
-        var newURL = new URL(newURL);
+        var newURL = new URL(newPage);
+        
         if (currentURL.origin != newURL.origin ||
             currentURL.pathname != newURL.pathname) {
 
@@ -236,7 +238,7 @@ class Authentication
         var _this = this;
 
         return this.postJSON(
-            "/my/jobs/[]",
+            "/my/jobs/$",
             status
         )
         .then(

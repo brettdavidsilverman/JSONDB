@@ -9,6 +9,8 @@
         handlePost();
     }
     else if ($method === "GET") {
+
+
         $q = getQueryParameter("q");
            
         if (is_null($q))

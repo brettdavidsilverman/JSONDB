@@ -271,15 +271,13 @@ fetchButton.onclick = function() {
     fetchButton.disabled = true;
     
     authentication.authenticate();
-    
-    
 
+    localStorage.setItem("path", pathInput.value);
+            
     var promise =
     authentication.fetch(url)
     .then(
         function(json) {
-            
-            localStorage.setItem("path", pathInput.value);
             
             jsonEditor.value =
                JSON.stringify(json, null, "   ");
@@ -346,7 +344,7 @@ saveButton.onclick =
     function() {
         
         var url = getURL();
-        localStorage.setItem("path", url);
+        localStorage.setItem("path", pathInput.value);
         saveButton.disabled = true;        
         
         authentication.authenticate();
@@ -403,13 +401,13 @@ saveButton.onclick =
                     else {
                         try {
                             alert(
-                                decodeURIComponent(
+                               decodeURIComponent(
                                     result
                                 )
                             );
                         }
                         catch(error) {
-                            alert("here " + result);
+                            //alert("here " + result);
                             displayError(error, "saveButton.onclick decode");
                         }
                     }
@@ -437,11 +435,8 @@ resetButton.onclick =
     function() {
         resetButton.disabled = true;
         authentication.postJSON(
-           "/my",
-           {
-               jobs: [],
-               data: []
-           }
+           "/my/jobs",
+           []
         ).then(
             (path) => {
                 pathInput.value = path;
@@ -502,9 +497,12 @@ function getURL(publish = false) {
  
     url = new URL(pathInput.value, authentication.url);
 
-    if (!url.pathname.endsWith("/"))
-       url.pathname += "/";
-       
+    if (url.pathname.endsWith("/")) {
+       url.pathname =
+           url.pathname
+           .substr(0, url.pathname.length - 1);
+    }
+    
     var paths = url.pathname.split("/");
         
     if (publish && 
@@ -515,7 +513,7 @@ function getURL(publish = false) {
             authentication.userId.toString();
         url.pathname = paths.join("/");
     }
-    
+    /*
     // Double encode slashes to allow
     // apache to pass them through
     // The server similarly decodes them
@@ -525,8 +523,13 @@ function getURL(publish = false) {
     
     // lower case
     url.pathname = url.pathname.replaceAll("%2f", "%252f");
+    */
     
-    return url.toString();
+    var str = url.pathname;
+    if (url.search)
+       str += url.search;
+       
+    return str;
 }
 
 function isInteger(value) {

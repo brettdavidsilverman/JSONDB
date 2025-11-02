@@ -77,11 +77,11 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     }
 
     protected function commit() {
-       # $this->connection->commit();
+       $this->connection->commit();
     }
     
     protected function begin_transaction() {
-       # $this->connection->begin_transaction();
+       $this->connection->begin_transaction();
     }
     
     public function writeToDatabase() {
@@ -171,14 +171,9 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         $this->newPath = $this->path;
         $this->lock = ($this->totalValueCount > 1);
 
-        $this->begin_transaction();
-
-       
+  
         $this->getPathValueId();
- 
-        if ($this->totalValueCount > 1) {
-            $this->commit();
-       }
+
 
     }
     
@@ -342,6 +337,10 @@ $msg = "ownerId: " . $ownerId . ", " .
 
     public function getPathValueId() {
 
+                 
+        $this->begin_transaction();
+
+        
         $parentValueId = null;
 
         $this->appendToArray = false;
@@ -376,6 +375,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             ]
         ];
         
+        $this->commit();
 
         return $parentValueId;
 
@@ -451,7 +451,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             $this->lock =
                ($this->totalValueCount > 1);
 
-            if ($nextSegment === "[]")
+            if ($nextSegment === "$")
                 $type = "array";
             else
                 $type = "object";
@@ -503,7 +503,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                 throw new PathException("Empty path", $this, $i);
  
             if (is_int($nextSegment) ||
-                $nextSegment === "[]")
+                $nextSegment === "$")
             {
                 $type = "array";
             }
@@ -512,7 +512,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                     
             $objectIndex = null;
             
-            if ($segment === "[]") {
+            if ($segment === "$") {
                 $this->newPath = null;
                 $this->replaceValueId = null;
                 #$this->lock = false;
@@ -576,7 +576,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         else
             $objectKey = $segment;
 
-        if ($segment === "[]")
+        if ($segment === "$")
         {
             $this->newPath = null;
             $this->appendToArray = true;
@@ -690,7 +690,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                     $type != "object")
                     throw new PathException("Expected array or object type", $this, $i);
             }
-            else if ($nextSegment === "[]")  {
+            else if ($nextSegment === "$")  {
                 if ($type != "array")
                     throw new PathException("Expecting array", $this, $i);
             }
@@ -703,7 +703,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         if (is_null($valueId) && !$last)
         {
             if (is_int($nextSegment) ||
-                $nextSegment === "[]")
+                $nextSegment === "$")
             {
                 $type = "array";
             }
@@ -916,8 +916,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         else
             $isNull = false;
         
-        if ($this->totalValueCount > 1)
-            $this->begin_transaction();
+       # $this->begin_transaction();
      
         if (!is_null($this->updateValueId))
         {
@@ -957,9 +956,18 @@ $msg = "ownerId: " . $ownerId . ", " .
                     $boolValue
                );
         }
+        
+        #$this->commit();
+         
+        $this->insertValueWords(
+            $valueId,
+            $objectKey,
+            $stringValue
+        );
 
-        if ($this->totalValueCount > 1)
-            $this->commit();
+
+       // if ($this->totalValueCount > 1)
+        //    $this->commit();
 
         
         if (is_null($this->stagingValueId))
@@ -1039,12 +1047,6 @@ $msg = "ownerId: " . $ownerId . ", " .
             $this->lock = false;
         }
         
-        $this->insertValueWords(
-            $valueId,
-            $objectKey,
-            $stringValue
-        );
-
         return $valueId;
        
     }
@@ -1086,13 +1088,6 @@ $msg = "ownerId: " . $ownerId . ", " .
         
         $statement->close();
         
-        $this->insertValueWords(
-            $valueId,
-            $objectKey,
-            $stringValue
-        );
-        
-
     }
     
     protected function insertValueWords(
@@ -1101,7 +1096,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         $stringValue
     )
     {
-        
+
         $this->insertParentValueWords(
             $valueId
         );

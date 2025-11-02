@@ -144,7 +144,7 @@ function validateReCaptchaToken($token)
 
     $result = json_decode($result, true);
     
-    if ($result["success"] == false)
+    if ($result["success"] !== true)
         return false;
 
 
@@ -239,10 +239,8 @@ function encodeSlashes($path) {
 }
 
 function decodePathSegment($segment) {
-    
-     $segment = urldecode(
-         decodeSlashes($segment)
-     );
+
+     $segment = urldecode($segment);
      
      if (str_starts_with($segment, "\"") &&
           str_ends_with($segment, "\""))
@@ -257,16 +255,17 @@ function decodePathSegment($segment) {
 
 function getPath() {
      
-     
+     /*
     $path = parse_url(
         $_SERVER['REQUEST_URI'],
         PHP_URL_PATH
     );
     
     
-   // $path = decodeSlashes($path);
-
+    $path = decodeSlashes($path);
+*/
     //$path = rawurldecode($path);
+    $path = getQueryParameter("uri");
     
     // remove trailing slash
     if (str_ends_with($path, "/")) {
@@ -278,7 +277,6 @@ function getPath() {
 
 function getQuery() {
     $query = $_SERVER['QUERY_STRING'];
-    $query = decodeSlashes($query);
     return $query;
 }
 
@@ -293,7 +291,7 @@ function getQueryParameter($parameter) {
         if (count($keyValue) === 2 &&
             $keyValue[0] == $parameter)
         {
-            return decodePathSegment($keyValue[1]);
+            return $keyValue[1];
         }
         
     }

@@ -26,4 +26,6 @@ RewriteRule ^(client|server|archive)/(.*)$ $1/$2 [END]
 RewriteRule ^((.*)\.(php|css|html|js|ico|jpg))$ /$1 [END]
 
 # Redirect all else to JSON.php
-RewriteRule (.*) server/json/JSON.php [END]
+RewriteRule (.*) server/json/JSON.php?uri=%{REQUEST_URI} [L,QSA]
+#[END]
+

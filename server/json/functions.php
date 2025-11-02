@@ -205,7 +205,7 @@ function handleGet()
         if ($_GET["type"] === "text")
            $type = "text/plain; charset=utf-8";
     }
-        
+    
     header("Content-Type: " . $type);
       
     setCredentialsCookie($credentials);
@@ -232,10 +232,10 @@ function handleGet()
         
         $error = [
             "message" => $ex->getMessage(),
-            "path" => $ex->path
+            "path" => $path
         ];
 
-       echo json_encode(
+        echo json_encode(
             [
                "{Error}" => $error
             ]
@@ -455,7 +455,7 @@ function getRootValueId($connection, $userId, & $lastType, $path)
 }
 
 
-function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLast, $lastType, & $lastPath, & $path, & $errorIndex)
+function _getValueIdByPath($connection, $credentials, $parentValueId, $lastType, & $lastPath, & $path, & $errorIndex)
 {
     $paths = explode("/", $path);
          
@@ -524,8 +524,7 @@ function _getValueIdByPath($connection, $credentials, $parentValueId, $insertLas
             $statement->close();
 
             if ($i === ($count - 1) &&
-                !is_numeric($segment) &&
-                $insertLast &&
+                $segment === "$" &&
                 ($lastType === "object" ||
                  $lastType === "array")
             )
@@ -571,13 +570,10 @@ function getValueIdByPath(
 
 // This is the extended version
 // The use of lastPath is for
-// Posts to append a key to
-// an object. To use this feature
-// you must set $insertLast to true
+// getting count of values per valueId
 function getValueIdByPathEx(
     $connection, 
     $credentials,
-    $insertLast,
     & $lastPath,
     $path
 )
@@ -601,7 +597,6 @@ function getValueIdByPathEx(
             $connection,
             $credentials,
             $rootValueId, 
-            $insertLast,
             $lastType,
             $lastPath,
             $path,
@@ -613,9 +608,7 @@ function getValueIdByPathEx(
     if (!is_null($pathValueId))
         $found = true;
     else {
-        if (is_null($rootValueId) &&
-            $insertLast)
-           $found = true;
+        $found = false;
     }
     
     if (!$found)
@@ -640,8 +633,7 @@ function getValueIdByPathEx(
 function pathExists(
     $connection, 
     $credentials,
-    $path,
-    $insertLast = true
+    $path
 )
 {
     
@@ -652,7 +644,6 @@ function pathExists(
         getValueIdByPathEx(
             $connection, 
             $credentials,
-            $insertLast,
             $lastPath,
             $path
         );
@@ -697,12 +688,16 @@ function writeValuesToStream(
         getValueIdByPathEx(
             $connection, 
             $credentials,
-            false, // $insertLast
             $lastPath,
             $path
         );
    
 
+    if ($lastPath === "$") {
+        writeCountByParentId($connection, $credentials, $pathValueId, $stream);
+        return;
+    }
+    
     $rootStatement = $connection->prepare(
         "CALL getValuesById(?, ?);"
     );
@@ -730,6 +725,45 @@ function writeValuesToStream(
     );
     
 }
+
+function writeCountByParentId(
+    $connection, 
+    $credentials,
+    $parentValueId, 
+    $stream
+)
+{
+    $statement = $connection->prepare(
+        "CALL getCountByParentValueId(?, ?);"
+    );
+    
+    $userId =  $credentials["userId"];
+    
+    $statement->bind_param(
+        'ii', 
+        $userId,
+        $parentValueId
+    );
+        
+    $statement->execute();
+        
+    $statement->bind_result(
+        $count
+    );
+    
+    if (!$statement->fetch())
+        $count = null;
+        
+    if (!is_null($stream)) {
+        if (!is_null($count))
+            fwrite($stream, $count);
+        else
+            fwrite($stream, "null");
+    }
+    
+    return $count;
+}
+    
 
 function handleSearch($query)
 {
@@ -764,7 +798,6 @@ END;
         $pathValueId = getValueIdByPathEx(
             $connection,
             $credentials,
-            false,
             $lastPath,
             getPath(),
             true
@@ -787,7 +820,7 @@ END;
         
     }
 
-    $words = explode("+", $query);
+    $words = explode("$", $query);
 
     $wordCount = count($words);
     for ($i = 0; $i < $wordCount; ++$i) {

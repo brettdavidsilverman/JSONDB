@@ -161,6 +161,11 @@ function redirect($url)
           if ($responseCode === 200)
               $responseCode = 302;
           header('location: ' . $url, true, $responseCode);
+          echo json_encode(
+              [
+                  "redirect" => $url
+              ]
+          );
      }
 
      exit();

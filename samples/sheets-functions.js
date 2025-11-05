@@ -19,6 +19,12 @@ function GETCREDENTIALS(email, secret) {
 
     const text = response.getContentText();
 
+    const credentials =
+        JSON.parse(text);
+        
+    if (!credentials.authenticated)
+        throw new Error("Invalid email or secret");
+        
     return text;
 
 }
@@ -27,6 +33,7 @@ function GETPATH(credentials, path) {
 
     const options = {
         method: "GET",
+        muteHttpExceptions: true,
         headers: {
             "x-auth-token" : encodeURIComponent(credentials)
         }
@@ -42,6 +49,10 @@ function GETPATH(credentials, path) {
         );
 
     const text = response.getContentText();
+    const code = response.getResponseCode();
+    
+    if (code != 200)
+       throw new Error(text);
 
     const json = JSON.parse(text);
     

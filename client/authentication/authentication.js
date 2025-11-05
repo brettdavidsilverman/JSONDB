@@ -243,7 +243,6 @@ class Authentication
         )
         .then(
             (jobPath) => {
-                
 
                 var promise = _this.postJSON(
                     jobPath + "/jobPath",
@@ -355,6 +354,7 @@ class Authentication
             )
             .then(
                 function(credentials) {
+                    _this.credentials = credentials;
                     return credentials;
                 }
             );
@@ -376,6 +376,12 @@ class Authentication
             this.authenticated = false;
             
         this.#credentials = creds;
+        
+        if (this.#credentials)
+             this.#credentials.toString =
+                 function() {
+                     return JSON.stringify(this);
+                 }
     }
     
     get authenticated() {

@@ -44,9 +44,9 @@
 
             <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
             
-            <label for="copySecret">
-                Copy secret <input type="file" id="copySecret" accept="image/*" style="display:none;" onchange="onCopySecret(event)"></input>
-            </label>
+            <button id="copyCredentials" onclick="onCopyCredentials(event)">
+                Copy Credentials
+            </button>
             
             <div id="secretContainer">
                 <div id="secretDiv">
@@ -76,6 +76,7 @@ var console = new Console();
 console.log("Hello world");
 
 var authentication = new Authentication();
+var copyCredentials = false;
 
 var form =
     document
@@ -84,9 +85,6 @@ var form =
 var canvas =
     document
     .getElementById("canvas");
-    
-var copySecret =
-    document.getElementById("copySecret");
     
 var thumbnail =
     document
@@ -144,29 +142,13 @@ function onEmailInput(event) {
         updateForm(false);
 }
 
-function onCopySecret() {
+function onCopyCredentials() {
     
-    if (copySecret.value) {
-        
-        var file = copySecret.files[0];
-        
-        createSecret(file, thumbnail)
-        .then(
-            function(secret) {
-                if (confirm("Copy secret")) {
-                    navigator.clipboard
-                    .writeText(
-                         secret
-                     );
-                }
-                updateForm();
-            }
-        );
-        
-        copySecret.value = "";
+    if (confirm("Please log off and on again"))
+    {
+        copyCredentials = true;
+        logoff(false);
     }
-    
-    
     return true;
 }
 
@@ -188,8 +170,6 @@ function logon()
     thumbnail.classList.add("pressed");
     
 
-    //prompt("secret: ", thumbnail.secret);
-    
     var redirect = getRedirect();
              
     var promise =
@@ -200,7 +180,9 @@ function logon()
         ).then(
             function(response) {
                 if (response) {
-                    
+                    if (copyCredentials) {
+                        prompt("Credentials", authentication.credentials);
+                    }
                     saveFields();
                     
                     document.location.replace(redirect);
@@ -231,6 +213,7 @@ function logon()
                         }
                     );
                 }
+                copyCredentials = false;
             }
         ).catch(
             function(error) {

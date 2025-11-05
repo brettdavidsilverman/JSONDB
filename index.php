@@ -31,9 +31,15 @@ form > div {
         </style>
     </head>
     <body>
-        <h1 id="h1"><?php echo getConfig()["Domain"] ?></h1>
+        <h1 id="h1">
+            <?php echo getConfig()["Domain"] ?>
+        </h1>
         
         <div id="expires"></div>
+        
+        <h2>
+            <a href="https://www.w3schools.com/js/js_json.asp">JSON Tutorial</a>
+        </h2>
         
         <div>
             <form onsubmit="return false;">

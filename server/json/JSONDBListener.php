@@ -35,6 +35,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $totalValueCount;
     protected $startTimer;
     
+    protected $insertValueStatement = null;
     
     public function __construct(
         $connection,
@@ -174,14 +175,14 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
   
         $this->getPathValueId();
 
-
+        
     }
     
     
     public function endDocument() : void
     {
 
-        set_time_limit(30);
+        $this->resetInsertValueStatement();
         
         $top = array_pop($this->stack);
     
@@ -286,6 +287,8 @@ $msg = "ownerId: " . $ownerId . ", " .
     public function cancelDocument()
     {
     
+        $this->resetInsertValueStatement();
+        
         $this->writeToJob(
             "/label",
             "Cancelling"
@@ -333,8 +336,16 @@ $msg = "ownerId: " . $ownerId . ", " .
 
     
     }
+    
+    private function resetInsertValueStatement()
+    {
+        if (!is_null($this->insertValueStatement)) {
+            $this->insertValueStatement->close();
+            $this->insertValueStatement = null;
+        }
 
-
+    }
+    
     public function getPathValueId() {
 
                  
@@ -377,6 +388,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         
         $this->commit();
 
+        
         return $parentValueId;
 
 
@@ -458,6 +470,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                 
             $valueId =
                 $this->insertValue(
+                    true,
                     $userId, # $ownerId
                     null, # $parentValueId,
                     $this->replaceValueId, // $replaceValueId
@@ -518,6 +531,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                 #$this->lock = false;
                 $valueId =
                     $this->insertValue(
+                        true,
                         $ownerId,
                         $parentValueId, // $parentValueId,
                         $this->replaceValueId, // $replaceValueId
@@ -713,6 +727,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             $objectIndex = null;
             $valueId =
                 $this->insertValue(
+                    true,
                     $ownerId,
                     $parentValueId, // $parentValueId,
                     $this->replaceValueId, // $replaceValueId
@@ -750,6 +765,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         & $locked
     )
     {
+
         $statement = $this->connection->prepare(
             "CALL getValueId(?,?,?,?);"
         );
@@ -943,6 +959,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             // Insert
             $valueId =
                 $this->insertValue(
+                    false,
                     $ownerId,
                     $parentValueId,
                     $this->replaceValueId,
@@ -956,19 +973,6 @@ $msg = "ownerId: " . $ownerId . ", " .
                     $boolValue
                );
         }
-        
-        #$this->commit();
-         
-        $this->insertValueWords(
-            $valueId,
-            $objectKey,
-            $stringValue
-        );
-
-
-       // if ($this->totalValueCount > 1)
-        //    $this->commit();
-
         
         if (is_null($this->stagingValueId))
             $this->stagingValueId = $valueId;
@@ -997,6 +1001,7 @@ $msg = "ownerId: " . $ownerId . ", " .
     
     
     protected function insertValue(
+       $resetStatement,
        $ownerId,
        $parentValueId,
        $replaceValueId,
@@ -1010,26 +1015,58 @@ $msg = "ownerId: " . $ownerId . ", " .
        $boolValue
     )
     {
-
-        $statement = 
-            $this->connection->prepare(
-                "CALL insertValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        
+        
+        $statement = $this->insertValueStatement;
+        
+        static $_ownerId = null;
+        static $_parentValueId = null;
+        static $_replaceValueId = null;
+        static $_lock = null;
+        static $_type = null;
+        static $_objectIndex = null;
+        static $_objectKey = null;
+        static $_isNull = null;
+        static $_stringValue = null;
+        static $_numericValue = null;
+        static $_boolValue = null;
+        
+        if (is_null($statement)) {
+            $statement = 
+                $this->connection->prepare(
+                    "CALL insertValue(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                );
+            
+            $statement->bind_param(
+                "iiiisisisdi",
+                $_ownerId,
+                $_parentValueId,
+                $_replaceValueId,
+                $_lock,
+                $_type,
+                $_objectIndex,
+                $_objectKey,
+                $_isNull,
+                $_stringValue,
+                $_numericValue,
+                $_boolValue
             );
             
-        $statement->bind_param(
-            "iiiisisisdi",
-            $ownerId,
-            $parentValueId,
-            $replaceValueId,
-            $lock,
-            $type,
-            $objectIndex,
-            $objectKey,
-            $isNull,
-            $stringValue,
-            $numericValue,
-            $boolValue
-        );
+            $this->insertValueStatement = $statement;
+            
+        }
+        
+        $_ownerId = $ownerId;
+        $_parentValueId = $parentValueId;
+        $_replaceValueId = $replaceValueId;
+        $_lock = $lock;
+        $_type = $type;
+        $_objectIndex = $objectIndex;
+        $_objectKey = $objectKey;
+        $_isNull = $isNull;
+        $_stringValue = $stringValue;
+        $_numericValue = $numericValue;
+        $_boolValue = $boolValue;
 
         $statement->execute();
 
@@ -1040,8 +1077,11 @@ $msg = "ownerId: " . $ownerId . ", " .
     
         $statement->fetch();
 
-        $statement->close();
-
+        if ($resetStatement === true)
+        {
+            $this->resetInsertValueStatement();
+        }
+        
         if ($lock) {
             $this->lockedValueId = $valueId;
             $this->lock = false;
@@ -1089,7 +1129,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         $statement->close();
         
     }
-    
+    /*
     protected function insertValueWords(
         $valueId,
         $objectKey,
@@ -1160,7 +1200,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         
         $statement->close();
     }
-    
+    */
     protected function getTokens($string)
     {
         if (is_null($string))
@@ -1171,7 +1211,7 @@ $msg = "ownerId: " . $ownerId . ", " .
            return [$string];
            
         $delimiter =
-            ",“.”\'()*\'\"{}:;!?~`|[] \t\r\n\\/";
+            ",“.”\'()*\'\"{}:;!?`|[] \t\r\n";
             
         $words = [];
         

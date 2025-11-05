@@ -14,6 +14,24 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50032 DROP TRIGGER IF EXISTS TG_Word_lowerWord */;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Word_lowerWord` BEFORE INSERT ON `Word` FOR EACH ROW BEGIN
+    SET NEW.lowerWord = LOWER(NEW.word);
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Dumping routines for database 'JSONDB'
@@ -51,7 +69,8 @@ BEGIN
                    
       SET @path = CONCAT(
          getSegmentByValue(@valueId, @userId),
-         CONCAT('/', @path)
+         '/', 
+         @path
       );
       SET @valueId = (
          SELECT   Value.parentValueId
@@ -105,10 +124,19 @@ BEGIN
     END IF;
     
     SET @objectKey = (
-       SELECT   objectKey
-       FROM     Value
-       WHERE   Value.valueId = @valueId
-       AND         Value.ownerId = @userId
+       SELECT
+          Word.word AS objectKey
+       FROM
+           Value
+       INNER JOIN
+           Word
+       ON
+           Value.objectKeyWordId =
+           Word.wordId
+       WHERE
+          Value.valueId = @valueId
+       AND
+          Value.ownerId = @userId
     );
     
     SET @segment = NULL;
@@ -306,7 +334,6 @@ BEGIN
        SELECT *
        FROM    Session
        WHERE Session.sessionKey = @sessionKey
-     #  AND       Session.ipAddress = @ipAddress
     ) THEN
        SET   @lastAccessedDate = (
           SELECT   lastAccessedDate
@@ -738,12 +765,22 @@ BEGIN
             @parentValueId = parentValueId,
             @objectIndex = objectIndex,
             @objectKey = objectKey,
+            @objectKeyWordId = NULL,
             @valueId = NULL,
             @type = NULL,
             @locked = NULL;
         
             
     IF @objectKey IS NOT NULL THEN
+        SELECT
+            Word.wordId
+        INTO
+            @objectKeyWordId
+        FROM
+            Word
+        WHERE
+            Word.word = @objectKey;
+            
         SELECT
             v.locked
         INTO
@@ -756,7 +793,7 @@ BEGIN
            v.parentValueId = 
                @parentValueId
        AND
-           v.objectKey = @objectKey
+           v.objectKeyWordId = @objectKeyWordId
        AND
            v.locked = 1;
        # FOR UPDATE;
@@ -774,7 +811,7 @@ BEGIN
              v.parentValueId = 
                @parentValueId
        AND
-           v.objectKey = @objectKey
+           v.objectKeyWordId = @objectKeyWordId
        AND
            v.locked = 0;
        #FOR UPDATE;
@@ -819,16 +856,20 @@ BEGIN
        SELECT
             v.type,
             v.objectIndex,
-            v.objectKey
+            w.word
        INTO
            @type,
            @objectIndex,
            @objectKey
        FROM
            Value AS v
+       LEFT JOIN
+           Word as w
+       ON
+           v.objectKeyWordId = w.wordId
        WHERE
            v.valueId = @valueId
-       FOR UPDATE;
+       ;
     END IF;
            
    IF @locked IS NULL THEN
@@ -868,18 +909,33 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValueIdByPath`(
 BEGIN
 
    
-   SET           @userId = userId,
-                      @ownerId = ownerId,
-                      @parentValueId = parentValueId,
-                      @objectIndex = objectIndex,
-                      @lowerObjectKey =
-                         LOWER(objectKey);
+   SET
+      @userId = userId,
+      @ownerId = ownerId,
+      @parentValueId = parentValueId,
+      @objectIndex = objectIndex,
+      @objectKey = objectKey,
+      @objectKeyWordId = NULL;
    
-   SELECT        Value.valueId,
-                           Value.type
-   FROM           Value
+   IF @objectKey IS NOT NULL THEN
+       SELECT
+           Word.wordId
+       INTO
+           @objectKeyWordId
+       FROM
+           Word
+       WHERE
+           Word.word = @objectKey;
+           
+   END IF;
+   
+   SELECT
+       Value.valueId,
+       Value.type
+   FROM
+       Value
    WHERE
-                     Value.ownerId = @ownerId
+        Value.ownerId = @ownerId
    AND
                      ( 
                                (
@@ -894,10 +950,10 @@ BEGIN
    AND            (@objectIndex IS NULL
                          OR
                           Value.objectIndex = @objectIndex)
-   AND            (@lowerObjectKey IS NULL
+   AND            (@objectKey IS NULL
                           OR
-                         Value.lowerObjectKey =
-                           @lowerObjectKey)
+                         Value.objectKeyWordId  =
+                           @objectKeyWordId)
   AND            Value.locked = 0
    -- THIS SECURITY CHECK WILL COME LATER
    AND           @ownerId = @userId;
@@ -928,6 +984,12 @@ BEGIN
             
    SELECT         Value.*,
                             (
+                                SELECT word
+                                FROM      Word
+                                WHERE    Word.wordId =
+                                                     Value.objectKeyWordId
+                            ) AS objectKey,
+                            (
                                   SELECT COUNT(*)
                                   FROM    Value
                                   WHERE  
@@ -941,7 +1003,9 @@ BEGIN
                             ) as childCount
    FROM            Value
    WHERE         Value.valueId = 
-                            @valueId;
+                            @valueId
+   AND                Value.ownerId = 
+                            @ownerId;
    
 END ;;
 DELIMITER ;
@@ -968,6 +1032,15 @@ BEGIN
             @ownerId = ownerId;
    
    SELECT         Value.*,
+                            (
+                                SELECT
+                                    Word.word
+                                FROM
+                                    Word
+                                WHERE
+                                    Word.wordId = 
+                                    Value.objectKeyWordId
+                            ) AS objectKey,
                             (
                                SELECT      COUNT(*)
                                FROM         Value AS Child
@@ -1076,8 +1149,6 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
 )
 BEGIN
 
-   START TRANSACTION;
-    
     SET @ownerId = ownerId, 
              @parentValueId =  parentValueId,
              @replaceValueId = replaceValueId,
@@ -1088,7 +1159,40 @@ BEGIN
              @isNull =  isNull,
              @stringValue = stringValue,
              @numericValue = numericValue,
-             @boolValue = boolValue;
+             @boolValue = boolValue,
+             @objectKeyWordId = NULL;
+    
+    IF @objectKey IS NOT NULL THEN
+        INSERT
+        INTO
+            Word(
+                word
+            )
+        SELECT
+            @objectKey
+        WHERE
+            NOT EXISTS(
+                SELECT
+                    *
+                FROM
+                    Word
+                WHERE
+                     Word.word = @objectKey
+            );
+            
+        SELECT
+            Word.wordId
+        INTO
+            @objectKeyWordId
+        FROM
+            Word
+        WHERE
+            Word.word = @objectKey;
+            
+    END IF;
+    
+    
+    START TRANSACTION;
     
     IF @replaceValueId IS NOT NULL AND
             @locked = 1
@@ -1114,7 +1218,7 @@ BEGIN
         WHERE
             Value.parentValueId = @parentValueId
         AND
-            Value.objectKey = @objectKey
+            Value.objectKeyWordId = @objectKeyWordId
         FOR UPDATE;
     END IF;
     
@@ -1145,8 +1249,7 @@ BEGIN
            locked,
            type,
            objectIndex,
-           objectKey,
-           lowerObjectKey,
+           objectKeyWordId,
            isNull,
            stringValue,
            numericValue,
@@ -1158,8 +1261,7 @@ BEGIN
            @locked,
            @type,
            @objectIndex,
-           @objectKey,
-           LOWER(@objectKey),
+           @objectKeyWordId,
            @isNull,
            @stringValue,
            @numericValue,
@@ -1169,13 +1271,13 @@ BEGIN
    SET @valueId = LAST_INSERT_ID();
   
    SET @stagingValueId = @valueId;
-       
-   COMMIT;
    
    CALL insertValueParentChild(
         @stagingValueId,
         @parentValueId
    );
+   
+   COMMIT;
    
    SELECT
        @valueId AS  valueId,
@@ -1557,7 +1659,38 @@ BEGIN
              @numericValue = numericValue,
              @boolValue = boolValue;
           
-
+    IF @objectKey IS NOT NULL THEN
+        INSERT
+        INTO
+            Word(
+                word
+            )
+        SELECT
+            @objectKey
+        WHERE
+            NOT EXISTS(
+                SELECT
+                    *
+                FROM
+                    Word
+                WHERE
+                     Word.word = @objectKey
+            );
+            
+        SELECT
+            Word.wordId
+        INTO
+            @objectKeyWordId
+        FROM
+            Word
+        WHERE
+            Word.word = @objectKey;
+            
+    END IF;
+    
+    
+   START TRANSACTION;
+    
    CALL deleteChildValues(@valueId);
    
    UPDATE Value
@@ -1565,21 +1698,16 @@ BEGIN
            Value.ownerId = @ownerId,
            Value.locked = @locked,
            Value.type = @type,
-           Value.objectKey = @objectKey,
+           Value.objectKeyWordId =
+               @objectKeyWordId,
            Value.isNull = @isNull,
            Value.stringValue = @stringValue,
            Value.numericValue = @numericValue,
            Value.boolValue = @boolValue
    WHERE
         Value.valueId = @valueId;
-   
-
-   DELETE
-   FROM
-       ValueWord
-   WHERE
-       ValueWord.valueId = @valueId;
-    
+        
+    COMMIT;
     
 END ;;
 DELIMITER ;
@@ -1633,31 +1761,6 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `wait` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`brett`@`%` PROCEDURE `wait`()
-BEGIN
-
-set @counter = 1;
-
-while @counter > 0 do
-   set @counter = @counter + 1;
-end while;
-
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -1668,4 +1771,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-03  8:55:15
+-- Dump completed on 2025-11-06  8:28:57

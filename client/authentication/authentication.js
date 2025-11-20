@@ -90,6 +90,7 @@ class Authentication
                         json = JSON.parse(text);
                     }
                     catch (ex) {
+
                         // Error parsing
                         throw {
                             message: ex.toString(),

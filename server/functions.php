@@ -8,36 +8,35 @@ function getConfig() {
     static $config = null;
     static $json = null;
 
-    if (is_null($config)) {
+    if (is_null($config) ||
+        is_null($json))
+    {
          $config = file_get_contents(__DIR__ . '/../../config.json'); 
-
          $json = json_decode($config, true);
     }
 
+    
     return $json;
 }
 
 function getConnection() {
 
-    static $count = 0;
-    $count++;
-
-    $json = getConfig();
+    $config = getConfig();
  
-    $database =      $json["Database"];
-    $serverName =    $database["server"];
-    $userName =      $database["username"];
-    $password =      $database["password"];
-    $databaseName = $database["database"];
-    
+    $dbconfig =  $config["Database"];
+    $server   =  $dbconfig["server"];
+    $username =  $dbconfig["username"];
+    $password =  $dbconfig["password"];
+    $database =  $dbconfig["database"];
+
     /* activate reporting */
     $driver = new mysqli_driver();
     $driver->report_mode = 
-        // MYSQLI_REPORT_ERROR;
-        MYSQLI_REPORT_ALL;
+         MYSQLI_REPORT_ERROR;
+       // MYSQLI_REPORT_ALL;
 
     // Create connection
-    $connection = new mysqli($serverName, $userName, $password, $databaseName);
+    $connection = new mysqli($server, $username, $password, $database);
 
     // Check connection
     if ($connection->connect_error) {

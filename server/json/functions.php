@@ -335,6 +335,8 @@ function handlePost()
             "line" => $ex->getLine(),
             "trace" => $ex->getTrace()
         ];
+
+        $listener->cancelDocument();
     }
     catch (PathException $ex) {
         $error = [
@@ -367,6 +369,8 @@ function handlePost()
     }
     finally {
 
+
+            
         $connection->close();
     }
     
@@ -781,14 +785,18 @@ function handleSearch($query)
 
     
     $sql = <<<END
-select distinct
-    getPathByValue(v.valueId, ?) as path
-from 
-    Value as v
-where
-    v.parentValueId = ?
-and
-    v.locked = 0
+with matches as (
+    select
+        v.valueId,
+        row_number() over 
+           (order  by v.valueId)
+           as rowNumber
+    from
+        Value as v
+    inner join
+        ValueParentChild as vpc
+    on
+        vpc.childValueId = v.valueId
 
 END;
 
@@ -820,26 +828,53 @@ END;
         
     }
 
-    $words = explode("$", $query);
+    $words = explode("+", $query);
 
     $wordCount = count($words);
     for ($i = 0; $i < $wordCount; ++$i) {
         $word = $words[$i];
         $words[$i] = decodePathSegment($word);
+        $alias = "w" . $i;
         $sql =
             $sql .
-            "and\r\n" .
-            word();
+            word($alias);
     }
     
 
-    $sql = $sql . "limit 100";
-    
+    $sql = $sql . <<<END
+where
+    vpc.parentValueId = ?
+       
+)
+
+select
+    matches.rowNumber,
+    (
+        select
+            count(*)
+        from
+            matches
+    ) as totalCount,
+    getPathByValue (
+        matches.valueId,
+        ?
+    ) as path
+
+from
+    matches
+where
+    matches.rowNumber between 1 and  100
+
+END;
+
+# echo $sql;
+# exit();
+
     $parameters =
         array_merge(
-            [$credentials["userId"]],
+            $words,
             [$pathValueId],
-            $words
+            [$credentials["userId"]]
         );
 
 
@@ -848,6 +883,7 @@ END;
         $parameters
     );
     
+
     $data = $result->fetch_all(MYSQLI_ASSOC);
 
     $count = count($data);
@@ -883,25 +919,65 @@ END;
     return true;
 }
 
-function word() {
+function word($alias) {
+/*
     $sql = <<<END
-    exists(
-        select
-            vw.valueId as valueId
-        from
-            ValueWord as vw,
-            Word as w
-        where
-            w.word = ?
-        and
-            vw.valueId = v.valueId
-        and
-            vw.wordId = w.wordId
-            
-    )
+    inner join
+        (
+            select distinct
+                parents.parentValueId as valueId
+            from
+                Word as w
+            inner join
+                ValueWord as vw
+            on
+                vw.wordId = w.wordId
+            inner join
+                ValueParentChild as vpc
+            on
+                vpc.parentValueId = vw.valueId
+            inner join
+                ValueParentChild as parents
+            on
+                parents.childValueId = vpc.childValueId
+            where
+                w.lowerWord = ?
+
+        ) as $alias
+    on
+        $alias.valueId = v.valueId
 
 END;
 
+*/
+
+   $sql = <<<END
+    inner join
+        (
+            select distinct
+                parents.parentValueId as valueId
+            from
+                ValueParentChild as vpc
+            inner join
+                ValueWord as vw
+            on
+                vw.valueId = vpc.parentValueId
+            inner join
+                Word as w
+            on
+                w.wordId = vw.wordId
+            inner join
+                ValueParentChild as parents
+            on
+                parents.childValueId = vpc.childValueId
+            where
+                w.lowerWord = ?
+
+        ) as $alias
+    on
+        $alias.valueId = v.valueId
+
+END;
    return $sql;
 }
     

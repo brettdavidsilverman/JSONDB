@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.4.6, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.4.7, for Linux (x86_64)
 --
 -- Host: localhost    Database: JSONDB
 -- ------------------------------------------------------
--- Server version	8.4.6
+-- Server version	8.4.7
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -22,11 +22,9 @@
 /*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-/*!50032 DROP TRIGGER IF EXISTS TG_Word_lowerWord */;
+/*!50032 DROP TRIGGER IF EXISTS TG_BeforeInsert */;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_Word_lowerWord` BEFORE INSERT ON `Word` FOR EACH ROW BEGIN
-    SET NEW.lowerWord = LOWER(NEW.word);
-END */;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`brett`@`%`*/ /*!50003 TRIGGER `TG_BeforeInsert` BEFORE INSERT ON `Word` FOR EACH ROW SET NEW.lowerWord = LOWER(NEW.word) */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -50,6 +48,7 @@ CREATE DEFINER=`brett`@`%` FUNCTION `getPathByValue`(
    valueId BIGINT,
    userId BIGINT
 ) RETURNS text CHARSET utf8mb4
+    DETERMINISTIC
 BEGIN
    SET @valueId = valueId,
             @userId = userId;
@@ -979,33 +978,44 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesById`(
    valueId BIGINT
 )
 BEGIN
+
    SET @ownerId = ownerId,
             @valueId = valueId;
             
    SELECT         Value.*,
                             (
-                                SELECT word
-                                FROM      Word
-                                WHERE    Word.wordId =
-                                                     Value.objectKeyWordId
+                                SELECT
+                                    Word.word
+                                FROM
+                                    Word
+                                WHERE
+                                    Word.wordId = 
+                                    Value.objectKeyWordId
                             ) AS objectKey,
                             (
-                                  SELECT COUNT(*)
-                                  FROM    Value
-                                  WHERE  
-                                       Value.ownerId = 
+                                SELECT
+                                    Word.word
+                                FROM
+                                    Word
+                                WHERE
+                                    Word.wordId = 
+                                    Value.stringValueWordId
+                            ) AS stringValue,
+                            (
+                               SELECT      COUNT(*)
+                               FROM         Value AS Child
+                               WHERE      
+                                       Child.ownerId = 
                                        @ownerId
-                                 AND
-                                       Value.parentValueId = 
-                                        @valueId
-                                  AND
-                                        Value.locked = 0
-                            ) as childCount
+                               AND
+                                        Child.parentValueId =
+                                        Value.valueId
+                               AND
+                                        Child.locked = 0
+                            ) AS childCount
    FROM            Value
-   WHERE         Value.valueId = 
-                            @valueId
-   AND                Value.ownerId = 
-                            @ownerId;
+   WHERE         Value.valueId =  @valueId
+   AND                Value.ownerId = @ownerId;
    
 END ;;
 DELIMITER ;
@@ -1041,6 +1051,15 @@ BEGIN
                                     Word.wordId = 
                                     Value.objectKeyWordId
                             ) AS objectKey,
+                            (
+                                SELECT
+                                    Word.word
+                                FROM
+                                    Word
+                                WHERE
+                                    Word.wordId = 
+                                    Value.stringValueWordId
+                            ) AS stringValue,
                             (
                                SELECT      COUNT(*)
                                FROM         Value AS Child
@@ -1160,43 +1179,35 @@ BEGIN
              @stringValue = stringValue,
              @numericValue = numericValue,
              @boolValue = boolValue,
-             @objectKeyWordId = NULL;
+             @objectKeyWordId = NULL,
+             @stringValueId = NULL;
     
     IF @objectKey IS NOT NULL THEN
-        INSERT
-        INTO
-            Word(
-                word
-            )
-        SELECT
-            @objectKey
-        WHERE
-            NOT EXISTS(
-                SELECT
-                    *
-                FROM
-                    Word
-                WHERE
-                     Word.word = @objectKey
-            );
-            
-        SELECT
-            Word.wordId
-        INTO
+        CALL insertWord(
+            @objectKey,
             @objectKeyWordId
-        FROM
-            Word
-        WHERE
-            Word.word = @objectKey;
+        );
             
     END IF;
     
+    IF @stringValue IS NOT NULL THEN
+        CALL insertWord(
+            @stringValue,
+            @stringValueWordId
+        );
+        CALL insertValueWords(
+            @stringValue,
+            null,
+            1
+        );
+    END IF;
     
     START TRANSACTION;
     
-    IF @replaceValueId IS NOT NULL AND
-            @locked = 1
-    THEN
+    IF @objectIndex IS NULL THEN
+        IF @replaceValueId IS NOT NULL AND
+                @locked = 1
+        THEN
             SELECT
                 Value.objectIndex
             INTO
@@ -1206,20 +1217,20 @@ BEGIN
             WHERE 
                 Value.valueId = @replaceValueId
             FOR UPDATE;
-    ELSEIF @objectIndex IS NULL AND
-         @objectKey IS NOT NULL
-    THEN
-        SELECT
-            Value.objectIndex
-        INTO
-            @objectIndex
-        FROM
-            Value
-        WHERE
-            Value.parentValueId = @parentValueId
-        AND
-            Value.objectKeyWordId = @objectKeyWordId
-        FOR UPDATE;
+        ELSEIF @objectKey IS NOT NULL
+        THEN
+            SELECT
+                Value.objectIndex
+            INTO
+                @objectIndex
+            FROM
+                Value
+            WHERE
+                Value.parentValueId = @parentValueId
+            AND
+                Value.objectKeyWordId = @objectKeyWordId
+            FOR UPDATE;
+        END IF;
     END IF;
     
     IF @objectIndex IS NULL
@@ -1251,7 +1262,7 @@ BEGIN
            objectIndex,
            objectKeyWordId,
            isNull,
-           stringValue,
+           stringValueWordId,
            numericValue,
            boolValue
   )
@@ -1263,7 +1274,7 @@ BEGIN
            @objectIndex,
            @objectKeyWordId,
            @isNull,
-           @stringValue,
+           @stringValueWordId,
            @numericValue,
            @boolValue
    );
@@ -1276,6 +1287,23 @@ BEGIN
         @stagingValueId,
         @parentValueId
    );
+     
+    
+    IF @objectKey IS NOT NULL THEN
+        CALL insertValueWords(
+            @objectKey,
+            @valueId,
+            0
+        );
+    END IF;
+    
+    IF @stringValue IS NOT NULL THEN
+        CALL insertValueWords(
+            @stringValue,
+            @valueId,
+            0
+        );
+    END IF;
    
    COMMIT;
    
@@ -1351,8 +1379,9 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWord`(
+    word TEXT,
     valueId BIGINT,
-    word BLOB
+    OUT wordId BIGINT
 )
 BEGIN
 
@@ -1360,9 +1389,145 @@ BEGIN
              @word = word,
              @wordId = NULL;
              
+    CALL insertWord(
+        @word,
+        @wordId
+    );
+ 
     INSERT
     INTO
-       Word(word)
+        ValueWord(
+            valueId,
+            wordId
+         )
+    SELECT 
+         @valueId,
+         @wordId
+     WHERE
+         NOT EXISTS(
+             SELECT
+                *
+             FROM
+                ValueWord
+            WHERE
+                ValueWord.valueId = @valueId
+            AND
+                ValueWord.wordId = @wordId
+        );
+        
+     SET wordId = @wordId;
+       
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `insertValueWords` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWords`(
+    text TEXT,
+    valueId BIGINT,
+    insertWordsOnly TINYINT
+)
+exit_procedure: BEGIN
+  
+   IF text IS NULL THEN
+       LEAVE exit_procedure;
+   END IF;
+   
+   
+   SET @lowerText = LOWER(text),
+            @word = NULL,
+            @start = 1,
+            @length = LENGTH(@lowerText),
+            @insertWordsOnly = insertWordsOnly;
+
+   WHILE (@start <= @length) DO
+         # Read first character
+         SET @nchar = SUBSTR(
+               @lowerText,
+               @start,
+               1
+         );
+         # Read subsequent delineators 
+         WHILE (isDelineator(@nchar) AND
+                          @start <= @length) DO
+               SET @start = @start + 1;
+               SET @nchar = SUBSTR(
+                     @lowerText,
+                     @start,
+                     1
+               );
+         END WHILE;
+         
+         
+         # Read word 
+         SET @word = '';
+         WHILE (isDelineator(@nchar) = 0 AND
+                          @start <= @length) DO
+              SET @word = CONCAT(@word, @nchar);
+              SET @start = @start + 1;
+              SET @nchar = SUBSTR(
+                     @lowerText,
+                     @start,
+                     1
+               );
+        END WHILE;
+                          
+        IF ( LENGTH(@word) > 0) THEN
+        
+            IF (@insertWordsOnly = 1) THEN
+                CALL insertWord(@word, @wordId);
+            ELSE
+                CALL insertValueWord(
+                    @word,
+                    @valueId,
+                    @wordId
+                );
+            END IF;
+            
+        END IF;
+              
+   END WHILE;
+   
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `insertWord` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`brett`@`%` PROCEDURE `insertWord`(
+    word TEXT,
+    OUT wordId BIGINT
+)
+BEGIN
+
+    SET @word = word;
+    
+    INSERT
+    INTO
+        Word(
+            word
+        )
     SELECT
         @word
      WHERE
@@ -1374,52 +1539,18 @@ BEGIN
              WHERE
                  Word.word = @word
          );
-            
-       SELECT
-            Word.wordId
-        INTO
-            @wordId
-        FROM
-            Word
-        WHERE
-            Word.word = @word;
-    
-        IF NOT EXISTS(
-                 SELECT
-                    *
-                FROM
-                    ValueWord
-                WHERE
-                    ValueWord.valueId = @valueId
-                AND
-                    ValueWord.wordId = @wordId
-            )
-        THEN
-        INSERT
-        INTO
-            ValueWord(
-                valueId,
-                wordId
-            )
-        SELECT 
-            @valueId,
-            @wordId;
-        END IF;
-            /*
-         WHERE
-             NOT EXISTS(
-                 SELECT
-                    *
-                FROM
-                    ValueWord
-                WHERE
-                    ValueWord.valueId = @valueId
-                AND
-                    ValueWord.wordId = @wordId
-            );
-            */
-    # COMMIT;
-    
+         
+     SELECT
+          Word.wordId
+      INTO
+          @wordId
+      FROM
+          Word
+      WHERE
+          Word.word = @word;
+          
+      SET wordId = @wordId;
+      
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1657,42 +1788,39 @@ BEGIN
              @isNull =  isNull,
              @stringValue = stringValue,
              @numericValue = numericValue,
-             @boolValue = boolValue;
+             @boolValue = boolValue,
+             @objectKeyWordId = NULL,
+             @stringValueWordId = NULL;
           
     IF @objectKey IS NOT NULL THEN
-        INSERT
-        INTO
-            Word(
-                word
-            )
-        SELECT
-            @objectKey
-        WHERE
-            NOT EXISTS(
-                SELECT
-                    *
-                FROM
-                    Word
-                WHERE
-                     Word.word = @objectKey
-            );
-            
-        SELECT
-            Word.wordId
-        INTO
+        CALL insertWord(
+            @objectKey,
             @objectKeyWordId
-        FROM
-            Word
-        WHERE
-            Word.word = @objectKey;
-            
+        );
     END IF;
     
+    IF @stringValue IS NOT NULL THEN
+        CALL insertWord(
+            @stringValue,
+            @stringValueWordId
+        );
+        CALL insertValueWords(
+            @stringValue,
+            null,
+            1
+        );
+    END IF;
     
    START TRANSACTION;
     
    CALL deleteChildValues(@valueId);
    
+   DELETE
+    FROM
+          ValueWord
+    WHERE
+         ValueWord.valueId = @valueId;
+           
    UPDATE Value
    SET
            Value.ownerId = @ownerId,
@@ -1701,12 +1829,29 @@ BEGIN
            Value.objectKeyWordId =
                @objectKeyWordId,
            Value.isNull = @isNull,
-           Value.stringValue = @stringValue,
+           Value.stringValueWordId = 
+               @stringValueWordId,
            Value.numericValue = @numericValue,
            Value.boolValue = @boolValue
    WHERE
         Value.valueId = @valueId;
         
+    IF @objectKey IS NOT NULL THEN
+        CALL insertValueWords(
+            @objectKey,
+            @valueId,
+            0
+        );
+    END IF;
+    
+    IF @stringValue IS NOT NULL THEN
+        CALL insertValueWords(
+            @stringValue,
+            @valueId,
+            0
+        );
+    END IF;
+
     COMMIT;
     
 END ;;
@@ -1771,4 +1916,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-06  8:28:57
+-- Dump completed on 2025-11-21  4:32:59

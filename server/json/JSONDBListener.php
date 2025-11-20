@@ -978,7 +978,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             $this->stagingValueId = $valueId;
 
         $this->objectKey = null;
-        
+    
         $this->stack[] = $top;
 
         return $valueId;

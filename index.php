@@ -73,7 +73,8 @@ form > div {
                              onclick="switchFunctions(this.checked)" 
                     />
                     <button id="clearButton">Clear</button>
-                    <button id="resetButton">Reset</button>                </div>
+                    <button id="resetJobsButton">Reset jobs</button>                    <button id="createProcessButton">Create process</button>
+                            </div>
                 <textarea id="jsonEditor"></textarea>
                 <button id="saveButton">Save</button>
                 <br/>
@@ -131,7 +132,7 @@ logon.href += "?redirect=" + encodeURIComponent(window.location.href);
 var pathInput = document.getElementById("pathInput");
 var result = document.getElementById("result");
 var jsonEditor = document.getElementById("jsonEditor");var html = document.getElementById("html");var fetchButton = document.getElementById("fetchButton");
-var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var clearButton = document.getElementById("clearButton");var resetButton = document.getElementById("resetButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
+var fileInput = document.getElementById("fileInput");var saveButton = document.getElementById("saveButton");var clearButton = document.getElementById("clearButton");var resetJobsButton = document.getElementById("resetJobsButton");var createProcessButton = document.getElementById("createProcessButton");var functionCheckbox = document.getElementById("functionCheckbox");var goLink = document.getElementById("goLink");
 var dataLink = document.getElementById("dataLink");
 var downloadLink = document.getElementById("downloadLink");
 var header = document.getElementById("h1");
@@ -141,7 +142,33 @@ var progressLabel = document.getElementById("progressLabel");
 var cancelUpload = document.getElementById("cancelUpload");
 var jobDiv = document.getElementById("job");
 var jobsDiv = document.getElementById("jobs");
-
+var sampleProcess =
+    {
+        "type": "function",
+            "inputs": {
+                "count": 100000
+            },
+        "variables": {
+            "x": 0
+        },
+        "processes": {
+            "check": {
+                "if": {
+                    "test": "x < count",
+                    "true": "increment",
+                    "false": "exit"
+                 }
+            },
+            "increment": {
+                "code": "++x",
+                "next": "check"
+            },
+            "exit": {
+                "code": "return x"
+            }
+        }
+    }
+   
 var origin =
     punycode.toUnicode(
         window.location.hostname
@@ -288,8 +315,7 @@ fetchButton.onclick = function() {
             jsonEditor.value =
                JSON.stringify(json, null, "   ");
                
-            fetchButton.disabled = false;
-            
+        
             if (typeof json == "string") {
                 var string = json;
                 if (string.startsWith("{") &&
@@ -322,20 +348,15 @@ fetchButton.onclick = function() {
     )
     .catch(
         (error) => {
-            fetchButton.disabled = false;
-            alert(error);
-            /*
-            if (error.status = 404)
-               alert("🛑 Path " + error.path + " not found.");
-            else
-               displayError(error, "fetchButton.onclick");
-               */
+            jsonEditor.value = error.text;
+            displayError(error, "fetchButton.onclick");
+               
         }
         
     )
     .finally(
         () => {
-                 
+            fetchButton.disabled = false;
             displayExpires();
                 
         }
@@ -413,7 +434,6 @@ saveButton.onclick =
                             );
                         }
                         catch(error) {
-                            //alert("here " + result);
                             displayError(error, "saveButton.onclick decode");
                         }
                     }
@@ -422,6 +442,7 @@ saveButton.onclick =
             .catch(
                 (error) => {
                     displayError(error, "saveButton.onclick");
+                    authentication.updateJobs();
                 }
             );
         
@@ -437,30 +458,57 @@ clearButton.onclick =
         jsonEditor.value = "";
     }
 
-resetButton.onclick =
+resetJobsButton.onclick =
     function() {
-        resetButton.disabled = true;
+        resetJobsButton.disabled = true;
         authentication.postJSON(
            "/my/jobs",
            []
-        ).then(
+        )
+        .then(
             (path) => {
-                pathInput.value = path;
-                    
-                fetchButton.onclick();
+                alert(path);
             }
-        ).catch(
+        )
+        .catch(
             (error) => {
-                 displayError(error, "resetButton");
+                 displayError(error, "resetJobsButton");
             }
         )
         .finally (
             () => {
-                resetButton.disabled = false;
+                resetJobsButton.disabled = false;
             }
         );
        
     }
+
+createProcessButton.onclick =
+
+    function() {
+        createProcessButton.disabled = true;
+        authentication.postJSON(
+            pathInput.value,
+            sampleProcess
+        )
+        .then(
+            (path) => {
+                fetchButton.click();
+                alert(path);
+            }
+        )
+        .catch(
+            (error) => {
+                 displayError(error, "createProcessButton");
+            }
+        )
+        .finally (
+            () => {
+                createProcessButton.disabled = false;
+            }
+        );
+       
+    }
 
 
 if (!pathInput.value)

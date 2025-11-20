@@ -1,0 +1,47 @@
+select
+   v.valueId,
+   getPathByValue (v.valueId, 118)
+from Value as v
+
+inner join ValueParentChild as vpc1
+on v.valueId  = vpc1.childValueId
+inner join ValueWord as vw1
+on vw1.valueId = vpc1.parentValueId
+left join Word as w1 
+on w1.wordId = vw1.wordId
+and w1.lowerWord = 'path1'
+
+inner join ValueParentChild as vpc2
+on v.valueId  = vpc2.childValueId
+inner join ValueWord as vw2
+on vw2.valueId = vpc2.parentValueId
+left join Word as w2
+on w2.wordId = vw2.wordId
+and w2.lowerWord = 'path2'
+
+inner join ValueParentChild as vpc3
+on v.valueId  = vpc3.childValueId
+inner join ValueWord as vw3
+on vw3.valueId = vpc3.parentValueId
+left join Word as w3
+on w3.wordId = vw3.wordId
+and w3.lowerWord = 'key'
+
+inner join ValueParentChild as vpc4
+on v.valueId  = vpc4.childValueId
+inner join ValueWord as vw4
+on vw4.valueId = vpc4.parentValueId
+left join Word as w4
+on w4.wordId = vw4.wordId
+and w4.lowerWord = 'boo'
+
+where (
+    w1.wordId is not null
+and  w2.wordId is not null
+and w3.wordId is not null
+and w4.wordId is null
+)
+
+#order by getPathByValue (v.valueId, 118)
+order by v.valueId, vw1.wordId
+limit 100

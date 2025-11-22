@@ -77,14 +77,6 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
         
     }
 
-    protected function commit() {
-       $this->connection->commit();
-    }
-    
-    protected function begin_transaction() {
-       $this->connection->begin_transaction();
-    }
-    
     public function writeToDatabase() {
         
         $parser = new \JsonStreamingParser\Parser(
@@ -184,27 +176,28 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
 
         $this->resetInsertValueStatement();
         
+
         $top = array_pop($this->stack);
     
         $ownerId =
             $this->credentials["userId"];
             
         if ($this->totalValueCount > 1) {
-            
-            $jobStatus = 
-                $this->readFromJob("");
+        
+            if (!is_null($this->jobPath)) {
+                $jobStatus = 
+                    $this->readFromJob("");
                 
-            $jobStatus["label"] = "Committing";
-            $jobStatus["progress"] = 100;
-            unset($jobStatus["cancel"]);
+                $jobStatus["label"] = "Committing";
+                $jobStatus["progress"] = 100;
+                unset($jobStatus["cancel"]);
             
-            $this->writeToJob(
-                "",
-                $jobStatus
-            );
+                $this->writeToJob(
+                    "",
+                    $jobStatus
+                );
+            }
             
-
-            $this->begin_transaction();
 
             $statement = $this->connection->prepare(
                 "CALL endDocument(?, ?, ?, ?, ?, ?);"
@@ -232,7 +225,6 @@ $msg = "ownerId: " . $ownerId . ", " .
             $statement->close();
         }
 
-        $this->commit();
         
         if (is_null($this->newPath))
         {
@@ -248,7 +240,8 @@ $msg = "ownerId: " . $ownerId . ", " .
         
 
         if ($this->totalValueCount > 1 &&
-            !is_null($this->jobPath)) {
+            !is_null($this->jobPath))
+        {
             $jobStatus =
                 $this->readFromJob(
                     ""
@@ -280,13 +273,13 @@ $msg = "ownerId: " . $ownerId . ", " .
             
             
         }
-   
+        
 
     }
 
     public function cancelDocument()
     {
-    
+
         $this->resetInsertValueStatement();
         
         $this->writeToJob(
@@ -296,8 +289,7 @@ $msg = "ownerId: " . $ownerId . ", " .
         
         
         if (!is_null($this->lockedValueId)) {
-            $this->begin_transaction();
-        
+            
             $statement = $this->connection->prepare(
                 "CALL deleteLockedValues(?);"
             );
@@ -310,8 +302,7 @@ $msg = "ownerId: " . $ownerId . ", " .
             $statement->execute();
         
             $statement->close();
-    
-            $this->commit();
+
         }
         
         $jobStatus =
@@ -349,8 +340,6 @@ $msg = "ownerId: " . $ownerId . ", " .
     public function getPathValueId() {
 
                  
-        $this->begin_transaction();
-
         
         $parentValueId = null;
 
@@ -386,8 +375,6 @@ $msg = "ownerId: " . $ownerId . ", " .
             ]
         ];
         
-        $this->commit();
-
         
         return $parentValueId;
 
@@ -932,7 +919,6 @@ $msg = "ownerId: " . $ownerId . ", " .
         else
             $isNull = false;
         
-       # $this->begin_transaction();
      
         if (!is_null($this->updateValueId))
         {
@@ -1104,7 +1090,7 @@ $msg = "ownerId: " . $ownerId . ", " .
        $boolValue
     )
     {
-
+        
         $statement = 
             $this->connection->prepare(
                 "CALL updateValue(?, ?, ?, ?, ?, ?, ?, ?, ?)"

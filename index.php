@@ -467,6 +467,7 @@ resetJobsButton.onclick =
         )
         .then(
             (path) => {
+                jobsDiv.innerHTML = "";
                 alert(path);
             }
         )

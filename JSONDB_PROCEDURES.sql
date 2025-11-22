@@ -1181,13 +1181,16 @@ BEGIN
              @boolValue = boolValue,
              @objectKeyWordId = NULL,
              @stringValueId = NULL;
-    
+   
     IF @objectKey IS NOT NULL THEN
         CALL insertWord(
             @objectKey,
             @objectKeyWordId
         );
-            
+        CALL insertValueWords(
+            @objectKey,
+            null
+        );
     END IF;
     
     IF @stringValue IS NOT NULL THEN
@@ -1197,8 +1200,7 @@ BEGIN
         );
         CALL insertValueWords(
             @stringValue,
-            null,
-            1
+            null
         );
     END IF;
     
@@ -1292,16 +1294,14 @@ BEGIN
     IF @objectKey IS NOT NULL THEN
         CALL insertValueWords(
             @objectKey,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
     
     IF @stringValue IS NOT NULL THEN
         CALL insertValueWords(
             @stringValue,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
    
@@ -1435,8 +1435,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWords`(
     text TEXT,
-    valueId BIGINT,
-    insertWordsOnly TINYINT
+    valueId BIGINT
 )
 exit_procedure: BEGIN
   
@@ -1449,7 +1448,13 @@ exit_procedure: BEGIN
             @word = NULL,
             @start = 1,
             @length = LENGTH(@lowerText),
-            @insertWordsOnly = insertWordsOnly;
+            @insertWordsOnly = NULL;
+            
+  IF valueId IS NULL THEN
+          SET @insertWordsOnly = 1;
+  ELSE
+          SET @insertWordsOnly = 0;
+  END IF;
 
    WHILE (@start <= @length) DO
          # Read first character
@@ -1490,7 +1495,7 @@ exit_procedure: BEGIN
             ELSE
                 CALL insertValueWord(
                     @word,
-                    @valueId,
+                    valueId,
                     @wordId
                 );
             END IF;
@@ -1779,7 +1784,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `updateValue`(
            boolValue TINYINT
 )
 BEGIN
- 
+
     SET @valueId = valueId,
              @ownerId = ownerId,
              @locked = locked,
@@ -1792,12 +1797,22 @@ BEGIN
              @objectKeyWordId = NULL,
              @stringValueWordId = NULL;
           
+    
     IF @objectKey IS NOT NULL THEN
+    
         CALL insertWord(
             @objectKey,
             @objectKeyWordId
         );
+        
+        CALL insertValueWords(
+            @objectKey,
+            null
+        );
+        
     END IF;
+    
+    
     
     IF @stringValue IS NOT NULL THEN
         CALL insertWord(
@@ -1806,15 +1821,17 @@ BEGIN
         );
         CALL insertValueWords(
             @stringValue,
-            null,
-            1
+            null
         );
     END IF;
     
-   START TRANSACTION;
-    
-   CALL deleteChildValues(@valueId);
-   
+ 
+   DELETE
+   FROM
+       Value
+   WHERE
+       Value.parentValueId = @valueId;
+  
    DELETE
     FROM
           ValueWord
@@ -1834,25 +1851,24 @@ BEGIN
            Value.numericValue = @numericValue,
            Value.boolValue = @boolValue
    WHERE
-        Value.valueId = @valueId;
+           Value.valueId = @valueId;
         
+        
+    
     IF @objectKey IS NOT NULL THEN
         CALL insertValueWords(
             @objectKey,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
     
     IF @stringValue IS NOT NULL THEN
         CALL insertValueWords(
             @stringValue,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
-
-    COMMIT;
+   
     
 END ;;
 DELIMITER ;
@@ -1916,4 +1932,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-21  4:32:59
+-- Dump completed on 2025-11-22 17:44:47

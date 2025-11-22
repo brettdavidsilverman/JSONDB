@@ -51,9 +51,11 @@ class PathException extends Exception
 class CancelException extends Exception
 {
     public function __construct($listener = null) {
-        parent::__construct("Cancelled");
+        
         if (!is_null($listener))
             $listener->cancelDocument();
+            
+        parent::__construct("Cancelled");
     }
     
 };
@@ -336,7 +338,7 @@ function handlePost()
             "trace" => $ex->getTrace()
         ];
 
-        $listener->cancelDocument();
+        #$listener->cancelDocument();
     }
     catch (PathException $ex) {
         $error = [
@@ -368,9 +370,6 @@ function handlePost()
 
     }
     finally {
-
-
-            
         $connection->close();
     }
     
@@ -789,7 +788,7 @@ with matches as (
     select
         v.valueId,
         row_number() over 
-           (order  by v.valueId)
+           (order by v.valueId)
            as rowNumber
     from
         Value as v
@@ -840,15 +839,46 @@ END;
             word($alias);
     }
     
+    $fromRow = 1;
+    if (array_key_exists("fromRow", $_GET) &&
+        is_numeric($_GET["fromRow"]))
+    {
+        $fromRow = (int)($_GET["fromRow"]);
+    }
+    
+    $toRow = 100;
+    if (array_key_exists("toRow", $_GET))
+        
+    {
+        if ($_GET["toRow"] === "$")
+            $toRow = null;
+        else if (is_numeric($_GET["toRow"]))
+            $toRow = (int)($_GET["toRow"]);
+    }
 
     $sql = $sql . <<<END
-where
-    vpc.parentValueId = ?
-       
+    where
+        vpc.parentValueId = ?
+    and
+        not exists(
+            select
+                *
+            from
+                Value as _v
+            inner join
+                ValueParentChild as _vpc
+            on
+                _vpc.parentValueId = _v.valueId
+            and
+                _vpc.childValueId = v.valueId
+            where
+                v.locked = 1
+            or
+                v.locked is null
+        )
 )
 
 select
-    matches.rowNumber,
     (
         select
             count(*)
@@ -863,12 +893,28 @@ select
 from
     matches
 where
-    matches.rowNumber between 1 and  100
 
 END;
 
-# echo $sql;
-# exit();
+    if (!is_null($toRow)) {
+        $sql = $sql . <<<END
+    matches.rowNumber between $fromRow and $toRow;
+    
+END;
+    }
+    else {
+        $sql = $sql . <<<END
+    matches.rowNumber >= $fromRow;
+    
+END;
+    }
+
+    if (array_key_exists("type", $_GET) &&
+        $_GET["type"] === "sql")
+    {
+        echo $sql;
+        return true;
+    }
 
     $parameters =
         array_merge(
@@ -885,16 +931,39 @@ END;
     
 
     $data = $result->fetch_all(MYSQLI_ASSOC);
-
+    
+    $connection->close();
+    
     $count = count($data);
+    
+    $totalRows = 0;
+    
+    if ($count > 0)
+        $totalRows = $data[0]["totalCount"];
+    
+    
+    
+    if (is_null($toRow) ||
+       $toRow >= $totalRows)
+    {
+        $toRow = $totalRows;
+    }
+    
+    echo <<<END
+{
+    "fromRow": $fromRow,
+    "toRow": $toRow,
+    "totalRows": $totalRows,
+    "paths": [
 
-    echo "[\r\n";
+END;
+
     
     for ($i = 0; $i < $count; ++$i) {
         $row = $data[$i];
         $path = $row["path"];
         
-        echo tabs(1)
+        echo tabs(2)
             . '"' . $path . '"';
             
         if ($i + 1 < $count)
@@ -903,9 +972,10 @@ END;
         echo "\r\n";
     }
     
-    echo "]";
+    echo "    ]\r\n";
+    echo "}";
     
-    $connection->close();
+
 
     // Log this query
     /*
@@ -920,36 +990,7 @@ END;
 }
 
 function word($alias) {
-/*
-    $sql = <<<END
-    inner join
-        (
-            select distinct
-                parents.parentValueId as valueId
-            from
-                Word as w
-            inner join
-                ValueWord as vw
-            on
-                vw.wordId = w.wordId
-            inner join
-                ValueParentChild as vpc
-            on
-                vpc.parentValueId = vw.valueId
-            inner join
-                ValueParentChild as parents
-            on
-                parents.childValueId = vpc.childValueId
-            where
-                w.lowerWord = ?
 
-        ) as $alias
-    on
-        $alias.valueId = v.valueId
-
-END;
-
-*/
 
    $sql = <<<END
     inner join
@@ -1145,7 +1186,7 @@ function loadValues($statement, $ownerId, $parentValueId) {
 }
 
 function tabs($tabCount) {
-    return str_repeat("   ", $tabCount);
+    return str_repeat("    ", $tabCount);
 }
     
 

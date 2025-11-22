@@ -34,7 +34,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1017 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1021 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -43,7 +43,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (1016,'d9788a2c5fda38a5fb79a276d541cc20',118,'2025-11-21 01:14:21','49.184.167.77','2025-11-21 03:21:50');
+INSERT INTO `Session` VALUES (1020,'2d449cf2ea083082061521840d7f2ebc',118,'2025-11-22 16:57:09','49.184.167.77','2025-11-22 17:13:30');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -132,7 +132,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','ilFE96NS+qLxpnjkzQ9gktwDKsZNWim8ud/lv/QMeaT6lV8OP/Xhv6M2I74K0pyK/DKpJBEOiJILRvjo1H0TnQ==',NULL,'d77b04a8ce0d52f891919ed036174308',1);
+INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','Tv76ek6EGDgTWbKhy21yxmbuJGbVTJReINTo1mO8kI96Ius0MKVwHAyCvCyi7kBrc9sQGyiWhPDutLvtGvMC3w==',NULL,'d77b04a8ce0d52f891919ed036174308',1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -167,7 +167,7 @@ CREATE TABLE `Value` (
   CONSTRAINT `FK_Value_objectKeyWordId` FOREIGN KEY (`objectKeyWordId`) REFERENCES `Word` (`wordId`),
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_parentValueId` FOREIGN KEY (`parentValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=33464175 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=34830080 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -249,7 +249,7 @@ CREATE TABLE `Word` (
   PRIMARY KEY (`wordId`),
   KEY `I_Word_word` (`word`(100)) USING BTREE,
   KEY `I_Word_lowerWord` (`lowerWord`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1104816 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1146651 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1426,13 +1426,16 @@ BEGIN
              @boolValue = boolValue,
              @objectKeyWordId = NULL,
              @stringValueId = NULL;
-    
+   
     IF @objectKey IS NOT NULL THEN
         CALL insertWord(
             @objectKey,
             @objectKeyWordId
         );
-            
+        CALL insertValueWords(
+            @objectKey,
+            null
+        );
     END IF;
     
     IF @stringValue IS NOT NULL THEN
@@ -1442,8 +1445,7 @@ BEGIN
         );
         CALL insertValueWords(
             @stringValue,
-            null,
-            1
+            null
         );
     END IF;
     
@@ -1537,16 +1539,14 @@ BEGIN
     IF @objectKey IS NOT NULL THEN
         CALL insertValueWords(
             @objectKey,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
     
     IF @stringValue IS NOT NULL THEN
         CALL insertValueWords(
             @stringValue,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
    
@@ -1680,8 +1680,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWords`(
     text TEXT,
-    valueId BIGINT,
-    insertWordsOnly TINYINT
+    valueId BIGINT
 )
 exit_procedure: BEGIN
   
@@ -1694,7 +1693,13 @@ exit_procedure: BEGIN
             @word = NULL,
             @start = 1,
             @length = LENGTH(@lowerText),
-            @insertWordsOnly = insertWordsOnly;
+            @insertWordsOnly = NULL;
+            
+  IF valueId IS NULL THEN
+          SET @insertWordsOnly = 1;
+  ELSE
+          SET @insertWordsOnly = 0;
+  END IF;
 
    WHILE (@start <= @length) DO
          # Read first character
@@ -1735,7 +1740,7 @@ exit_procedure: BEGIN
             ELSE
                 CALL insertValueWord(
                     @word,
-                    @valueId,
+                    valueId,
                     @wordId
                 );
             END IF;
@@ -2024,7 +2029,7 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `updateValue`(
            boolValue TINYINT
 )
 BEGIN
- 
+
     SET @valueId = valueId,
              @ownerId = ownerId,
              @locked = locked,
@@ -2037,12 +2042,22 @@ BEGIN
              @objectKeyWordId = NULL,
              @stringValueWordId = NULL;
           
+    
     IF @objectKey IS NOT NULL THEN
+    
         CALL insertWord(
             @objectKey,
             @objectKeyWordId
         );
+        
+        CALL insertValueWords(
+            @objectKey,
+            null
+        );
+        
     END IF;
+    
+    
     
     IF @stringValue IS NOT NULL THEN
         CALL insertWord(
@@ -2051,15 +2066,17 @@ BEGIN
         );
         CALL insertValueWords(
             @stringValue,
-            null,
-            1
+            null
         );
     END IF;
     
-   START TRANSACTION;
-    
-   CALL deleteChildValues(@valueId);
-   
+ 
+   DELETE
+   FROM
+       Value
+   WHERE
+       Value.parentValueId = @valueId;
+  
    DELETE
     FROM
           ValueWord
@@ -2079,25 +2096,24 @@ BEGIN
            Value.numericValue = @numericValue,
            Value.boolValue = @boolValue
    WHERE
-        Value.valueId = @valueId;
+           Value.valueId = @valueId;
         
+        
+    
     IF @objectKey IS NOT NULL THEN
         CALL insertValueWords(
             @objectKey,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
     
     IF @stringValue IS NOT NULL THEN
         CALL insertValueWords(
             @stringValue,
-            @valueId,
-            0
+            @valueId
         );
     END IF;
-
-    COMMIT;
+   
     
 END ;;
 DELIMITER ;
@@ -2161,4 +2177,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-21  4:32:47
+-- Dump completed on 2025-11-22 17:44:37

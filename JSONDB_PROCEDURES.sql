@@ -48,7 +48,7 @@ CREATE DEFINER=`brett`@`%` FUNCTION `getPathByValue`(
    valueId BIGINT,
    userId BIGINT
 ) RETURNS text CHARSET utf8mb4
-    DETERMINISTIC
+    READS SQL DATA
 BEGIN
    SET @valueId = valueId,
             @userId = userId;
@@ -113,6 +113,7 @@ CREATE DEFINER=`brett`@`%` FUNCTION `getSegmentByValue`(
    valueId BIGINT,
    userId BIGINT
 ) RETURNS text CHARSET utf8mb4
+    READS SQL DATA
 BEGIN
 
     SET @valueId = valueId,
@@ -205,6 +206,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` FUNCTION `isDelineator`(
        nchar TEXT ) RETURNS tinyint(1)
+    DETERMINISTIC
 BEGIN
    SET @nchar = nchar,
             @delineators = ",“.”\'()*\'\"{}:;!?~`|[] \t\r\n\b\\";
@@ -227,6 +229,7 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` FUNCTION `urlencode`(original_text text) RETURNS text CHARSET utf8mb4
+    DETERMINISTIC
 BEGIN
 
   SET @text = original_text;
@@ -1932,4 +1935,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-22 17:44:47
+-- Dump completed on 2025-11-25  8:50:48

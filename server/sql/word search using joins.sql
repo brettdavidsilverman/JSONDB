@@ -1,39 +1,98 @@
-select distinct
-    getPathByValue (v.valueId, 118)
-from Value as v
-
-inner join ValueParentChild as vpc1
-on v.valueId  = vpc1.childValueId
-inner join ValueWord as vw1
-on vw1.valueId = vpc1.parentValueId
-inner join Word as w1
-on w1.wordId = vw1.wordId
-
-inner join ValueParentChild as vpc2
-on v.valueId  = vpc2.childValueId
-inner join ValueWord as vw2
-on vw2.valueId = vpc2.parentValueId
-inner join Word as w2
-on w2.wordId = vw2.wordId
-
-inner join ValueParentChild as vpc3
-on v.valueId  = vpc3.childValueId
-inner join ValueWord as vw3
-on vw3.valueId = vpc3.parentValueId
-inner join Word as w3
-on w3.wordId = vw3.wordId
-
-inner join ValueParentChild as vpc4
-on v.valueId  = vpc4.childValueId
-inner join ValueWord as vw4
-on vw4.valueId = vpc4.parentValueId
-left join Word as w4
-on w4.wordId = vw4.wordId
-and w4.lowerWord = 'cocaine'
-where (
-    w1.lowerWord = 'key' and
-    w2.lowerWord = 'value' and
-    w3.lowerWord = 'path' and
-    w4.wordId is null
+with matches as (
+    select distinct
+        v.valueId
+    from
+        ValueParentChild as vpc
+    inner join
+        Value as v
+    on
+        vpc.childValueId = v.valueId
+    
+    inner join
+        ValueParentChild as parents0
+    on
+        parents0.parentValueId = v.valueId
+    inner join
+        ValueWord as vw0
+    on
+        vw0.valueId = parents0.childValueId
+    inner join
+        Word as w0
+    on
+        w0.lowerWord = 'process'
+    and
+        w0.wordId = w0.wordId
+        
+    inner join
+        ValueParentChild as parents1
+    on
+        parents1.parentValueId = v.valueId
+    inner join
+        ValueWord as vw1
+    on
+        vw1.valueId = parents1.childValueId
+    inner join
+        Word as w1
+    on
+        w1.lowerWord = 'deaths'
+    and
+        w1.wordId = w1.wordId
+        
+    where
+        vpc.parentValueId in (
+            select
+                v.valueId
+            from
+                Value as v
+            where
+                v.parentValueId is null
+        )
+    and
+        not exists(
+            select
+                *
+            from
+                Value as _v
+            inner join
+                ValueParentChild as _vpc
+            on
+                _vpc.parentValueId = _v.valueId
+            and
+                _vpc.childValueId = v.valueId
+            where
+                v.locked = 1
+            or
+                v.locked is null
+        )
+        
 )
-order by getPathByValue (v.valueId, 118)
+
+select
+    matches.valueId,
+    (
+        select 
+            count(*)
+        from
+            matches
+    ) as totalCount,
+    getPathByValue (
+        matches.valueId,
+        118
+    ) as path
+
+from
+    matches
+inner join
+    (
+        select
+            m.valueId,
+            row_number() over 
+           (order by m.valueId)
+           as rowNumber
+       from
+           matches as m
+    ) as rowNumbers
+on
+    rowNumbers.valueId = matches.valueId
+where
+    rowNumbers.rowNumber between 1 and 100

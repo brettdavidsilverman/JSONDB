@@ -864,18 +864,19 @@ END;
             select
                 *
             from
-                Value as _v
+                Value
             inner join
-                ValueParentChild as _vpc
+                ValueParentChild as vpc
             on
-                _vpc.parentValueId = _v.valueId
+                vpc.parentValueId = Value.valueId
             and
-                _vpc.childValueId = v.valueId
+                vpc.childValueId = v.valueId
             where
-                v.locked = 1
+                Value.locked = 1
             or
-                v.locked is null
+                Value.locked is null
         )
+        
 )
 
 select

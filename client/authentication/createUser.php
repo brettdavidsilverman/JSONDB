@@ -127,7 +127,8 @@ function updateForm() {
    
    authentication.getUserEmailExists(
       email.value
-   ).then(
+   )
+   .then(
       function (exists)
       {
          if (exists)

@@ -446,9 +446,10 @@ class Authentication
         }
             
         var promise =
-            fetch(this.url + "/server/authentication/userEmailExists.php", parameters);
-
+            this.fetch(this.url + "/server/authentication/userEmailExists.php", parameters);
+            
         return promise;
+;
     }
     
     createUser(token, email, secret) {

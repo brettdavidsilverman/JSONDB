@@ -25,6 +25,12 @@ Theres a sample <a href="config.json">config.json</a>
 
 # Install JSONDB database
 # create JSONDB database
+sudo mysql
+create database JSONDB;
+use JSONDB;
+create user 'brett'@'%' identified by 'password';
+grant all privileges on JSONDB.* to 'brett'@'%';
+exit
 
 ./createdatabase.sh
 
@@ -32,19 +38,8 @@ Theres a sample <a href="config.json">config.json</a>
 
 # Instructions to setup google email
 
-install postfix
+Follow these instructions
 
-edit /etc/postfix/main.cf
-   relayhost = [smtp.gmail.com]:587
-   smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt 
-   
-create google app password
+https://www.linode.com/docs/guides/configure-postfix-to-send-mail-using-gmail-and-google-workspace-on-debian-or-ubuntu/
 
-edit /etc/postfix/sasl_passwd
-   [smtp.gmail.com]:587 email@gmail.com:{app password}
-   
-sudo postmap /etc/postfix/sasl_passwd
-sudo chown root:root /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
-sudo chmod 0600 /etc/postfix/sasl_passwd
- 
-sudo service postfix restart
+

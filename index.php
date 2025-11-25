@@ -487,6 +487,10 @@ resetJobsButton.onclick =
 createProcessButton.onclick =
 
     function() {
+        
+        if (!confirm("This will replace the path " + pathInput.value + " with a sample process"))
+           return;
+           
         createProcessButton.disabled = true;
         authentication.postJSON(
             pathInput.value,

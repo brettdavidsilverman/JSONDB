@@ -34,7 +34,7 @@ CREATE TABLE `Session` (
   KEY `I_Session_userId` (`userId`) USING BTREE,
   KEY `I_Session_ipAddress` (`ipAddress`) USING BTREE,
   CONSTRAINT `FK_Session_userId` FOREIGN KEY (`userId`) REFERENCES `User` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1037 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1054 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -43,7 +43,7 @@ CREATE TABLE `Session` (
 
 LOCK TABLES `Session` WRITE;
 /*!40000 ALTER TABLE `Session` DISABLE KEYS */;
-INSERT INTO `Session` VALUES (1033,'acfb7eff5e1488689d4134ca49730db6',118,'2025-11-25 04:45:32','49.183.5.148','2025-11-25 06:21:02'),(1034,'d0d53c2bf6701ec52e29e2e7be82da6a',118,'2025-11-25 07:05:23','49.183.5.148','2025-11-25 07:05:33'),(1035,'d2e39d452c11303629138c34e5b1af56',118,'2025-11-25 07:06:53','49.183.5.148','2025-11-25 07:07:06'),(1036,'9318affd2415f1be994e00cb32fd31f2',118,'2025-11-25 07:08:28','49.183.5.148','2025-11-25 08:10:46');
+INSERT INTO `Session` VALUES (1050,'628a0a145d0516f19758845db4d7735e',119,'2025-11-25 23:32:15','49.183.5.148','2025-11-26 00:38:47'),(1051,'60d56ccb7a4e5c11e08d248d4edd6f52',119,'2025-11-26 00:41:48','49.183.5.148','2025-11-26 00:59:28'),(1052,'122a901a794a5152279513b0f28a0681',119,'2025-11-26 00:59:55','49.183.5.148','2025-11-26 01:00:02'),(1053,'f5bcbb0aece0057579cb3e00a4f6ca1c',119,'2025-11-26 01:00:26','49.183.5.148','2025-11-26 01:04:37');
 /*!40000 ALTER TABLE `Session` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -122,7 +122,7 @@ CREATE TABLE `User` (
   `validated` tinyint NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `UI_userEmail` (`userEmail`)
-) ENGINE=InnoDB AUTO_INCREMENT=119 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -131,7 +131,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (118,'brettdavidsilverman@gmail.com','m/XXrPXn9bO9+v5zajnQ6T7qH8lSu3BtFgEmz8C0RMmvxnGFyF05/fGaQ0IDjWdn4T2crfr/TKdFQNNR5O+l9Q==',NULL,'d0ece33aa333edab62acf7570f2d99d3',1);
+INSERT INTO `User` VALUES (119,'brettdavidsilverman@gmail.com','kiIYowCfV/z9uCC7IZLVLzaAhVgvMaDthqR59rD1RPeb+1YWyRG+JOzG/sBscqgf+OPnNBWXoZmvNMRVlOWN0w==',NULL,NULL,1);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -163,10 +163,12 @@ CREATE TABLE `Value` (
   KEY `I_Value_objectKeyWordId` (`objectKeyWordId`),
   KEY `I_Value_objectKeyWordId_numericValue` (`objectKeyWordId`,`numericValue`) USING BTREE,
   KEY `I_Value_objectKeyWordId_stringValue` (`objectKeyWordId`,`stringValueWordId`) USING BTREE,
+  KEY `I_,Value_locked` (`locked`) USING BTREE,
+  KEY `I_Value_parentValueId_objectDepth` (`parentValueId`) USING BTREE,
   CONSTRAINT `FK_Value_objectKeyWordId` FOREIGN KEY (`objectKeyWordId`) REFERENCES `Word` (`wordId`),
   CONSTRAINT `FK_Value_ownerId` FOREIGN KEY (`ownerId`) REFERENCES `User` (`userId`) ON DELETE CASCADE,
   CONSTRAINT `FK_Value_parentValueId` FOREIGN KEY (`parentValueId`) REFERENCES `Value` (`valueId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=35170183 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=35848377 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -248,7 +250,7 @@ CREATE TABLE `Word` (
   PRIMARY KEY (`wordId`),
   KEY `I_Word_word` (`word`(100)) USING BTREE,
   KEY `I_Word_lowerWord` (`lowerWord`(100)) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1188464 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1230284 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1501,8 +1503,7 @@ BEGIN
     IF @objectIndex IS NULL THEN
         SET @objectIndex = 1;
     END IF;
-        
-    
+       
     INSERT INTO Value(
            ownerId,
            parentValueId,
@@ -2179,4 +2180,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-25  8:50:47
+-- Dump completed on 2025-11-26  1:10:30

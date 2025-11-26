@@ -1257,8 +1257,7 @@ BEGIN
     IF @objectIndex IS NULL THEN
         SET @objectIndex = 1;
     END IF;
-        
-    
+       
     INSERT INTO Value(
            ownerId,
            parentValueId,
@@ -1935,4 +1934,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-25  8:50:48
+-- Dump completed on 2025-11-26  1:10:30

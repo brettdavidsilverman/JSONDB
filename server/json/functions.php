@@ -784,18 +784,16 @@ function handleSearch($query)
 
     
     $sql = <<<END
-with matches as (
-    select
-        v.valueId,
-        row_number() over 
-           (order by v.valueId)
-           as rowNumber
-    from
-        Value as v
-    inner join
-        ValueParentChild as vpc
-    on
-        vpc.childValueId = v.valueId
+with
+    matches as (
+        select
+            v.valueId
+        from
+            Value as v
+        inner join
+            ValueParentChild as vpc
+        on
+            vpc.childValueId = v.valueId
 
 END;
 
@@ -857,58 +855,68 @@ END;
     }
 
     $sql = $sql . <<<END
-    where
-        vpc.parentValueId = ?
-    and
-        not exists(
-            select
-                *
-            from
-                Value
-            inner join
-                ValueParentChild as vpc
-            on
-                vpc.parentValueId = Value.valueId
-            and
-                vpc.childValueId = v.valueId
-            where
-                Value.locked = 1
-            or
-                Value.locked is null
-        )
-        
-)
-
+        where
+            vpc.parentValueId = ?
+        and
+            not exists(
+                select
+                    *
+                from
+                    Value
+                inner join
+                    ValueParentChild as vpc
+                on
+                    vpc.parentValueId = Value.valueId
+                and
+                    vpc.childValueId = v.valueId
+                where
+                    Value.locked = 1
+                or
+                    Value.locked is null
+            )
+    ),
+    rowedMatches as (
+        select
+            matches.*,
+            row_number() over 
+                (order by matches.valueId )
+                as rowNumber
+        from
+            matches
+    )
 select
     (
         select
             count(*)
         from
-            matches
+            rowedMatches
     ) as totalCount,
     getPathByValue (
-        matches.valueId,
+        valueId,
         ?
     ) as path
 
 from
-    matches
+    rowedMatches
+
 where
 
 END;
 
+
     if (!is_null($toRow)) {
         $sql = $sql . <<<END
-    matches.rowNumber between $fromRow and $toRow;
-    
+    rowNumber between $fromRow and $toRow;
+
 END;
     }
     else {
         $sql = $sql . <<<END
-    matches.rowNumber >= $fromRow;
-    
+    rowNumber >= $fromRow;
+
 END;
     }
+
 
     if (array_key_exists("type", $_GET) &&
         $_GET["type"] === "sql")
@@ -941,7 +949,8 @@ END;
     
     if ($count > 0)
         $totalRows = $data[0]["totalCount"];
-    
+    else
+        $fromRow = 0;
     
     
     if (is_null($toRow) ||
@@ -993,31 +1002,33 @@ END;
 function word($alias) {
 
 
-   $sql = <<<END
-    inner join
-        (
-            select distinct
-                parents.parentValueId as valueId
-            from
-                ValueParentChild as vpc
-            inner join
-                ValueWord as vw
-            on
-                vw.valueId = vpc.parentValueId
-            inner join
-                Word as w
-            on
-                w.wordId = vw.wordId
-            inner join
-                ValueParentChild as parents
-            on
-                parents.childValueId = vpc.childValueId
-            where
-                w.lowerWord = ?
+    $sql = <<<END
+        inner join
+            (
+                select distinct
+                    parents.parentValueId as valueId
+                from
+                    ValueParentChild as vpc
+                inner join
+                    ValueWord as vw
+                on
+                    vw.valueId = vpc.parentValueId
+                inner join
+                    Word as w
+                on
+                    w.wordId = vw.wordId
+                inner join
+                    ValueParentChild as parents
+                on
+                    parents.childValueId = vpc.childValueId
+                where
+                    w.lowerWord = ?
+                and
+                    parents.parentValueId != parents.childValueId
 
-        ) as $alias
-    on
-        $alias.valueId = v.valueId
+            ) as $alias
+        on
+            $alias.valueId = v.valueId
 
 END;
    return $sql;

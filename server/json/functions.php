@@ -283,7 +283,10 @@ function handlePost($credentials)
         $jobPath = $_POST["jobPath"];
      
     $file = "php://input";
-
+    
+    $listener = null;
+    $cancelDocument = true;
+    
     try {
         
         $connection = getConnection();
@@ -294,7 +297,8 @@ function handlePost($credentials)
                 $file = $_FILES["uploadFile"]["tmp_name"];
             }
             else {
-               throw new CancelException();
+                $cancelDocument = false;
+                throw new CancelException();
             }
         }
 
@@ -364,7 +368,7 @@ function handlePost($credentials)
 
     }
     finally {
-        if (!is_null($error))
+        if (!is_null($error) && $cancelDocument)
         
             $listener->cancelDocument();
             
@@ -562,7 +566,6 @@ function getValueIdByPath(
         getValueIdByPathEx(
            $connection, 
            $credentials,
-           false,
            $lastPath,
            $path
         );

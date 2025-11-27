@@ -4,22 +4,18 @@ session_start();
 require_once "../functions.php";
 
 $credentials = authenticate();
-$enabled = ini_get("session.upload_progress.enabled");
-
-$prefix = ini_get("session.upload_progress.prefix");
-
 http_response_code(200);
-
 setCredentialsCookie($credentials);
 
 header("content-type: application/json");
 
+$prefix = ini_get("session.upload_progress.prefix");
 
 foreach($_SESSION as $key => $value) {
 
     if (str_starts_with($key, $prefix)) {
         $jobPath = substr($key, strlen($prefix));
-        $jobPath = $jobPath;
+
         
         $jobStatus = readFromDatabase(
             $credentials,
@@ -35,13 +31,10 @@ foreach($_SESSION as $key => $value) {
            )
         {
             
-            if (!isset(
-                $_SESSION[$key]["cancel_upload"]))
-            {
-                $_SESSION[$key]["cancel_upload"]
-                    = true;
-                session_commit(); 
-            }
+            $_SESSION[$key]["cancel_upload"]
+                = true;
+            session_commit(); 
+            
             
             $jobStatus["label"] = "Cancelling";
             $jobStatus["jobPath"] = $jobPath;
@@ -90,11 +83,14 @@ try {
         false
     );
 
-    $connection->close();
+
 }
 catch(PathException $ex) {
-    //var_dump($ex);
+   # var_dump($ex);
     echo "undefined";
+}
+finally {
+    $connection->close();
 }
 
 ?>

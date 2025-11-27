@@ -2,15 +2,16 @@ class Authentication
 {
     static _uploadProgressName = null;
     static _uploadMaxFilesize = null;
-    #credentials = false;
+    #credentials = null;
     
     constructor(authenticationServer = document.location.origin) {
         
         this.credentials = this.getCredentials();
-        
+    
         this.authenticationServer =
             authenticationServer;
         this.url = this.authenticationServer;
+        
         if (this.authenticated)
             this.updateJobs();
     }
@@ -108,16 +109,6 @@ class Authentication
                         json["{Error}"] != undefined)
                     {
                         throw json["{Error}"];
-/*
-                        throw {
-                            message: json["{Error}"],
-                            url: url,
-                            text: text,
-                            method: defaultParameters.method,
-                            status: status,
-                            where: "Authentication.fetch error"
-                        }
-*/
                     }
 
                     return json;
@@ -272,12 +263,14 @@ class Authentication
     
     
     updateJobs(jobs) {
-        
+
         var _this = this;
         if (!jobs) {
             var promise = this.getJobs()
             .then(
                 (jobs) => {
+                    if (jobs === undefined)
+                        jobs = [];
                     _this.updateJobs(jobs);
                 }
             )
@@ -376,6 +369,7 @@ class Authentication
     }
     
     set credentials(creds) {
+
         if (creds) {
             this.setCookie(creds);
             this.authenticated =
@@ -443,6 +437,7 @@ class Authentication
             this.fetch(this.url + "/server/json/updateUploadStatus.php");
 
         return promise;
+    
     }
 
     getUserEmailExists(email) {
@@ -457,7 +452,7 @@ class Authentication
             this.fetch(this.url + "/server/authentication/userEmailExists.php", parameters);
             
         return promise;
-;
+
     }
     
     createUser(token, email, secret) {
@@ -645,8 +640,9 @@ class Authentication
                 "credentials=;" +
                 "path=/;";
         }
-         
-        document.cookie = cookie;
+        
+        document.cookie = cookie;
+        
 
     }
     
@@ -681,7 +677,6 @@ class Authentication
             this.getCookie(
                 "credentials"
             );
-        
         if (credentialsString)
             credentialsString =
                 decodeURIComponent(

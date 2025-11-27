@@ -21,7 +21,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
     protected $replaceValueId;
     protected $lockedValueId;
     protected $stagingValueId;
-    protected $parentValueId;
+    public $parentValueId;
     
     protected $lock = true;
     protected $appendToArray;
@@ -219,6 +219,9 @@ $msg = "ownerId: " . $ownerId . ", " .
        "parentValueId: " . $this->parentValueId . ", " .
        "stagingValueId: " . $this->stagingValueId . ", " .
        "appendToArray: " . ($this->appendToArray ? 1 : 0);
+       
+error_log($this->path);
+error_log($msg);
 
             $statement->execute();
        
@@ -358,24 +361,28 @@ $msg = "ownerId: " . $ownerId . ", " .
                 $parentValueId,
                 $type
             );
-
+            
+        $this->parentValueId =
+            $parentValueId;
+    
+            
+            
         $parentValueId =
            $this->lastSegment(
                $parentValueId,
                $type
            );
 
-        $this->parentValueId =
-            $parentValueId;
             
+
         $this->stack = [
             [
-                "parentValueId" => $parentValueId,
+                "parentValueId" => $this->parentValueId,
                 "objectIndex" => $this->objectIndex
             ]
         ];
         
-        
+
         return $parentValueId;
 
 
@@ -471,10 +478,10 @@ $msg = "ownerId: " . $ownerId . ", " .
                     null   # $boolValue
                );
 
-
+            $this->replaceValueId = null;
         }
         else
-            $this->replaceValueId = $valueId;
+           $this->replaceValueId = $valueId;
             
         
 
@@ -540,6 +547,7 @@ $msg = "ownerId: " . $ownerId . ", " .
                         $i,
                         $type
                     );
+                
             }
 
             $parentValueId = $valueId;
@@ -596,7 +604,8 @@ $msg = "ownerId: " . $ownerId . ", " .
                     $locked
                 );
                 
-
+            $parentValueId = $valueId;
+            
             if ($locked) {
                 throw new LockedException("Path locked", $this, $count - 1);
             }
@@ -610,7 +619,10 @@ $msg = "ownerId: " . $ownerId . ", " .
                     $this->updateValueId =
                         $valueId;
                 }
-                
+                else
+                    $this->replaceValueId =
+                    $valueId;
+                    
                 if (!is_int($segment) &&
                      $preceedingType != "object")
                 {
@@ -619,9 +631,9 @@ $msg = "ownerId: " . $ownerId . ", " .
             
                 
             }
+            else
+               $this->replaceValueId = null;
             
-            $this->replaceValueId =
-                $valueId;
 
         }
     
@@ -668,10 +680,6 @@ $msg = "ownerId: " . $ownerId . ", " .
             $type,
             $locked
         );
-        
-        if (!is_null($valueId)) {
-            $this->replaceValueId = $valueId;
-        }
         
         if ($locked) {
             throw new LockedException("Path locked", $this, $i);
@@ -728,9 +736,6 @@ $msg = "ownerId: " . $ownerId . ", " .
                     null  //$boolValue
                 );
                 
-
- 
-
         }
 
     

@@ -45,10 +45,10 @@ var authentication = new Authentication();
 
 var email =
     document.getElementById("email");
-    
 
 function lostSecret(token)
 {
+    
     if (!email.value) {
         alert("Please enter your email address");
         return;
@@ -57,24 +57,29 @@ function lostSecret(token)
     if (!confirm("This will send a link to reset your password to your email inbox. Continue?"))
         return;
     
+    
+    
+    
     authentication.logoff()
     .then(
         function() {
-            return
+             var promise =
                 authentication
                .getUserEmailExists(
                    email.value
                );
+            return promise;
         }
     )
     .then(
         function(exists) {
+
             if (!exists)
                throw "This email was not found";
         }
     )
     .then(
-        function(status) {
+        function() {
             var promise =
                 authentication.lostSecret(
                     token,

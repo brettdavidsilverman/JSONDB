@@ -17,5 +17,5 @@
    if ($validated)
       redirect('/');
    else
-      http_response_code(500);
+      echo "Invalid email or email already validated";
 ?>

@@ -50,49 +50,55 @@ CREATE DEFINER=`brett`@`%` FUNCTION `getPathByValue`(
 ) RETURNS text CHARSET utf8mb4
     READS SQL DATA
 BEGIN
-   SET @valueId = valueId,
-            @userId = userId;
+
+   DECLARE _valueId BIGINT;
+   DECLARE _userId BIGINT;
+   DECLARE _parentValueId BIGINT;
+   DECLARE _path TEXT;
    
-   SET @parentValueId = (
+   SET _valueId = valueId,
+            _userId = userId;
+   
+   SET _parentValueId = (
          SELECT   Value.parentValueId
          FROM     Value
-         WHERE  Value.valueId = @valueId
-         AND         Value.ownerId = @userId
+         WHERE  Value.valueId = _valueId
+         AND         Value.ownerId = _userId
       );
       
-   SET @path = '';
+   SET _path = '';
    
-   WHILE (@valueId IS NOT NULL 
+   WHILE (_valueId IS NOT NULL 
    AND
-                   @parentValueId IS NOT NULL) DO
+                   _parentValueId IS NOT NULL) DO
                    
-      SET @path = CONCAT(
-         getSegmentByValue(@valueId, @userId),
+      SET _path = CONCAT(
+         getSegmentByValue(_valueId, _userId),
          '/', 
-         @path
+         _path
       );
-      SET @valueId = (
+      SET _valueId = (
          SELECT   Value.parentValueId
          FROM     Value
-         WHERE  Value.valueId = @valueId
-         AND         Value.ownerId = @userId
+         WHERE  Value.valueId = _valueId
+         AND         Value.ownerId = _userId
       );
       
-      SET @parentValueId = (
+      SET _parentValueId = (
          SELECT   Value.parentValueId
          FROM     Value
-         WHERE  Value.valueId = @valueId
-         AND        Value.ownerId = @userId
+         WHERE  Value.valueId = _valueId
+         AND        Value.ownerId = _userId
       );
     
    END WHILE;
 
-   SET @path = CONCAT('/my/', @path);
+   SET _path = CONCAT('/my/', _path);
    
    /* Remove trailing slash */
-   SET @path = SUBSTR(@path, 1, LENGTH(@path) - 1);
+   SET _path = SUBSTR(_path, 1, LENGTH(_path) - 1);
    
-   RETURN @path;
+   RETURN _path;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -116,14 +122,19 @@ CREATE DEFINER=`brett`@`%` FUNCTION `getSegmentByValue`(
     READS SQL DATA
 BEGIN
 
-    SET @valueId = valueId,
-             @userId = userId;
+    DECLARE _valueId BIGINT;
+    DECLARE _userId BIGINT;
+    DECLARE _objectKey TEXT;
+    DECLARE _segment TEXT;
     
-    IF @valueId IS NULL THEN
+    SET _valueId = valueId,
+             _userId = userId;
+    
+    IF _valueId IS NULL THEN
        RETURN '';
     END IF;
     
-    SET @objectKey = (
+    SET _objectKey = (
        SELECT
           Word.word AS objectKey
        FROM
@@ -134,25 +145,25 @@ BEGIN
            Value.objectKeyWordId =
            Word.wordId
        WHERE
-          Value.valueId = @valueId
+          Value.valueId = _valueId
        AND
-          Value.ownerId = @userId
+          Value.ownerId = _userId
     );
     
-    SET @segment = NULL;
+    SET _segment = NULL;
     
-    IF (@objectKey IS NULL) THEN
-       SET @segment  = (
+    IF (_objectKey IS NULL) THEN
+       SET _segment  = (
           SELECT CAST(Value.objectIndex AS CHAR)
           FROM   Value
-          WHERE Value.valueId = @valueId
-          AND       Value.ownerId = @userId
+          WHERE Value.valueId = _valueId
+          AND       Value.ownerId = _userId
        );
     ELSE
-       SET @segment = urlencode(@objectKey);
+       SET _segment = urlencode(_objectKey);
     END IF;
 
-   RETURN @segment;
+   RETURN _segment;
    
 END ;;
 DELIMITER ;
@@ -176,17 +187,22 @@ CREATE DEFINER=`brett`@`%` FUNCTION `getSetting`(
     READS SQL DATA
 BEGIN
 
-   SET @settingCode = settingCode;
+   DECLARE _settingCode NVARCHAR(256);
+   DECLARE _settingValue TEXT;
    
-   SET @settingValue = NULL;
+   SET _settingCode = settingCode;
    
-   SET   @settingValue = (
-      SELECT  settingValue
-      FROM     Setting
-      WHERE Setting. settingCode = @settingCode
-   );
+   SET _settingValue = NULL;
    
-   RETURN @settingValue;
+  SELECT  Setting.settingValue
+  INTO
+      _settingValue
+  FROM
+       Setting
+  WHERE
+      Setting. settingCode = _settingCode;
+   
+   RETURN _settingValue;
       
 END ;;
 DELIMITER ;
@@ -205,13 +221,16 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`brett`@`%` FUNCTION `isDelineator`(
-       nchar TEXT ) RETURNS tinyint(1)
+       nchar TEXT
+ ) RETURNS tinyint(1)
     DETERMINISTIC
 BEGIN
-   SET @nchar = nchar,
-            @delineators = ",“.”\'()*\'\"{}:;!?~`|[] \t\r\n\b\\";
+
+   DECLARE delineators TEXT;
+   
+   SET delineators = ",“.”\'()*\'\"{}:;!?~`|[] \t\r\n\b\\";
             
-   RETURN IF(INSTR(@delineators, @nchar) > 0, 1, 0);
+   RETURN IF(INSTR(delineators, nchar) > 0, 1, 0);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -287,19 +306,36 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`brett`@`%` FUNCTION `userEmailExists`( email NVARCHAR ( 320 ) ) RETURNS tinyint(1)
+CREATE DEFINER=`brett`@`%` FUNCTION `userEmailExists`( 
+    email NVARCHAR ( 320 )
+ ) RETURNS tinyint(1)
     READS SQL DATA
 BEGIN
-   SET @email = email;
+
+   DECLARE _email NVARCHAR(320);
+   DECLARE _count BIGINT;
+   DECLARE _emailExists TINYINT;
+   
+   SET _email = email;
     
-   SET       @emailExists = (
+   SET       _count  = (
       SELECT   COUNT(*)
       FROM     User
-      WHERE  User.userEmail = @email
+      WHERE  User.userEmail = _email
       AND        User.validated = 1
    );
    
-   RETURN @emailExists; 
+   IF _count IS NULL THEN
+      SET _count = 0;
+   END IF;
+   
+   IF _count = 1 THEN
+      SET _emailExists = 1;
+   ELSE
+      SET _emailExists = 0;
+   END IF;
+   
+   RETURN _emailExists;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -323,65 +359,79 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `authenticate`(
 )
 BEGIN
 
-  
-   SET @sessionKey = sessionKey,
-           @ipAddress = ipAddress,
-           @ignoreExpires = ignoreExpires,
-           @timeout = CAST(
-                 getSetting(N'SESSION_TIMEOUT')
-                 AS UNSIGNED
-            );
+   DECLARE _sessionKey VARCHAR(32);
+   DECLARE _ipAddress VARCHAR(15);
+   DECLARE _ignoreExpires TINYINT;
+   DECLARE _timeout BIGINT;
+   DECLARE _expiresDate DATETIME;
+   DECLARE _expiresSeconds BIGINT;
+   DECLARE _lastAccessedDate DATETIME;
+   
+   
+   START TRANSACTION;
+   
+   SET
+        _sessionKey = sessionKey,
+        _ipAddress = ipAddress,
+        _ignoreExpires = ignoreExpires,
+        _timeout = CAST(
+            getSetting(N'SESSION_TIMEOUT')
+            AS UNSIGNED
+        );
        
     IF EXISTS(
        SELECT *
-       FROM    Session
-       WHERE Session.sessionKey = @sessionKey
+       FROM   Session
+       WHERE  Session.sessionKey = _sessionKey
+       FOR UPDATE
     ) THEN
-       SET   @lastAccessedDate = (
-          SELECT   lastAccessedDate
-          FROM      Session
-          WHERE   Session. sessionKey = @sessionKey
+     
+       SELECT   Session.lastAccessedDate
+       INTO     _lastAccessedDate
+       FROM     Session
+       WHERE    Session.sessionKey = _sessionKey;
+       
+       SET _expiresDate = DATE_ADD(
+          _lastAccessedDate,
+          INTERVAL _timeout SECOND
        );
        
-       SET @expires = DATE_ADD(
-          @lastAccessedDate,
-          INTERVAL @timeout SECOND
-       );
-       
-       IF @ignoreExpires = 1 OR @expires > NOW() THEN
-          UPDATE   Session
-          SET              lastAccessedDate = NOW(),
-                               ipAddress = @ipAddress
-          WHERE   Session.sessionKey =  @sessionKey;
+       IF 1 = 1 or _ignoreExpires = 1 OR _expiresDate > NOW()
+       THEN
+          UPDATE  Session
+          SET     Session.lastAccessedDate = NOW(),
+                  Session.ipAddress = _ipAddress
+          WHERE   Session.sessionKey =  _sessionKey;
        ELSE
-          SET @sessionKey = NULL;
+          SET _sessionKey = NULL;
        END IF;
        
     ELSE
-       SET @sessionKey = NULL;
+       SET _sessionKey = NULL;
     END IF;
     
-    SET @expires  =
+    SET _expiresSeconds  =
       UNIX_TIMESTAMP(
          DATE_ADD(
             NOW(),
-            INTERVAL @timeout SECOND
+            INTERVAL _timeout SECOND
          )
       )  * 1000;
    
-    SELECT Session. sessionKey,
-                      Session. userId,
-                      User.userEmail ,
-                       @expires
-                          as expires
-   FROM      Session
-   INNER JOIN
-                      User
-   ON            User.userId = Session.userId
-   WHERE   Session.sessionKey =
-@sessionKey;
+
+    SELECT  Session.sessionKey,
+            Session.userId,
+            User.userEmail ,
+            _expiresSeconds
+                as expires
+    FROM    Session
+    INNER JOIN
+            User
+    ON      User.userId = Session.userId
+    WHERE   Session.sessionKey =
+            _sessionKey;
    
-  
+  COMMIT;
       
    
 END ;;
@@ -407,32 +457,42 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `changeSecret`(
 )
 BEGIN
 
-   SET @email = email;
-   SET @oldSecret = oldSecret;
-   SET @newSecret = newSecret;
+   DECLARE _email NVARCHAR(320);
+   DECLARE _oldSecret TEXT;
+   DECLARE _newSecret TEXT;
+   DECLARE _result TINYINT;
+   DECLARE _userId BIGINT;
+ 
+   START TRANSACTION;
    
-   SET @result = 0;
+   SET _email = email;
+   SET _oldSecret = oldSecret;
+   SET _newSecret = newSecret;
    
-   SET                @userId = (
+   SET _result = 0;
+   
+   SET                _userId = (
       SELECT          User.userId
       FROM             User
-      WHERE          User.userEmail = @email
+      WHERE          User.userEmail = _email
       AND                 User.validated = 1
-      AND                 User.logonSecret = @oldSecret
+      AND                 User.logonSecret = _oldSecret
       
    );
    
-   IF @userId IS NOT NULL 
+   IF _userId IS NOT NULL 
    THEN
       UPDATE  User
-      SET           User. logonSecret = @newSecret
-      WHERE   User.userId = @userId;
-      SET @result = 1;
+      SET           User. logonSecret = _newSecret
+      WHERE   User.userId = _userId;
+      SET _result = 1;
    END IF;
    
    
-   SELECT @result as result;
+   SELECT _result as result;
                     
+   COMMIT;
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -455,16 +515,18 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `createUser`(
 )
 BEGIN
 
+   DECLARE _email NVARCHAR(320);
+   DECLARE _secret TEXT;
+   DECLARE _userId BIGINT;
    
-   
-   SET @email = email;
-   SET @secret = secret;
-   SET @userId = NULL;
+   SET _email = email;
+   SET _secret = secret;
+   SET _userId = NULL;
   
    IF NOT EXISTS(
          SELECT *
          FROM    User
-         WHERE   User.userEmail = @email
+         WHERE   User.userEmail = _email
          FOR UPDATE)
    THEN
          
@@ -473,26 +535,26 @@ BEGIN
          logonSecret,
          newUserSecret,
          validated )
-      VALUES  ( @email, @secret, MD5(UUID()), 0 );
+      VALUES  (_email, _secret, MD5(UUID()), 0 );
      
-     SET @userId = LAST_INSERT_ID();
+     SET _userId = LAST_INSERT_ID();
      
    ELSEIF EXISTS(
          SELECT   *
          FROM     User
-         WHERE  User.userEmail = @email
+         WHERE  User.userEmail = _email
          AND        validated = 0
          FOR UPDATE
    ) THEN
         UPDATE   User
-        SET             logonSecret = @secret,
+        SET             logonSecret = _secret,
                              newUserSecret = MD5(UUID())
-        WHERE    User.userEmail = @email;
+        WHERE    User.userEmail = _email;
         
-        SET @userId = (
+        SET _userId = (
            SELECT userId
            FROM    User
-           WHERE User.userEmail = @email
+           WHERE User.userEmail = _email
            FOR UPDATE
         );
         
@@ -502,7 +564,7 @@ BEGIN
    SELECT   userId,
                       newUserSecret
    FROM     User
-   WHERE  User.userId = @userId;
+   WHERE  User.userId = _userId;
    
 END ;;
 DELIMITER ;
@@ -525,11 +587,13 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `deleteChildValues`(
 )
 BEGIN
 
-   SET @valueId = valueId;
+   DECLARE _valueId BIGINT;
+   
+   SET _valueId = valueId;
    
    DELETE
    FROM      Value
-   WHERE   Value.parentValueId = @valueId;
+   WHERE   Value.parentValueId = _valueId;
    
 END ;;
 DELIMITER ;
@@ -551,13 +615,16 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `deleteLockedValues`(
     lockedValueId BIGINT
 )
 BEGIN
-     SET @lockedValueId = lockedValueId;
+
+     DECLARE _lockedValueId BIGINT;
+     
+     SET _lockedValueId = lockedValueId;
    
      DELETE
      FROM
          Value
      WHERE
-         Value.valueId = @lockedValueId;
+         Value.valueId = _lockedValueId;
 
 END ;;
 DELIMITER ;
@@ -579,11 +646,14 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `deleteValue`(
    valueId BIGINT
 )
 BEGIN
-      SET @valueId = valueId;
+
+      DECLARE _valueId BIGINT;
+      
+      SET _valueId = valueId;
       
       DELETE
       FROM      Value
-      WHERE   Value.valueId = @valueId;
+      WHERE   Value.valueId = _valueId;
    
 END ;;
 DELIMITER ;
@@ -610,67 +680,80 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `endDocument`(
     appendToArray BIGINT
 )
 BEGIN
- 
-    SET  @ownerId = ownerId,
-              @replaceValueId = replaceValueId,
-              @lockedValueId = lockedValueId,
-              @parentValueId = parentValueId,
-              @stagingValueId = stagingValueId,
-              @appendToArray = appendToArray,
-              @objectIndex = NULL;
+
+    DECLARE _ownerId BIGINT;
+    DECLARE _replaceValueId BIGINT;
+    DECLARE _lockedValueId BIGINT;
+    DECLARE _parentValueId BIGINT;
+    DECLARE _stagingValueId BIGINT;
+    DECLARE _appendToArray BIGINT;
+    DECLARE _objectIndex BIGINT;
+    
+    SET  _ownerId = ownerId,
+              _replaceValueId = replaceValueId,
+              _lockedValueId = lockedValueId,
+              _parentValueId = parentValueId,
+              _stagingValueId = stagingValueId,
+              _appendToArray = appendToArray,
+              _objectIndex = NULL;
+              
+  START TRANSACTION;
   
-  IF (@appendToArray = 1) THEN
+  IF (_appendToArray = 1) THEN
         SELECT
             COUNT(*) + 1
         INTO
-            @objectIndex
+            _objectIndex
         FROM
             Value
         WHERE
-            Value.ownerId = @ownerId
+            Value.ownerId = _ownerId
         AND
             Value.parentValueId =
-                @parentValueId
+                _parentValueId
         AND
             Value.locked = 0
         FOR UPDATE;
         
-        IF (@objectIndex IS NULL) THEN
-            SET @objectIndex = 1;
+        IF (_objectIndex IS NULL) THEN
+            SET _objectIndex = 1;
         END IF;
         
         UPDATE
             Value
         SET
-            Value.objectIndex = @objectIndex
+            Value.objectIndex = _objectIndex
         WHERE
-            Value.valueId = @stagingValueId;
+            Value.valueId = _stagingValueId;
        
    END IF;
    
-    IF (@appendToArray = 0) THEN
+    IF (_appendToArray = 0) THEN
     
         UPDATE
             Value
         SET
             Value.locked = NULL
         WHERE
-            Value.valueId = @replaceValueId;
+            Value.valueId =  _replaceValueId;
             
     END IF;
-   
-    DELETE
-    FROM
-        Value
-    WHERE
-        Value.valueId = @replaceValueId;
-        
+  
+        DELETE
+        FROM
+           Value
+        WHERE
+           Value.valueId = _replaceValueId;
+  
+    
     UPDATE
             Value
     SET
             Value.locked = 0
     WHERE
-            Value.valueId = @lockedValueId;
+            Value.valueId = _lockedValueId;
+    
+    COMMIT;
     
 END ;;
 DELIMITER ;
@@ -693,19 +776,23 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getCountByParentValueId`(
     parentValueId BIGINT
 )
 BEGIN
-    SET @userId = userId,
-             @parentValueId = @parentValueId;
+
+    DECLARE _userId BIGINT;
+    DECLARE _parentValueId BIGINT;
+    
+    SET _userId = userId,
+             _parentValueId = parentValueId;
              
     SELECT
         COUNT(*)
     FROM
         Value
     WHERE
-        Value.ownerId = @userId
+        Value.ownerId = _userId
     AND
         Value.locked = 0
     AND
-        Value.parentValueId = @parentValueId;
+        Value.parentValueId = _parentValueId;
         
 END ;;
 DELIMITER ;
@@ -729,13 +816,16 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getRootValueId`(
 )
 BEGIN
 
-   SET @userId = userId,
-            @ownerId = ownerId;
+   DECLARE _userId BIGINT;
+   DECLARE _ownerId BIGINT;
+   
+   SET _userId = userId,
+            _ownerId = ownerId;
    
    SELECT Value.valueId,
                     Value.type
    FROM   Value
-   WHERE Value.ownerId = @ownerId
+   WHERE Value.ownerId = _ownerId
    AND       Value.parentValueId IS NULL
    AND       Value.locked = 0;
 
@@ -763,106 +853,112 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValueId`(
    objectKey TEXT
 )
 BEGIN
-   SET @ownerId = ownerId,
-            @parentValueId = parentValueId,
-            @objectIndex = objectIndex,
-            @objectKey = objectKey,
-            @objectKeyWordId = NULL,
-            @valueId = NULL,
-            @type = NULL,
-            @locked = NULL;
+
+   DECLARE _ownerId BIGINT;
+   DECLARE _parentValueId BIGINT;
+   DECLARE _objectIndex BIGINT;
+   DECLARE _objectKey TEXT;
+   DECLARE _objectKeyWordId BIGINT;
+   DECLARE _valueId BIGINT;
+   DECLARE _type VARCHAR(10);
+   DECLARE _locked TINYINT;
+   
+   SET _ownerId = ownerId,
+            _parentValueId = parentValueId,
+            _objectIndex = objectIndex,
+            _objectKey = objectKey,
+            _objectKeyWordId = NULL,
+            _valueId = NULL,
+            _type = NULL,
+            _locked = NULL;
         
             
-    IF @objectKey IS NOT NULL THEN
+    IF _objectKey IS NOT NULL THEN
         SELECT
             Word.wordId
         INTO
-            @objectKeyWordId
+            _objectKeyWordId
         FROM
             Word
         WHERE
-            Word.word = @objectKey;
+            Word.word = _objectKey;
             
         SELECT
             v.locked
         INTO
-            @locked
+            _locked
         FROM
             Value AS v
         WHERE 
-            v.ownerId = @ownerId
+            v.ownerId = _ownerId
         AND
            v.parentValueId = 
-               @parentValueId
+               _parentValueId
        AND
-           v.objectKeyWordId = @objectKeyWordId
+           v.objectKeyWordId = _objectKeyWordId
        AND
            v.locked = 1;
-       # FOR UPDATE;
-       
 
        SELECT
             v.valueId
         INTO
-            @valueId
+            _valueId
         FROM
             Value AS v
         WHERE
-            v.ownerId = @ownerId
+            v.ownerId = _ownerId
          AND
              v.parentValueId = 
-               @parentValueId
+               _parentValueId
        AND
-           v.objectKeyWordId = @objectKeyWordId
+           v.objectKeyWordId = _objectKeyWordId
        AND
            v.locked = 0;
-       #FOR UPDATE;
+    
    ELSE
         SELECT
             v.locked
         INTO
-            @locked
+            _locked
         FROM
             Value AS v
         WHERE 
-            v.ownerId = @ownerId
+            v.ownerId = _ownerId
         AND
            v.parentValueId = 
-               @parentValueId
+               _parentValueId
        AND
-              v.objectIndex = @objectIndex
+              v.objectIndex = _objectIndex
        AND
               v.locked = 1;
-       #FOR UPDATE;
 
        SELECT
             v.valueId
         INTO
-            @valueId
+            _valueId
         FROM
             Value AS v
         WHERE
-            v.ownerId = @ownerId
+            v.ownerId = _ownerId
         AND
             v.parentValueId = 
-               @parentValueId
+               _parentValueId
        AND
-              v.objectIndex = @objectIndex
+              v.objectIndex = _objectIndex
        AND
               v.locked = 0;
-       #FOR UPDATE;
    END IF;
    
    
-   IF @valueId IS NOT NULL THEN
+   IF _valueId IS NOT NULL THEN
        SELECT
             v.type,
             v.objectIndex,
             w.word
        INTO
-           @type,
-           @objectIndex,
-           @objectKey
+           _type,
+           _objectIndex,
+           _objectKey
        FROM
            Value AS v
        LEFT JOIN
@@ -870,20 +966,19 @@ BEGIN
        ON
            v.objectKeyWordId = w.wordId
        WHERE
-           v.valueId = @valueId
-       ;
+           v.valueId = _valueId;
     END IF;
            
-   IF @locked IS NULL THEN
-       SET @locked = 0;
+   IF _locked IS NULL THEN
+       SET _locked = 0;
    END IF;
    
    SELECT
-            @valueId AS valueId,
-            @type AS type,
-            @locked as locked,
-            @objectIndex AS objectIndex,
-            @objectKey AS objectKey;
+            _valueId AS valueId,
+            _type AS type,
+            _locked as locked,
+            _objectIndex AS objectIndex,
+            _objectKey AS objectKey;
             
 END ;;
 DELIMITER ;
@@ -910,24 +1005,31 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValueIdByPath`(
 )
 BEGIN
 
+   DECLARE _userId BIGINT;
+   DECLARE _ownerId BIGINT;
+   DECLARE _parentValueId BIGINT;
+   DECLARE _objectIndex BIGINT;
+   DECLARE _objectKey TEXT;
+   DECLARE _objectKeyWordId BIGINT;
+   
    
    SET
-      @userId = userId,
-      @ownerId = ownerId,
-      @parentValueId = parentValueId,
-      @objectIndex = objectIndex,
-      @objectKey = objectKey,
-      @objectKeyWordId = NULL;
+      _userId = userId,
+      _ownerId = ownerId,
+      _parentValueId = parentValueId,
+      _objectIndex = objectIndex,
+      _objectKey = objectKey,
+      _objectKeyWordId = NULL;
    
-   IF @objectKey IS NOT NULL THEN
+   IF _objectKey IS NOT NULL THEN
        SELECT
            Word.wordId
        INTO
-           @objectKeyWordId
+           _objectKeyWordId
        FROM
            Word
        WHERE
-           Word.word = @objectKey;
+           Word.word = _objectKey;
            
    END IF;
    
@@ -937,28 +1039,28 @@ BEGIN
    FROM
        Value
    WHERE
-        Value.ownerId = @ownerId
+        Value.ownerId = _ownerId
    AND
                      ( 
                                (
-                                  @parentValueId IS NULL
+                                  _parentValueId IS NULL
                                   AND
                                   Value.parentValueId IS NULL
                                ) 
                                OR
                               (Value.parentValueId = 
-                                    @parentValueId)
+                                    _parentValueId)
                         )
-   AND            (@objectIndex IS NULL
+   AND            (_objectIndex IS NULL
                          OR
-                          Value.objectIndex = @objectIndex)
-   AND            (@objectKey IS NULL
+                          Value.objectIndex = _objectIndex)
+   AND            (_objectKey IS NULL
                           OR
                          Value.objectKeyWordId  =
-                           @objectKeyWordId)
+                           _objectKeyWordId)
   AND            Value.locked = 0
    -- THIS SECURITY CHECK WILL COME LATER
-   AND           @ownerId = @userId;
+   AND           _ownerId = _userId;
    
 END ;;
 DELIMITER ;
@@ -982,8 +1084,11 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesById`(
 )
 BEGIN
 
-   SET @ownerId = ownerId,
-            @valueId = valueId;
+   DECLARE _ownerId BIGINT;
+   DECLARE _valueId BIGINT;
+   
+   SET _ownerId = ownerId,
+            _valueId = valueId;
             
    SELECT         Value.*,
                             (
@@ -1009,7 +1114,7 @@ BEGIN
                                FROM         Value AS Child
                                WHERE      
                                        Child.ownerId = 
-                                       @ownerId
+                                       _ownerId
                                AND
                                         Child.parentValueId =
                                         Value.valueId
@@ -1017,8 +1122,8 @@ BEGIN
                                         Child.locked = 0
                             ) AS childCount
    FROM            Value
-   WHERE         Value.valueId =  @valueId
-   AND                Value.ownerId = @ownerId;
+   WHERE         Value.valueId =  _valueId
+   AND                Value.ownerId = _ownerId;
    
 END ;;
 DELIMITER ;
@@ -1041,8 +1146,12 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `getValuesByParentId`(
    parentValueId BIGINT
 )
 BEGIN
-   SET @parentValueId = parentValueId,
-            @ownerId = ownerId;
+
+   DECLARE _ownerId BIGINT;
+   DECLARE _parentValueId BIGINT;
+   
+   SET _parentValueId = parentValueId,
+            _ownerId = ownerId;
    
    SELECT         Value.*,
                             (
@@ -1068,7 +1177,7 @@ BEGIN
                                FROM         Value AS Child
                                WHERE      
                                        Child.ownerId = 
-                                       @ownerId
+                                       _ownerId
                                AND
                                         Child.parentValueId =
                                         Value.valueId
@@ -1076,10 +1185,10 @@ BEGIN
                                         Child.locked = 0
                             ) AS childCount
    FROM            Value
-   WHERE        Value.ownerId = @ownerId
+   WHERE        Value.ownerId = _ownerId
    AND
                             Value.parentValueId = 
-                            @parentValueId
+                            _parentValueId
    AND               Value.locked = 0
    ORDER BY   Value.objectIndex;
    
@@ -1104,7 +1213,9 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertParentValueWords`(
 )
 BEGIN
 
-    SET @valueId = valueId;
+    DECLARE _valueId BIGINT;
+    
+    SET _valueId = valueId;
     
     INSERT
     INTO
@@ -1113,7 +1224,7 @@ BEGIN
                 wordId
             )
     SELECT
-        @valueId,
+        _valueId,
         ValueWord.wordId
     FROM
         Value
@@ -1122,7 +1233,7 @@ BEGIN
     ON
         ValueWord.valueId = Value.parentValueId
     WHERE
-        Value.valueId = @valueId
+        Value.valueId = $valueId
     AND
         NOT EXISTS(
             SELECT
@@ -1134,12 +1245,11 @@ BEGIN
             ON
                 vw.valueId = v.parentValueId
             WHERE
-                v.valueId = @valueId
+                v.valueId = _valueId
             AND
                 vw.wordId = ValueWord.wordId
         );
         
-    #COMMIT;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1171,91 +1281,108 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValue`(
 )
 BEGIN
 
-    SET @ownerId = ownerId, 
-             @parentValueId =  parentValueId,
-             @replaceValueId = replaceValueId,
-             @locked = locked,
-             @type = type,
-             @objectIndex = objectIndex,
-             @objectKey =  objectKey,
-             @isNull =  isNull,
-             @stringValue = stringValue,
-             @numericValue = numericValue,
-             @boolValue = boolValue,
-             @objectKeyWordId = NULL,
-             @stringValueId = NULL;
+    DECLARE _ownerId BIGINT;
+    DECLARE _parentValueId BIGINT;
+    DECLARE _replaceValueId BIGINT;
+    DECLARE _locked TINYINT;
+    DECLARE _type VARCHAR(10);
+    DECLARE _objectIndex BIGINT;
+    DECLARE _objectKey TEXT;
+    DECLARE _isNull TINYINT;
+    DECLARE _stringValue TEXT;
+    DECLARE _numericValue DOUBLE;
+    DECLARE _boolValue TINYINT;
+    DECLARE _objectKeyWordId BIGINT;
+    DECLARE _stringValueWordId BIGINT;
+    DECLARE _valueId BIGINT;
+    DECLARE _stagingValueId BIGINT;
+    
+    SET _ownerId = ownerId, 
+             _parentValueId =  parentValueId,
+             _replaceValueId = replaceValueId,
+             _locked = locked,
+             _type = type,
+             _objectIndex = objectIndex,
+             _objectKey =  objectKey,
+             _isNull =  isNull,
+             _stringValue = stringValue,
+             _numericValue = numericValue,
+             _boolValue = boolValue,
+             _objectKeyWordId = NULL,
+             _stringValueWordId = NULL;
    
-    IF @objectKey IS NOT NULL THEN
+    IF _objectKey IS NOT NULL THEN
         CALL insertWord(
-            @objectKey,
-            @objectKeyWordId
+            _objectKey,
+            _objectKeyWordId
         );
         CALL insertValueWords(
-            @objectKey,
+            _objectKey,
             null
         );
     END IF;
     
-    IF @stringValue IS NOT NULL THEN
+    IF _stringValue IS NOT NULL THEN
         CALL insertWord(
-            @stringValue,
-            @stringValueWordId
+            _stringValue,
+            _stringValueWordId
         );
         CALL insertValueWords(
-            @stringValue,
+            _stringValue,
             null
         );
     END IF;
     
     START TRANSACTION;
     
-    IF @objectIndex IS NULL THEN
-        IF @replaceValueId IS NOT NULL AND
-                @locked = 1
+    IF _objectIndex IS NULL THEN
+    
+        IF _replaceValueId IS NOT NULL AND
+                _locked = 1
         THEN
             SELECT
                 Value.objectIndex
             INTO
-                @objectIndex
+                _objectIndex
             FROM
                 Value
             WHERE 
-                Value.valueId = @replaceValueId
+                Value.valueId = _replaceValueId
             FOR UPDATE;
-        ELSEIF @objectKey IS NOT NULL
+        ELSEIF _objectKey IS NOT NULL
         THEN
             SELECT
                 Value.objectIndex
             INTO
-                @objectIndex
+                _objectIndex
             FROM
                 Value
             WHERE
-                Value.parentValueId = @parentValueId
+                Value.parentValueId = _parentValueId
             AND
-                Value.objectKeyWordId = @objectKeyWordId
+                Value.objectKeyWordId = _objectKeyWordId
             FOR UPDATE;
         END IF;
     END IF;
     
-    IF @objectIndex IS NULL
+    IF _objectIndex IS NULL
     THEN
     
             SELECT
                 COUNT(Value.objectIndex) + 1
             INTO
-                @objectIndex
+                _objectIndex
             FROM
                 Value
             WHERE 
                  Value.parentValueId =
-                 @parentValueId
+                 _parentValueId
             FOR UPDATE;
         
     END IF;
     
-    IF @objectIndex IS NULL THEN
-        SET @objectIndex = 1;
+    IF _objectIndex IS NULL THEN
+        SET _objectIndex = 1;
     END IF;
        
     INSERT INTO Value(
@@ -1271,47 +1398,47 @@ BEGIN
            boolValue
   )
   VALUES(
-           @ownerId,
-           @parentValueId,
-           @locked,
-           @type,
-           @objectIndex,
-           @objectKeyWordId,
-           @isNull,
-           @stringValueWordId,
-           @numericValue,
-           @boolValue
+           _ownerId,
+           _parentValueId,
+           _locked,
+           _type,
+           _objectIndex,
+           _objectKeyWordId,
+           _isNull,
+           _stringValueWordId,
+           _numericValue,
+           _boolValue
    );
   
-   SET @valueId = LAST_INSERT_ID();
+   SET _valueId = LAST_INSERT_ID();
   
-   SET @stagingValueId = @valueId;
+   SET _stagingValueId = _valueId;
    
    CALL insertValueParentChild(
-        @stagingValueId,
-        @parentValueId
+        _stagingValueId,
+        _parentValueId
    );
      
     
-    IF @objectKey IS NOT NULL THEN
+    IF _objectKey IS NOT NULL THEN
         CALL insertValueWords(
-            @objectKey,
-            @valueId
+            _objectKey,
+            _valueId
         );
     END IF;
     
-    IF @stringValue IS NOT NULL THEN
+    IF _stringValue IS NOT NULL THEN
         CALL insertValueWords(
-            @stringValue,
-            @valueId
+            _stringValue,
+            _valueId
         );
     END IF;
    
    COMMIT;
    
    SELECT
-       @valueId AS  valueId,
-       @objectIndex AS objectIndex;
+       _valueId AS  valueId,
+       _objectIndex AS objectIndex;
        
 END ;;
 DELIMITER ;
@@ -1335,10 +1462,12 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueParentChild`(
 )
 BEGIN
 
-
+    DECLARE _stagingValueId BIGINT;
+    DECLARE _parentValueId BIGINT;
+    
     SET
-        @stagingValueId = stagingValueId,
-        @parentValueId = parentValueId;
+        _stagingValueId = stagingValueId,
+        _parentValueId = parentValueId;
       
     INSERT INTO
         ValueParentChild(
@@ -1347,12 +1476,12 @@ BEGIN
         )
     SELECT
         ValueParentChild.parentValueId,
-        @stagingValueId
+        _stagingValueId
     FROM
         ValueParentChild
     WHERE
         ValueParentChild.childValueId =
-        @parentValueId;
+        _parentValueId;
         
     INSERT INTO
         ValueParentChild(
@@ -1360,8 +1489,8 @@ BEGIN
             childValueId
         )
     SELECT
-        @stagingValueId,
-        @stagingValueId;
+        _stagingValueId,
+        _stagingValueId;
     
     
 END ;;
@@ -1387,13 +1516,17 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWord`(
 )
 BEGIN
 
-    SET @valueId = valueId,
-             @word = word,
-             @wordId = NULL;
+    DECLARE _valueId BIGINT;
+    DECLARE _word TEXT;
+    DECLARE _wordId BIGINT;
+    
+    SET _valueId = valueId,
+             _word = word,
+             _wordId = NULL;
              
     CALL insertWord(
-        @word,
-        @wordId
+        _word,
+        _wordId
     );
  
     INSERT
@@ -1403,8 +1536,8 @@ BEGIN
             wordId
          )
     SELECT 
-         @valueId,
-         @wordId
+         _valueId,
+         _wordId
      WHERE
          NOT EXISTS(
              SELECT
@@ -1412,12 +1545,12 @@ BEGIN
              FROM
                 ValueWord
             WHERE
-                ValueWord.valueId = @valueId
+                ValueWord.valueId = _valueId
             AND
-                ValueWord.wordId = @wordId
+                ValueWord.wordId = _wordId
         );
         
-     SET wordId = @wordId;
+     SET wordId = _wordId;
        
 END ;;
 DELIMITER ;
@@ -1441,64 +1574,78 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertValueWords`(
 )
 exit_procedure: BEGIN
   
-   IF text IS NULL THEN
+   
+   DECLARE _text TEXT;
+   DECLARE _lowerText TEXT;
+   DECLARE _valueId BIGINT;
+   DECLARE _word TEXT;
+   DECLARE _start BIGINT;
+   DECLARE _length BIGINT;
+   DECLARE _insertWordsOnly TINYINT;
+   DECLARE _nchar TEXT;
+   DECLARE _wordId BIGINT;
+   
+   SET _text = text;
+   
+   IF _text IS NULL THEN
        LEAVE exit_procedure;
    END IF;
    
-   
-   SET @lowerText = LOWER(text),
-            @word = NULL,
-            @start = 1,
-            @length = LENGTH(@lowerText),
-            @insertWordsOnly = NULL;
+   SET _lowerText = LOWER(_text),
+           _valueId = valueId,
+            _word = NULL,
+            _start = 1,
+            _length = LENGTH(_lowerText),
+            _insertWordsOnly = NULL,
+            _nchar = NULL;
             
-  IF valueId IS NULL THEN
-          SET @insertWordsOnly = 1;
+  IF _valueId IS NULL THEN
+          SET _insertWordsOnly = 1;
   ELSE
-          SET @insertWordsOnly = 0;
+          SET _insertWordsOnly = 0;
   END IF;
 
-   WHILE (@start <= @length) DO
+   WHILE (_start <= _length) DO
          # Read first character
-         SET @nchar = SUBSTR(
-               @lowerText,
-               @start,
+         SET _nchar = SUBSTR(
+               _lowerText,
+               _start,
                1
          );
          # Read subsequent delineators 
-         WHILE (isDelineator(@nchar) AND
-                          @start <= @length) DO
-               SET @start = @start + 1;
-               SET @nchar = SUBSTR(
-                     @lowerText,
-                     @start,
+         WHILE (isDelineator(_nchar) AND
+                          _start <= _length) DO
+               SET _start = _start + 1;
+               SET _nchar = SUBSTR(
+                     _lowerText,
+                     _start,
                      1
                );
          END WHILE;
          
          
          # Read word 
-         SET @word = '';
-         WHILE (isDelineator(@nchar) = 0 AND
-                          @start <= @length) DO
-              SET @word = CONCAT(@word, @nchar);
-              SET @start = @start + 1;
-              SET @nchar = SUBSTR(
-                     @lowerText,
-                     @start,
+         SET _word = '';
+         WHILE (isDelineator(_nchar) = 0 AND
+                          _start <= _length) DO
+              SET _word = CONCAT(_word, _nchar);
+              SET _start = _start + 1;
+              SET _nchar = SUBSTR(
+                     _lowerText,
+                     _start,
                      1
                );
         END WHILE;
                           
-        IF ( LENGTH(@word) > 0) THEN
+        IF ( LENGTH(_word) > 0) THEN
         
-            IF (@insertWordsOnly = 1) THEN
-                CALL insertWord(@word, @wordId);
+            IF (_insertWordsOnly = 1) THEN
+                CALL insertWord(_word, _wordId);
             ELSE
                 CALL insertValueWord(
-                    @word,
-                    valueId,
-                    @wordId
+                    _word,
+                    _valueId,
+                    _wordId
                 );
             END IF;
             
@@ -1528,7 +1675,10 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `insertWord`(
 )
 BEGIN
 
-    SET @word = word;
+    DECLARE _word TEXT;
+    DECLARE _wordId BIGINT;
+    
+    SET _word = word;
     
     INSERT
     INTO
@@ -1536,7 +1686,7 @@ BEGIN
             word
         )
     SELECT
-        @word
+        _word
      WHERE
          NOT EXISTS(
              SELECT
@@ -1544,19 +1694,19 @@ BEGIN
              FROM
                  Word
              WHERE
-                 Word.word = @word
+                 Word.word = _word
          );
          
      SELECT
           Word.wordId
       INTO
-          @wordId
+          _wordId
       FROM
           Word
       WHERE
-          Word.word = @word;
+          Word.word = _word;
           
-      SET wordId = @wordId;
+      SET wordId = _wordId;
       
 END ;;
 DELIMITER ;
@@ -1578,10 +1728,18 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `logoff`(
    sessionKey VARCHAR(32)
 )
 BEGIN
-   SET @sessionKey = sessionKey;
+   DECLARE _sessionKey VARCHAR(32);
+   
+   SET _sessionKey = sessionKey;
+   
+   START TRANSACTION;
+   
    DELETE
    FROM      Session
-   WHERE   Session.sessionKey = @sessionKey;
+   WHERE   Session.sessionKey = _sessionKey;
+   
+   COMMIT;
+   
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1605,33 +1763,41 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `logon`(
 )
 BEGIN
 
+   DECLARE _email NVARCHAR(320);
+   DECLARE _secret TEXT;
+   DECLARE _ipAddress VARCHAR(15);
+   DECLARE _timeout BIGINT;
+   DECLARE _userId BIGINT;
+   DECLARE _sessionKey VARCHAR(32);
+   DECLARE _expiresSeconds BIGINT;
+   
    START TRANSACTION;
    
-   SET @email = email;
-   SET @secret = secret;
-   SET @ipAddress = ipAddress;
-   SET @timeout = CAST(
+   SET _email = email;
+   SET _secret = secret;
+   SET _ipAddress = ipAddress;
+   SET _timeout = CAST(
               getSetting(N'SESSION_TIMEOUT')
                  AS UNSIGNED
              );
-   SET                @userId = (
+   SET                _userId = (
       SELECT          User.userId
       FROM             User
-      WHERE          User.userEmail = @email
+      WHERE          User.userEmail = _email
       AND                 User.newUserSecret IS NULL
-      AND                 User.logonSecret = @secret
+      AND                 User.logonSecret = _secret
       
    );
    
 
-   SET @sessionKey = MD5(UUID());
+   SET _sessionKey = MD5(UUID());
    
-   IF @userId IS NOT NULL 
+   IF _userId IS NOT NULL 
    THEN
        /* Delete expired sessions */
       DELETE
       FROM     Session
-      WHERE   Session.userId = @userId
+      WHERE   Session.userId = _userId
       AND         Session.lastAccessedDate <
                          DATE_ADD(
                             NOW(),
@@ -1648,31 +1814,31 @@ BEGIN
                           lastAccessedDate
                        )
       VALUES (
-                      @sessionKey, 
-                      @userId, 
-                      @ipAddress,
+                      _sessionKey, 
+                      _userId, 
+                      _ipAddress,
                       NOW(),
                       NOW()
                    );
       
    ELSE
-      SET @sessionKey = NULL;
+      SET _sessionKey = NULL;
    END IF;
    
-   SET @expires  =
+   SET _expiresSeconds  =
       UNIX_TIMESTAMP(
          DATE_ADD(
             NOW(),
-            INTERVAL @timeout SECOND
+            INTERVAL _timeout SECOND
          )
       ) * 1000;
    
    
    COMMIT; 
    
-   SELECT @userId as userId,
-                    @sessionKey as sessionKey,
-                   @expires  as expires;
+   SELECT _userId as userId,
+                    _sessionKey as sessionKey,
+                   _expiresSeconds  as expires;
                    
    
    
@@ -1696,17 +1862,21 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `lostSecret`(
    email NVARCHAR(320)
 )
 BEGIN
+
+   DECLARE _email NVARCHAR(320);
+   
    START TRANSACTION;
-   SET @email = email;
+   
+   SET _email = email;
    
    UPDATE   User
    SET            User. lostSecret = MD5(UUID())
-   WHERE    User.userEmail = @email;
+   WHERE    User.userEmail = _email;
    
    
    SELECT   lostSecret
    FROM     User
-   WHERE   User.userEmail = @email;
+   WHERE   User.userEmail = _email;
     
    COMMIT;
    
@@ -1787,28 +1957,40 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `updateValue`(
 )
 BEGIN
 
-    SET @valueId = valueId,
-             @ownerId = ownerId,
-             @locked = locked,
-             @type = type,
-             @objecyKey = objectKey,
-             @isNull =  isNull,
-             @stringValue = stringValue,
-             @numericValue = numericValue,
-             @boolValue = boolValue,
-             @objectKeyWordId = NULL,
-             @stringValueWordId = NULL;
+    DECLARE _valueId BIGINT;
+    DECLARE _ownerId BIGINT;
+    DECLARE _locked TINYINT;
+    DECLARE _type VARCHAR(10);
+    DECLARE _objectKey TEXT;
+    DECLARE _isNull TINYINT;
+    DECLARE _stringValue TEXT;
+    DECLARE _numericValue DOUBLE;
+    DECLARE _boolValue TINYINT;
+    DECLARE _objectKeyWordId BIGINT;
+    DECLARE _stringValueWordId BIGINT;
+    
+    SET _valueId = valueId,
+             _ownerId = ownerId,
+             _locked = locked,
+             _type = type,
+             _objectKey = objectKey,
+             _isNull =  isNull,
+             _stringValue = stringValue,
+             _numericValue = numericValue,
+             _boolValue = boolValue,
+             _objectKeyWordId = NULL,
+             _stringValueWordId = NULL;
           
     
-    IF @objectKey IS NOT NULL THEN
+    IF _objectKey IS NOT NULL THEN
     
         CALL insertWord(
-            @objectKey,
-            @objectKeyWordId
+            _objectKey,
+            _objectKeyWordId
         );
         
         CALL insertValueWords(
-            @objectKey,
+            _objectKey,
             null
         );
         
@@ -1816,61 +1998,61 @@ BEGIN
     
     
     
-    IF @stringValue IS NOT NULL THEN
+    IF _stringValue IS NOT NULL THEN
         CALL insertWord(
-            @stringValue,
-            @stringValueWordId
+            _stringValue,
+            _stringValueWordId
         );
         CALL insertValueWords(
-            @stringValue,
+            _stringValue,
             null
         );
     END IF;
     
- 
+   START TRANSACTION;
+    
    DELETE
    FROM
        Value
    WHERE
-       Value.parentValueId = @valueId;
+       Value.parentValueId = _valueId;
   
    DELETE
     FROM
           ValueWord
     WHERE
-         ValueWord.valueId = @valueId;
+         ValueWord.valueId = _valueId;
            
    UPDATE Value
    SET
-           Value.ownerId = @ownerId,
-           Value.locked = @locked,
-           Value.type = @type,
+           Value.ownerId = _ownerId,
+           Value.locked = _locked,
+           Value.type = _type,
            Value.objectKeyWordId =
-               @objectKeyWordId,
-           Value.isNull = @isNull,
+               _objectKeyWordId,
+           Value.isNull = _isNull,
            Value.stringValueWordId = 
-               @stringValueWordId,
-           Value.numericValue = @numericValue,
-           Value.boolValue = @boolValue
+               _stringValueWordId,
+           Value.numericValue = _numericValue,
+           Value.boolValue = _boolValue
    WHERE
-           Value.valueId = @valueId;
-        
-        
-    
-    IF @objectKey IS NOT NULL THEN
+           Value.valueId = _valueId;
+     
+    IF _objectKey IS NOT NULL THEN
         CALL insertValueWords(
-            @objectKey,
-            @valueId
+            _objectKey,
+            _valueId
         );
     END IF;
     
-    IF @stringValue IS NOT NULL THEN
+    IF _stringValue IS NOT NULL THEN
         CALL insertValueWords(
-            @stringValue,
-            @valueId
+            _stringValue,
+            _valueId
         );
     END IF;
    
+    COMMIT;
     
 END ;;
 DELIMITER ;
@@ -1894,27 +2076,35 @@ CREATE DEFINER=`brett`@`%` PROCEDURE `validateUserEmail`(
 )
 BEGIN
 
-   SET @email = email;
-   SET @newUserSecret = newUserSecret;
-   SET @userId = (
-      SELECT   userId
-      FROM      User
-      WHERE   User.userEmail = @email
-      AND         User.newUserSecret = @newUserSecret
-   );
+   
+   DECLARE _email NVARCHAR(320);
+   DECLARE _newUserSecret VARCHAR(32);
+   DECLARE _userId BIGINT;
    
    START TRANSACTION;
    
-   IF NOT ISNULL(@userId) THEN
+   SET _email = email;
+   SET _newUserSecret = newUserSecret;
+   SET _userId = (
+      SELECT   userId
+      FROM      User
+      WHERE   User.userEmail = _email
+      AND         User.newUserSecret = _newUserSecret
+      FOR UPDATE
+   );
+   
+   
+   
+   IF NOT ISNULL(_userId) THEN
       UPDATE   User
       SET             newUserSecret = NULL,
                            validated = 1
-      WHERE    User.userId = @userId;
+      WHERE    User.userId = _userId;
    END IF;
    
    COMMIT;
    
-   SELECT NOT ISNULL(@userId)
+   SELECT IF(ISNULL(_userId), 0, 1)
    AS            validated;
    
    
@@ -1934,4 +2124,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-26  1:10:30
+-- Dump completed on 2025-11-27 19:37:28

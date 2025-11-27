@@ -2,8 +2,8 @@
     require_once "server/functions.php";
     $credentials = authenticate();
     http_response_code(200);
-    header("content-type: text/html");
     setCredentialsCookie($credentials);
+    header("content-type: text/html");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,6 +30,7 @@ form > div {
 
         </style>
     </head>
+    
     <body>
         <h1 id="h1">
             <?php echo getConfig()["Domain"] ?>
@@ -181,12 +182,12 @@ fetchButton.disabled = false;
 
 authentication.onHandleLogon =
     function() {
+
         authentication.redirect();
         
         return false;
     }
     
-var uploadJob;
 
 authentication.onUpdateJobs =
     (jobs) => {
@@ -329,20 +330,19 @@ fetchButton.onclick = function() {
                 }
             }
             
-            /*
-            var object = 
-                eval("(" + string + ")");
+            
+          //  var object = 
+          //  eval("(" + string + ")");
                
-            if (typeof object == "function")
-                functionCheckbox.checked = true;
-            else
-                functionCheckbox.checked = false;
-            */
-          /*
-            switchFunctions(
-                functionCheckbox.checked
-            );
-                */
+          //  if (typeof object == "function")
+          //      functionCheckbox.checked = true;
+          //  else
+          //      functionCheckbox.checked = false;
+            
+          //  switchFunctions(
+          //      functionCheckbox.checked
+          //  );
+            
             return json;
         }
     )
@@ -571,7 +571,7 @@ function getURL(publish = false) {
             authentication.userId.toString();
         url.pathname = paths.join("/");
     }
-    /*
+    
     // Double encode slashes to allow
     // apache to pass them through
     // The server similarly decodes them
@@ -581,7 +581,7 @@ function getURL(publish = false) {
     
     // lower case
     url.pathname = url.pathname.replaceAll("%2f", "%252f");
-    */
+    
     
     var str = url.pathname;
     if (url.search)
@@ -641,8 +641,6 @@ function displayExpires() {
 }
 
 
-
-//authentication.updateStatus();
 authentication.updateJobs();
 
         </script>

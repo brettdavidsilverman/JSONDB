@@ -13,7 +13,7 @@
 
     if ($method === "POST") {
 
-        handlePost();
+        handlePost($credentials);
     }
     else if ($method === "GET") {
 

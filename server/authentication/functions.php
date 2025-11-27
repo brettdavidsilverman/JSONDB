@@ -279,9 +279,7 @@ function getEmptyCredentials()
 
 function getCredentialsCookie()
 {
- 
-        http_response_code(200);
-    
+
     $credentialsString = null;
     $xAuthToken = getHeader("x-auth-token");
     
@@ -385,7 +383,7 @@ function authenticate($ignoreExpires = false)
              getHeader("x-auth-token")
          );
          
-    if ($credentials["authenticated"] === false) {
+    if ($credentials["authenticated"] !== true) {
          
         if ($isFetchClient)
             http_response_code(401);

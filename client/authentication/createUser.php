@@ -78,7 +78,6 @@ var button =
 var emailExists =
    document.getElementById("emailExists");
   
-   
 function onSecretFile() {
    createThumbnail(
       secretFile.files[0], 
@@ -131,6 +130,7 @@ function updateForm() {
    .then(
       function (exists)
       {
+          
          if (exists)
             emailExists.style.display = "block";
          else
@@ -149,7 +149,7 @@ function updateForm() {
 
 
 window.onload = function() {
-   button.disabled = true;
+   updateForm();
 }
          </script>
 

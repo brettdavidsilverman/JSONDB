@@ -195,11 +195,9 @@ function writeToDatabaseEx(
 }
 
 
-function handleGet()
+function handleGet($credentials)
 {
-    $credentials = authenticate();
 
-    http_response_code(200);
     
     $type = "application/json; charset=utf-8";
     if (array_key_exists("type", $_GET))
@@ -210,7 +208,7 @@ function handleGet()
     
     header("Content-Type: " . $type);
       
-    setCredentialsCookie($credentials);
+
     
     $stream = fopen("php://output", "w");
     $path = getPath();
@@ -266,14 +264,10 @@ function handleGet()
     }
 }
 
-function handlePost()
+function handlePost($credentials)
 {
 
-    $credentials = authenticate(true);
-
-    http_response_code(200);
-    setCredentialsCookie($credentials);
-        
+         
     
     header('Content-Type: application/json; charset=utf-8');
     
@@ -338,7 +332,7 @@ function handlePost()
             "trace" => $ex->getTrace()
         ];
 
-        #$listener->cancelDocument();
+        
     }
     catch (PathException $ex) {
         $error = [
@@ -370,6 +364,10 @@ function handlePost()
 
     }
     finally {
+        if (!is_null($error))
+        
+            $listener->cancelDocument();
+            
         $connection->close();
     }
     
@@ -768,17 +766,11 @@ function writeCountByParentId(
 }
     
 
-function handleSearch($query)
+function handleSearch($credentials, $query)
 {
-    $credentials = authenticate();
-    
-        
-    http_response_code(200);
     
     header('Content-Type: application/json; charset=utf-8');
       
-    setCredentialsCookie($credentials);
-    
     
     $connection = getConnection();
 
@@ -1023,8 +1015,8 @@ function word($alias) {
                     parents.childValueId = vpc.childValueId
                 where
                     w.lowerWord = ?
-                and
-                    parents.parentValueId != parents.childValueId
+               # and
+               #     parents.parentValueId != parents.childValueId
 
             ) as $alias
         on

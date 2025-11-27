@@ -66,6 +66,8 @@ class Authentication
         var ok;
         var status;
         
+        url = encodeSlashes(url);
+        
         var promise =
             fetch(url, defaultParameters)
             .then(
@@ -125,6 +127,12 @@ class Authentication
             );
 
         return promise;
+        
+        function encodeSlashes(url) {
+            url = url.replace("%2F", "%252F");
+            url = url.replace("%2f", "%252f");
+            return url;
+        }
     }
     
     postJSON(url, json) {
@@ -808,6 +816,7 @@ class Authentication
         
         return promise;
     }
+
     
     async createProcess(path) {
         var process = await this.fetch(path);

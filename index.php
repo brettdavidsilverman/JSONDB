@@ -527,7 +527,6 @@ pathInput.onfocus =
     
 pathInput.onblur =
     function() {
-        fetchButton.disabled = false;
         setLinks();
     }
 

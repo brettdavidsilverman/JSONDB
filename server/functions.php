@@ -259,18 +259,12 @@ function decodePathSegment($segment) {
 
 function getPath() {
      
-     /*
     $path = parse_url(
         $_SERVER['REQUEST_URI'],
         PHP_URL_PATH
     );
-    
-    
     $path = decodeSlashes($path);
-*/
-    //$path = rawurldecode($path);
-    $path = getQueryParameter("uri");
-    
+
     // remove trailing slash
     if (str_ends_with($path, "/")) {
         $path = substr($path, 0, -1);
@@ -280,12 +274,19 @@ function getPath() {
 }
 
 function getQuery() {
-    $query = $_SERVER['QUERY_STRING'];
+    
+    $query = $_SERVER["QUERY_STRING"];
+    
+    if ($query === "")
+        return null;
+        
     return $query;
 }
 
 function getQueryParameter($parameter) {
-    $query = getQuery();
+    $query =
+        $_SERVER["QUERY_STRING"];
+
     
     $arguments = explode("&", $query);
     

@@ -1018,9 +1018,8 @@ function word($alias) {
                     parents.childValueId = vpc.childValueId
                 where
                     w.lowerWord = ?
-               # and
-               #     parents.parentValueId != parents.childValueId
-
+                and
+                    parents.parentValueId != parents.childValueId
             ) as $alias
         on
             $alias.valueId = v.valueId

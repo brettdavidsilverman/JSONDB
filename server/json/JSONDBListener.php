@@ -167,7 +167,7 @@ class JSONDBListener implements  \JsonStreamingParser\Listener\ListenerInterface
   
         $this->getPathValueId();
 
-        
+        $this->resetInsertValueStatement();
     }
     
     
@@ -220,8 +220,8 @@ $msg = "ownerId: " . $ownerId . ", " .
        "stagingValueId: " . $this->stagingValueId . ", " .
        "appendToArray: " . ($this->appendToArray ? 1 : 0);
        
-error_log($this->path);
-error_log($msg);
+#error_log($this->path);
+#error_log($msg);
 
             $statement->execute();
        

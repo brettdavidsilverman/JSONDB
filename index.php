@@ -11,11 +11,11 @@
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <title id="title"><?php echo getConfig()["Domain"] ?></title>
-        <script src="/client/head.js?v=2"></script>
+        <script src="/client/head.js"></script>
         <script src="/client/stream/stream.js"></script>
         <script src="/client/power-encoding/power-encoding.js"></script>
         <script src="/client/id/id.js"></script>
-        <script src="/client/evaluate.js?v=1"></script>        <script src="/client/authentication/authentication.js?v=28"></script>
+        <script src="/client/evaluate.js"></script>        <script src="/client/authentication/authentication.js"></script>
         <script src="/client/punycode.js"></script>
         <link rel="stylesheet" type="text/css" href="style.css"/>
         <style>
@@ -379,10 +379,11 @@ saveButton.onclick =
         try {
             json = jsonEditor.value;
 
-            var object = eval("(" + json + ")");
+           // var object = eval("(" + json + ")");
 
-            // var object = JSON.parse(json);
-           // json = JSON.stringify(object);
+             var object = JSON.parse(json);
+            // json = JSON.stringify(object);
+           //  throw new Error("here");
         }
         catch(error) {
             displayError(error, "saveButton.onclick parse");

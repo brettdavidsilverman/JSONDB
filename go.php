@@ -60,7 +60,7 @@ async function go() {
 
 }
 
-function setup() {   
+function setup() {
    var logoff =
       document.getElementById("logoff");
    

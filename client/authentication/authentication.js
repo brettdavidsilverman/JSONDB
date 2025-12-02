@@ -821,10 +821,13 @@ class Authentication
         var processCases = createProcessCases();
         
         var code =
-`while (next != undefined) {
+`var input = ${process.inputs};
+var output;
+while (1) {
     switch (next) {
 ${processCases}
     }
+    input = output;
 }
 `;
 

@@ -396,7 +396,7 @@ BEGIN
           INTERVAL _timeout SECOND
        );
        
-       IF 1 = 1 or _ignoreExpires = 1 OR _expiresDate > NOW()
+       IF _ignoreExpires = 1 OR _expiresDate > NOW()
        THEN
           UPDATE  Session
           SET     Session.lastAccessedDate = NOW(),
@@ -1576,7 +1576,6 @@ exit_procedure: BEGIN
   
    
    DECLARE _text TEXT;
-   DECLARE _lowerText TEXT;
    DECLARE _valueId BIGINT;
    DECLARE _word TEXT;
    DECLARE _start BIGINT;
@@ -1591,11 +1590,10 @@ exit_procedure: BEGIN
        LEAVE exit_procedure;
    END IF;
    
-   SET _lowerText = LOWER(_text),
-           _valueId = valueId,
+   SET  _valueId = valueId,
             _word = NULL,
             _start = 1,
-            _length = LENGTH(_lowerText),
+            _length = LENGTH(_text),
             _insertWordsOnly = NULL,
             _nchar = NULL;
             
@@ -1608,7 +1606,7 @@ exit_procedure: BEGIN
    WHILE (_start <= _length) DO
          # Read first character
          SET _nchar = SUBSTR(
-               _lowerText,
+               _text,
                _start,
                1
          );
@@ -1617,7 +1615,7 @@ exit_procedure: BEGIN
                           _start <= _length) DO
                SET _start = _start + 1;
                SET _nchar = SUBSTR(
-                     _lowerText,
+                     _text,
                      _start,
                      1
                );
@@ -1631,7 +1629,7 @@ exit_procedure: BEGIN
               SET _word = CONCAT(_word, _nchar);
               SET _start = _start + 1;
               SET _nchar = SUBSTR(
-                     _lowerText,
+                     _text,
                      _start,
                      1
                );
@@ -2124,4 +2122,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-27 19:37:28
+-- Dump completed on 2025-12-02  6:52:12

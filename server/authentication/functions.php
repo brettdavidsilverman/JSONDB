@@ -173,7 +173,7 @@ function logon($connection, $email, $secret)
     }
     else
     {
-        $credentials = getEmptyCredentials();
+        $credentials = null;
     }
     
     
@@ -230,83 +230,79 @@ function changeSecret($connection, $email, $oldSecret, $newSecret)
 
 function setCredentialsCookie($credentials)
 {
-     
-    if (is_null($credentials)) {
-
-        $credentials = getEmptyCredentials();
-      
-    }
-
-    $expires = $credentials["expires"];
     
-    if (is_null($expires)) {
-        // Set expires to 1/2 hour ago
-        $expires = time() - 30 * 60;
-    }
-    else {
+    $expires = null;
+     
+    if (!is_null($credentials)) {
+
+        $expires = $credentials["expires"];
         // Convert milliseconds
         // to seconds
         $expires = $expires / 1000;
     }
+
+    if (is_null($expires)) {
+        // Set expires to 1/2 hour ago
+        $expires = time() - 30 * 60;
+    }
     
-    $credentialsString =
+    $credentialsString = null;
+    
+    if (!is_null($credentials))
+    {
+        $credentialsString =
             json_encode($credentials);
-        
+    }
+    
+    if (!is_null($credentialsString))
+        header("X-Auth-Token: " . urlencode($credentialsString));
+
     setcookie(
         "credentials",
         $credentialsString,
-        $expires,
-        "/"
-    );
-
-    header("x-auth-token: " . urlencode($credentialsString));
-
-}
-
-function getEmptyCredentials()
-{
-    $credentials = array(
-        "userId" => null, 
-        "expires" => null,
-        "authenticated" => false,
-        "sessionKey" => null,
-        "email" => null
+        [
+            "expires" => $expires,
+            "path" => "/",
+            "secure" => true, // Recommended for production
+            "httponly" => false, // Recommended for security
+            "samesite" => "None" // Can be 'Strict', 'Lax', or 'None'
+        ]
     );
     
-    return $credentials;
-    
 }
+
 
 function getCredentialsCookie()
 {
 
-    $credentialsString = null;
-    $xAuthToken = getHeader("x-auth-token");
+    $credentialsString =
+        getHeader("X-Auth-Token");
     
-    if (!is_null($xAuthToken))
+    if (!is_null($credentialsString))
+        $credentialsString =
+            urldecode($credentialsString);
+            
+
+    if (is_null($credentialsString) &&
+        array_key_exists("credentials", $_COOKIE))
     {
         $credentialsString =
-             $xAuthToken;
-    }
-    else if (array_key_exists("credentials", $_COOKIE))
-    {
-        $credentialsString =
-            $_COOKIE['credentials'];
+            $_COOKIE["credentials"];
     }
 
-    
-    if (!is_null($credentialsString)) {
+
+    if (!is_null($credentialsString))
+    {
         $credentials = json_decode(
-            urldecode($credentialsString),
+            $credentialsString,
             true
         );
-    
+        
         return $credentials;
     }
     
-    $credentials = getEmptyCredentials();
-    
-    return $credentials;
+
+    return null;
 }
 
 
@@ -320,7 +316,7 @@ function getCredentials($connection, $ignoreExpires = false)
         !array_key_exists("sessionKey", $credentials)
         )
     {
-        return getEmptyCredentials();
+        return null;
     }
     
     $ipAddress = getClientIPAddress();
@@ -356,7 +352,7 @@ function getCredentials($connection, $ignoreExpires = false)
         );
     }
     else {
-        $credentials = getEmptyCredentials();
+        $credentials = null;
     }
         
     $statement->close();
@@ -376,28 +372,28 @@ function authenticate($ignoreExpires = false)
         $ignoreExpires
     );
     
+
     $connection->close();
     
     $isFetchClient =
          !is_null(
-             getHeader("x-auth-token")
+             getHeader("X-Auth-Token")
          );
          
-    if ($credentials["authenticated"] !== true) {
+    if (is_null($credentials) ||
+        $credentials["authenticated"] !== true) {
          
-        if ($isFetchClient)
-            http_response_code(401);
-            
-        $url = '/client/authentication/logon.php';
-        $redirect = $_SERVER['REQUEST_URI'];
-        $url = $url . '?redirect=' . urlencode($redirect);
-        
         if ($isFetchClient) {
+            http_response_code(401);
             header("content-type: application/json");
             echo json_encode("Invalid credentials");
         }
-        else
+        else {
+            $url = '/client/authentication/logon.php';
+            $redirect = $_SERVER['REQUEST_URI'];
+            $url = $url . '?redirect=' . urlencode($redirect);
             redirect($url);
+        }
         
         exit();
 

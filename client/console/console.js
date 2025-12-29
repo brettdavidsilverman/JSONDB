@@ -51,7 +51,7 @@ function Console() {
          Date.now() + "\t" +
          string +
          "<br/>" +
-         text.substr(0, 1000);
+         text.substr(0, 4000);
           
       element.innerHTML = text;
 

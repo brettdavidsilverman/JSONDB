@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title id="title">dev.bee.fish</title>
+        <script src="https://bee.fish/client/head.js"></script>        <script src="https://bee.fish/client/authentication/authentication.js"></script>
+        <script src="https://bee.fish/client/console/console.js"></script>
+        <script src="https://bee.fish/client/authentication/sha512.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css"/>
+        <script>
+
+        </script>
+    </head>
+    <body>
+        <h1 id="h1">Sample Test Page</h1>
+        <div id="expires"></div>
+        <label for="logonFile">
+            Logon
+            <input type="file" id="logonFile" accept="image/*" style="display:none;"></input>
+        </label>
+        <br />
+        <label for="uploadFile">
+            Upload file
+            <input type="file" id="uploadFile" accept=".json" style="display:none;"></input>
+        </label>
+        <br />
+        <button id="getData">Get data</button>
+        <br />
+        <button id="cancel" onclick="cancel();">Cancel</button>
+        
+        <br />
+        <button id="logoffButton">logoff</button>
+        <br />
+        <script>
+        
+var console = new Console();
+console.log("Hello world");
+
+        </script>
+        <script type="module">
+
+var authentication =
+    new Authentication("https://bee.fish");
+
+await authentication.refresh();
+
+displayExpires();
+
+var logonFile = document.getElementById("logonFile");logonFile.onchange = logon;
+
+async function logon(event)
+{
+
+    var secret = await
+        authentication
+        .getFileHash(
+            logonFile.files[0]
+        );
+            
+    logonFile.value = null;
+        
+    try {
+        await authentication.logon(
+            "brettdavidsilverman@gmail.com",
+            secret
+        );
+    }
+    catch (error) {
+        displayError(error, "test.html.logon");
+    }
+
+
+    if (authentication.authenticated) {
+        
+        alert("logged on");
+        
+    }
+    else
+        alert("Invalid email/secret");
+
+    displayExpires();
+    
+}
+
+async function logoff() {
+    await authentication.logoff();
+    displayExpires();
+}
+
+var uploadFile = document.getElementById("uploadFile");var iframe = document.getElementById("iframe");
+var progress = document.getElementById("progress");
+var progressLabel = document.getElementById("progressLabel");var logoffButton = document.getElementById("logoffButton");
+
+uploadFile.onchange = writeFile;
+logoffButton.onclick = logoff;
+
+async function writeFile(event) {
+    try {
+        const file = event.target.files[0];
+        await authentication.postFile("/my/test", file);
+        alert("Ok");
+        event.target.value = null;
+    }
+    catch (error) {
+        alert(error);
+    }
+}
+
+
+var getDataButton = document.getElementById("getData");
+getDataButton.onclick = getData;
+
+async function getData(event) {
+    getDataButton.disabled = true;
+    try {
+        var object = await
+            authentication.fetch(
+                "/my/test"
+            );
+           
+        alert(object);
+    }
+    catch (error)
+    {
+        displayError(error, "test.html.getData");
+    }
+
+    getDataButton.disabled = false;
+    displayExpires();
+}
+
+function displayExpires() {
+    var div = document.getElementById("expires");
+    
+    var credentials =
+        authentication.credentials;
+    
+    if (credentials) {
+        var expires = credentials.expires;
+        div.innerText = "Credentials expire " + new Date(expires);
+    }
+    else
+        div.innerText = "No credentials";
+    
+ 
+}
+
+    //alert(self.crypto.randomUUID());
+
+          </script>
+
+    </body>
+
+</html>

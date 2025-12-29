@@ -1,8 +1,10 @@
 <?php
     require_once "server/functions.php";
+    
     $credentials = authenticate();
     http_response_code(200);
     setCredentialsCookie($credentials);
+    
     header("content-type: text/html");
 ?>
 <!DOCTYPE html>
@@ -260,7 +262,7 @@ function setJob(job, index) {
     cancelUpload.onclick =
         function() {
             if (confirm("Press OK to stop upload ❌")) {
-                authentication.postJSON(
+                authentication.postObject(
                     job.jobPath + "/cancel",
                     true
                 );
@@ -413,7 +415,7 @@ saveButton.onclick =
         else {
 
             promise =
-                authentication.postJSON(
+                authentication.postObject(
                     url,
                     object
                 );
@@ -462,7 +464,7 @@ clearButton.onclick =
 resetJobsButton.onclick =
     function() {
         resetJobsButton.disabled = true;
-        authentication.postJSON(
+        authentication.postObject(
            "/my/jobs",
            []
         )
@@ -493,7 +495,7 @@ createProcessButton.onclick =
            return;
            
         createProcessButton.disabled = true;
-        authentication.postJSON(
+        authentication.postObject(
             pathInput.value,
             sampleProcess
         )
@@ -629,7 +631,7 @@ function displayExpires() {
     var div = document.getElementById("expires");
     
     var credentials =
-        authentication.getCredentials();
+        authentication.credentials;
         
     if (credentials) {
         var expires = credentials.expires;

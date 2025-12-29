@@ -1,191 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <script src="/client/head.js"></script>
-        <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <link rel="stylesheet" type="text/css" href="/style.css" />
-        <link rel="stylesheet" type="text/css" href="../style.css" />
+     <head>
+          <script src="/client/head.js"></script>
+          <meta charset="utf-8"/>
+          <meta name="viewport" content="width=device-width, initial-scale=1"/>
+          <link rel="stylesheet" type="text/css" href="/style.css" />
+          <link rel="stylesheet" type="text/css" href="../style.css" />
 
-        <title>Javascript parser</title>
-        <script src="/console/console.js"></script>
-        <style>
+          <title>Javascript parser</title>
+          <script src="/console/console.js"></script>
+          <style>
 pre {
-   color: red;
+    color: red;
 }
 
 .highlight {
-   color: blue;
+    color: blue;
 }
-        </style>
-    </head>
-    <body>
+          </style>
+     </head>
+     <body>
 
-        <h1>Javascript Parser</h1>
+          <h1>Javascript Parser</h1>
 
-        <h2>Match</h2>
-      
-        <details>
-      
-            <summary>
+          <h2>Match</h2>
+        
+          <details>
+        
+                <summary>
 A generic class for matching 
 characters from an input stream.
-            </summary>
-      
-            <pre>
-                 <script class="export">
+                </summary>
+        
+                <pre>
+                      <script class="export">
 class Match {
-    #inputs;
-    #success = undefined;
-    #value = null;
-    
-    constructor(...inputs) {
-        this.#inputs = inputs;
-    }
-   
-    match(character) {
-    
-    }
-   
-    read(string, end = true) {
+     #inputs;
+     #success = undefined;
+     #value = null;
      
-        var matched;
-        var i;
-        for (i = 0;
-             i < string.length;
-            )
-        {
-            var character = string[i];
-         
-            var matched =
-                this.match(character);
-         
-            if (matched) {
-                document.write(
-                   "{" + 
-                   character + 
-                   "}"
-                );
+     constructor(...inputs) {
+          this.#inputs = inputs;
+     }
+    
+     match(character) {
+     
+     }
+    
+     read(string, end = true) {
+      
+          var matched;
+          var i;
+          for (i = 0;
+                 i < string.length;
+                )
+          {
+                var character = string[i];
+            
+                var matched =
+                     this.match(character);
+            
+                if (matched) {
+                     document.write(
+                         "{" + 
+                         character + 
+                         "}"
+                     );
 
-            }
+                }
+                
+                if (this.success !=
+                     undefined)
+                     break;
+                
+                if (matched)
+                     ++i;
+          }
+        
+          if (end) {
+                this.readEnd();
+                document.writeln();
+          }
+          return i;
+        
+     }
+    
+     readEnd() {
+     }
+    
+     get success() {
+          return this.#success;
+     }
+    
+     set success(value) {
+          if (value != this.#success)
+          {
+                this.#success = value;
+                if (this.#success)
+                     this.onsuccess();
+          }
+     }
+    
+     onsuccess() {
+     }
+     
+    
+     get inputs() {
+          return this.#inputs;
+     }
+    
+     onmatch(character) {
+     }
+    
+     write(doc) {
+          if (!doc)
+                doc = document;
             
-            if (this.success !=
-                undefined)
-                break;
-            
-            if (matched)
-                ++i;
-        }
-      
-        if (end)
-            this.readEnd();
-         
-        return i;
-      
-    }
-   
-    readEnd() {
-    }
-   
-    get success() {
-        return this.#success;
-    }
-   
-    set success(value) {
-        if (value != this.#success)
-        {
-            this.#success = value;
-            if (this.#success)
-                this.onsuccess();
-        }
-    }
-   
-    onsuccess() {
-    }
-    
-   
-    get inputs() {
-        return this.#inputs;
-    }
-   
-    onmatch(character) {
-    }
-   
-    write(doc) {
-        if (!doc)
-            doc = document;
-         
-        if (this.success) {
-            doc.write("Match");
-            if (this.value !== null)
-                doc.write(": " + this.value);
-            doc.writeln();
-        }
-        else
-            doc.writeln("No match");
-    }
-    
-    set value(value) {
-        this.#value = value;
-    }
-    
-    get value() {
-        return this.#value;
-    }
+          if (this.success) {
+                doc.write("Match");
+                if (this.value !== null)
+                     doc.write(": " + this.value);
+                doc.writeln();
+          }
+          else
+                doc.writeln("No match");
+     }
+     
+     set value(value) {
+          this.#value = value;
+     }
+     
+     get value() {
+          return this.#value;
+     }
 }
 
-                </script>
-            </pre>
-        </details>
+                     </script>
+                </pre>
+          </details>
 
-        <h2>Character</h2>
-      
-        <details>
-            <summary>
-A class to match an individual character.
-            </summary>
-            <pre>
-                <script class="export">
-class Character extends Match {
-    #character;
-   
-    constructor(character) {
-        super();
-        this.#character = character;
-    }
-   
-    match(character) {
-        var matched =
-            this.#character === character;
-         
-        if (matched) {
-            this.onmatch(character);
-            this.success = true;
-        }
-        else
-            this.success = false;
-         
-        return matched;
-    }
-   
-}
-                </script>
-            </pre>
-         
-            <h3>Testing Character</h3>
-      
-            <details>
+          <h2>Character</h2>
+        
+          <details>
                 <summary>
+A class to match an individual character.
+                </summary>
+                <pre>
+                     <script class="export">
+class Character extends Match {
+     #character;
+    
+     constructor(character) {
+          super();
+          this.#character = character;
+     }
+    
+     match(character) {
+          var matched =
+                this.#character === character;
+            
+          if (matched) {
+                this.onmatch(character);
+                this.success = true;
+          }
+          else
+                this.success = false;
+            
+          return matched;
+     }
+    
+}
+                     </script>
+                </pre>
+            
+                <h3>Testing Character</h3>
+        
+                <details>
+                     <summary>
 Testing character 'A' with match and no
 match.
-                </summary>
-         
-                <pre>
-                    <script>
+                     </summary>
+            
+                     <pre>
+                          <script>
 class CharA extends Character {
-   constructor() {
-      super("A");
-   }
+    constructor() {
+        super("A");
+    }
 }
 
 var charA = new CharA();
@@ -196,64 +197,64 @@ charA = new CharA();
 charA.read("x");
 charA.write(document);
 
-                    </script>
-                </pre>
-            </details>
-    </details>
-    
-    
-    <h2>Range</h2>
-      
-    <details>
-        <summary>
+                          </script>
+                     </pre>
+                </details>
+     </details>
+     
+     
+     <h2>Range</h2>
+        
+     <details>
+          <summary>
 A class to match a character
 between a minimum and maximum.
-            </summary>
-         
-        <pre>
-            <script class="export">
+                </summary>
+            
+          <pre>
+                <script class="export">
 class Range extends Match {
-    #minimum;
-    #maximum;
-    constructor(minimum, maximum) {
-        super();
-        this.#minimum = minimum;
-        this.#maximum = maximum;
-    }
-   
-    match(character) {
-   
-        var matched =
-            (this.#minimum <= character) &&
-            (this.#maximum >= character);
-         
-        if (matched) {
-            this.onmatch(character);
-            this.success = true;
-        }
-        else
-            this.success = false;
-      
-        return matched;
-    }
-   
-}
-        </script>
-    </pre>
+     #minimum;
+     #maximum;
+     constructor(minimum, maximum) {
+          super();
+          this.#minimum = minimum;
+          this.#maximum = maximum;
+     }
+    
+     match(character) {
+    
+          var matched =
+                (this.#minimum <= character) &&
+                (this.#maximum >= character);
+            
+          if (matched) {
+                this.onmatch(character);
+                this.success = true;
+          }
+          else
+                this.success = false;
         
-    <h3>Testing Range</h3>
-        <details>
-            <summary>
+          return matched;
+     }
+    
+}
+          </script>
+     </pre>
+          
+     <h3>Testing Range</h3>
+          <details>
+                <summary>
 Testing character 'A'-'Z' with match and
 no match.
-            </summary>
-         
-            <pre>
-                <script>
+                </summary>
+            
+                <pre>
+                     <script>
 class RangeAZ extends Range {
-   constructor() {
-      super("A", "Z");
-   }
+    constructor() {
+        super("A", "Z");
+    }
 }
 
 var range = new RangeAZ();
@@ -264,68 +265,68 @@ range = new RangeAZ();
 range.read("b");
 range.write(document);
 
-                </script>
-            </pre>
-        </details>
-    </details>
+                     </script>
+                </pre>
+          </details>
+     </details>
+        
+     <h2>Word</h2>
       
-    <h2>Word</h2>
-     
-    <details>
-      
-        <summary>
+     <details>
+        
+          <summary>
 A class to match a string of 
 characters.
-        </summary>
-         
-        <pre>
-            <script class="export">
+          </summary>
+            
+          <pre>
+                <script class="export">
 class Word extends Match {
-    #index = 0;
-    #word;
-    constructor(word) {
-        super();
-        this.#word = word;
-    }
-   
-    match(character) {
-        var matched =
-            this.#word[this.#index] ===
-            character;
-         
-        if (matched)
-        {
-            this.onmatch(character);
-            ++this.#index;
-            if (this.#index === this.#word.length) {
-                this.success = true;
-            }
-        }
-        else
-            this.success = false;
-         
-        return matched;
-    }
-   
-   
+     #index = 0;
+     #word;
+     constructor(word) {
+          super();
+          this.#word = word;
+     }
+    
+     match(character) {
+          var matched =
+                this.#word[this.#index] ===
+                character;
+            
+          if (matched)
+          {
+                this.onmatch(character);
+                ++this.#index;
+                if (this.#index === this.#word.length) {
+                     this.success = true;
+                }
+          }
+          else
+                this.success = false;
+            
+          return matched;
+     }
+    
+    
 }
 
-            </script>
-        </pre>
-            
-        <h3>Testing Word</h3>
-            <details>
-                <summary>
+                </script>
+          </pre>
+                
+          <h3>Testing Word</h3>
+                <details>
+                     <summary>
 Testing word "Brett" with match and
 no match.
-                </summary>
-         
-            <pre>
-                <script>
+                     </summary>
+            
+                <pre>
+                     <script>
 class WordBrett extends Word {
-   constructor() {
-      super("Brett");
-   }
+    constructor() {
+        super("Brett");
+    }
 }
 
 var word = new WordBrett();
@@ -336,124 +337,124 @@ word = new WordBrett();
 word.read("brett");
 word.write(document);
 
-                </script>
-            </pre>
-        </details>
-    </details>
+                     </script>
+                </pre>
+          </details>
+     </details>
+          
+          
+     <h2>And</h2>
         
+     <details>
         
-    <h2>And</h2>
-      
-    <details>
-      
-        <summary>
+          <summary>
 A class to match all input items in
 order.
-        </summary>
-      
-        <pre>
-            <script class="export">
+          </summary>
+        
+          <pre>
+                <script class="export">
 class And extends Match {
-   #index = 0;
-   #matches = [];
-   constructor(...inputs) {
-      super(...inputs);
-      if (this.inputs.length === 0) {
-         this.success = false;
-      }
-   }
-   
-   match(character) {
-      var item;
-      var matched;
-      
-      do {
-         item =
-            this.inputs[this.#index];
-
-         matched =
-            item.match(character);
-    
-         if (matched)
-             this.onmatch(character);
-             
-         if (item.success) {
-         
-            this.#matches.push(item);
-         
-            if (++this.#index  ===
-                this.inputs.length)
-            {
-               this.success = true;
-               break;
-            }
-         }
-         else if (item.success == false)
-         {
+    #index = 0;
+    #matches = [];
+    constructor(...inputs) {
+        super(...inputs);
+        if (this.inputs.length === 0) {
             this.success = false;
-         }
-         
-      } while(item.success && !matched);
-         
-      return matched;
-   }
-   
-   readEnd(success) {
-      while(this.#index <
-            this.inputs.length) {
-         var item =
-            this.inputs[this.#index];
+        }
+    }
+    
+    match(character) {
+        var item;
+        var matched;
+        
+        do {
+            item =
+                this.inputs[this.#index];
 
-         item.readEnd();
-         
-         if (item.success) {
-            this.#matches.push(item);
-            ++this.#index;
-         }
-         else {
-            if (item.success === false)
-               this.success = false;
-            break;
-         }
-         
-      }
-      
-      if (this.success === undefined &&
-          this.#index ===
-          this.inputs.length)
-         this.success = true;
-         
-      super.readEnd();
-      
-   }
-   
-   get matches() {
-      return this.#matches;
-   }
-   
+            matched =
+                item.match(character);
+     
+            if (matched)
+                 this.onmatch(character);
+                 
+            if (item.success) {
+            
+                this.#matches.push(item);
+            
+                if (++this.#index  ===
+                     this.inputs.length)
+                {
+                    this.success = true;
+                    break;
+                }
+            }
+            else if (item.success == false)
+            {
+                this.success = false;
+            }
+            
+        } while(item.success && !matched);
+            
+        return matched;
+    }
+    
+    readEnd(success) {
+        while(this.#index <
+                this.inputs.length) {
+            var item =
+                this.inputs[this.#index];
+
+            item.readEnd();
+            
+            if (item.success) {
+                this.#matches.push(item);
+                ++this.#index;
+            }
+            else {
+                if (item.success === false)
+                    this.success = false;
+                break;
+            }
+            
+        }
+        
+        if (this.success === undefined &&
+             this.#index ===
+             this.inputs.length)
+            this.success = true;
+            
+        super.readEnd();
+        
+    }
+    
+    get matches() {
+        return this.#matches;
+    }
+    
 }
 
-            </script>
-        </pre>
+                </script>
+          </pre>
 
-        <h3>Testing And</h3>
-      
-            <details>
-                <summary>
+          <h3>Testing And</h3>
+        
+                <details>
+                     <summary>
 Create an instance of And with [a,b,c]
 characters to match.
-                </summary>
-                <pre>
-                    <script>
+                     </summary>
+                     <pre>
+                          <script>
 class TestAnd extends And {
-   constructor() {
-      super(
-         new Character("a"),
-         new Character("b"),
-         new Character("c")
-      )
-   }
-   
+    constructor() {
+        super(
+            new Character("a"),
+            new Character("b"),
+            new Character("c")
+        )
+    }
+    
 }
 
 var and = new TestAnd();
@@ -463,103 +464,103 @@ and.write(document);
 and = new TestAnd();
 and.read("ab");
 and.write(document);
-                    </script>
-                </pre>
-            </details>
-        </details>
+                          </script>
+                     </pre>
+                </details>
+          </details>
+          
+          <h2>Or</h2>
         
-        <h2>Or</h2>
-      
-        <details>
-            <summary>
+          <details>
+                <summary>
 A class to match a single item from an
 array of input items.
-            </summary>
-         
-            <pre>
-                <script class="export">
+                </summary>
+            
+                <pre>
+                     <script class="export">
 class Or extends Match {
-    #item;
-    constructor(...inputs) {
-        super(...inputs);
-    }
-   
-    match(character) {
-        var matched = false;
+     #item;
+     constructor(...inputs) {
+          super(...inputs);
+     }
+    
+     match(character) {
+          var matched = false;
  
-        for (var i in this.inputs)
-        {
-            var item = this.inputs[i];
-            
-            if (item.success === undefined) {
-         
-               if (item.match(character)) {
-                  matched = true;
-               }
+          for (var i in this.inputs)
+          {
+                var item = this.inputs[i];
                 
-               if (item.success) {
-                  this.#item = item;
-                  this.index = i;
-                  this.success = true;
-                  break;
-               }
+                if (item.success === undefined) {
             
-            }
-        }
-      
-        if (matched)
-            this.onmatch(character);
-        else
-            this.success = false;
-         
-        return matched;
-    }
-   
-    readEnd() {
-      
-       for (var i in this.inputs)
-       {
-           var item = this.inputs[i];
-           if (item.success != false) {
-               item.readEnd();
-               if (item.success) {
-                   this.#item = item;
-                   this.index = i;
-                   this.success = true;
-                   break;
-               }
-           }
-       }
-      
-       super.readEnd();
+                    if (item.match(character)) {
+                        matched = true;
+                    }
+                     
+                    if (item.success) {
+                        this.#item = item;
+                        this.index = i;
+                        this.success = true;
+                        break;
+                    }
+                
+                }
+          }
+        
+          if (matched)
+                this.onmatch(character);
+          else
+                this.success = false;
+            
+          return matched;
+     }
+    
+     readEnd() {
+        
+         for (var i in this.inputs)
+         {
+              var item = this.inputs[i];
+              if (item.success != false) {
+                    item.readEnd();
+                    if (item.success) {
+                         this.#item = item;
+                         this.index = i;
+                         this.success = true;
+                         break;
+                    }
+              }
+         }
+        
+         super.readEnd();
 
-    }
-   
-    get item() {
-        return this.#item;
-    }
+     }
+    
+     get item() {
+          return this.#item;
+     }
 }
-                </script>
-            </pre>
+                     </script>
+                </pre>
   
-            <h3>Testing Or</h3>
-      
-            <details>
-                <summary>
+                <h3>Testing Or</h3>
+        
+                <details>
+                     <summary>
 Create an alphabet class with a range of
 upper and lower case chatacters.
-                </summary>
-                <pre>
-                    <script>
+                     </summary>
+                     <pre>
+                          <script>
 
 class Alphabet extends Or {
-    constructor() {
-        super(
-            new Range("A", "Z"),
-            new Range("a", "z")
-        );
-    }
-   
+     constructor() {
+          super(
+                new Range("A", "Z"),
+                new Range("a", "z")
+          );
+     }
+    
 }
 
 var alphabet = new Alphabet();
@@ -573,144 +574,144 @@ alphabet.write(document);
 alphabet = new Alphabet();
 alphabet.read("1");
 alphabet.write(document);
-                    </script>
-                </pre>
-            </details>
-        </details>
-      
+                          </script>
+                     </pre>
+                </details>
+          </details>
+        
  
-        <h2>Not</h2>
-      
-        <details>
-      
-            <summary>
+          <h2>Not</h2>
+        
+          <details>
+        
+                <summary>
 A class to match a single character 
 that doesnt match the input item.
-            </summary>
-      
-            <pre>
-                <script class="export">
+                </summary>
+        
+                <pre>
+                     <script class="export">
 class Not extends Match {
-    #match;
-    constructor(match) {
-        super();
-        this.#match = match;
-    }
-   
-    match(character) {
-      
-        var matched =
-            !this.#match.match(character);
-      
-        if (this.#match.success === false) {
-            this.success = true;
-        }
-        else if (this.#match.success)
-            this.success = false;
+     #match;
+     constructor(match) {
+          super();
+          this.#match = match;
+     }
+    
+     match(character) {
+        
+          var matched =
+                !this.#match.match(character);
+        
+          if (this.#match.success === false) {
+                this.success = true;
+          }
+          else if (this.#match.success)
+                this.success = false;
 
-        if (matched)
-           this.onmatch(character);
-           
-        return matched;
-      
-    }
-   
+          if (matched)
+              this.onmatch(character);
+              
+          return matched;
+        
+     }
+    
 }
-                </script>
-            </pre>
-      
-         
-            <h3>Testing Not</h3>
-         
-            <details>
-                <summary>
+                     </script>
+                </pre>
+        
+            
+                <h3>Testing Not</h3>
+            
+                <details>
+                     <summary>
 Create a class that matches any character
 not in the alphabet.
-                </summary>
-                <pre>
-                    <script>
+                     </summary>
+                     <pre>
+                          <script>
 class NotAlphabet extends Not {
-    constructor() {
-        super(
-            new Alphabet()
-        );
-    }
+     constructor() {
+          super(
+                new Alphabet()
+          );
+     }
 }
 
 var notAlphabet = new NotAlphabet();
 notAlphabet.read("@");
 notAlphabet.write(document);
 
-                    </script>
-                </pre>
-            </details>
-        </details>
+                          </script>
+                     </pre>
+                </details>
+          </details>
 
-        <h2>Optional</h2>
-      
-        <details>
-      
-            <summary>
+          <h2>Optional</h2>
+        
+          <details>
+        
+                <summary>
 A class to optionally match an item.
-            </summary>
-      
-            <pre>
-                <script class="export">
+                </summary>
+        
+                <pre>
+                     <script class="export">
 class Optional extends Match {
-   #match;
-   constructor(match) {
-      super();
-      this.#match = match;
-   }
-   
-   match(character) {
-      var matched =
-         this.#match.match(character);
-          
-      if (this.#match.success !=
-          undefined) {
-         this.success = true;
-      }
+    #match;
+    constructor(match) {
+        super();
+        this.#match = match;
+    }
+    
+    match(character) {
+        var matched =
+            this.#match.match(character);
+             
+        if (this.#match.success !=
+             undefined) {
+            this.success = true;
+        }
 
-      return matched;
-   }
-   
-   readEnd() {
-      this.success = true;
-      super.readEnd();
-   }
-   
+        return matched;
+    }
+    
+    readEnd() {
+        this.success = true;
+        super.readEnd();
+    }
+    
  
 }
-                </script>
-            </pre>
-      
-         
-            <h3>Testing Optional 1</h3>
-      
-            <details>
-                <summary>
+                     </script>
+                </pre>
+        
+            
+                <h3>Testing Optional 1</h3>
+        
+                <details>
+                     <summary>
 Extend [a,b,c] with optional hyphens.
-                </summary>
-                <pre>
-                    <script>
+                     </summary>
+                     <pre>
+                          <script>
 class TestOptional1 extends And {
-   constructor() {
-      super(
-         new Character("a"),
-         new Optional(
-            new Character("-")
-         ),
-         new Character("b"),
-         new Optional(
-            new Character("-")
-         ),
-         new Character("c"),
-         new Optional(
-            new Character(".")
-         )
-      );
-   }
+    constructor() {
+        super(
+            new Character("a"),
+            new Optional(
+                new Character("-")
+            ),
+            new Character("b"),
+            new Optional(
+                new Character("-")
+            ),
+            new Character("c"),
+            new Optional(
+                new Character(".")
+            )
+        );
+    }
 }
 
 var test;
@@ -721,196 +722,196 @@ test.write(document);
 test = new TestOptional1();
 test.read("a-b-c");
 test.write(document);
-   
-                    </script>
-                </pre>
-            </details>
-         
-            <h3>Testing Optional 2</h3>
-      
-            <details>
-                <summary>
+    
+                          </script>
+                     </pre>
+                </details>
+            
+                <h3>Testing Optional 2</h3>
+        
+                <details>
+                     <summary>
 Testing with a missed optional.
-                </summary>
-                <pre>
-                    <script>
+                     </summary>
+                     <pre>
+                          <script>
 class TestOptional2 extends And {
-   constructor() {
-      super(
-         new Word("abc"),
-         new Optional(
-             new Word("123")
-         ),
-         new Or(
-            new And(
-               new Word("xy"),
-               new Word("xyz")
+    constructor() {
+        super(
+            new Word("abc"),
+            new Optional(
+                 new Word("123")
             ),
-            new Word("xyz")
-         )
-      );
-   }
+            new Or(
+                new And(
+                    new Word("xy"),
+                    new Word("xyz")
+                ),
+                new Word("xyz")
+            )
+        );
+    }
 }
 
 var test = new TestOptional2();
 test.read("abcxyz");
 test.write();
-                    </script>
-                </pre>
-            </details>
-         
-        </details>
+                          </script>
+                     </pre>
+                </details>
+            
+          </details>
+          
+          <h2>Capture</h2>
         
-        <h2>Capture</h2>
-      
-        <details>
-            <summary>
+          <details>
+                <summary>
 Matches all the properties in order.
 Allows for sub objects, or nested.
 
 The captured input is the value
 property.
-            </summary>
-      
-            <pre>
-                <script class="export">
+                </summary>
+        
+                <pre>
+                     <script class="export">
 class Capture extends And {
 
-    #object;
-    #keys;
+     #object;
+     #keys;
 
-    constructor(object) {
-        var objects;
-        if (object instanceof Match) {
-            object.value = null;
-            object.onmatch = onmatch;
-            objects = [object];
-        }
-        else
-            objects = getObjects(object);
-            
-        super(...objects);
-        
-        this.#object = object;
-        this.#keys = getKeys(object);
-        this.onmatch = onmatch;
-        
-        function getObjects(object) {
-            var objects = [];
-            var keys = Object.keys(object);
-            for (var index in keys) {
-                var key = keys[index];
-                var obj = object[key];
-                if (obj instanceof Match) {
-                    obj.value = null;
-                    obj.onmatch = onmatch
-                    objects.push(obj);
-                }
-                else {
-                    objects.push(...getObjects(obj));
-                }
-            }
-            return objects;
-        }
-        
-        function getKeys(object) {
-            var allKeys= [];
-            if (object instanceof Match)
-                return [
-                    {
-                        key: "value"
-                    }
-                ];
+     constructor(object) {
+          var objects;
+          if (object instanceof Match) {
+                object.value = null;
+                object.onmatch = onmatch;
+                objects = [object];
+          }
+          else
+                objects = getObjects(object);
                 
-               
-            var keys = Object.keys(object);
-            for (var index in keys) {
+          super(...objects);
+          
+          this.#object = object;
+          this.#keys = getKeys(object);
+          this.onmatch = onmatch;
+          
+          function getObjects(object) {
+                var objects = [];
+                var keys = Object.keys(object);
+                for (var index in keys) {
+                     var key = keys[index];
+                     var obj = object[key];
+                     if (obj instanceof Match) {
+                          obj.value = null;
+                          obj.onmatch = onmatch
+                          objects.push(obj);
+                     }
+                     else {
+                          objects.push(...getObjects(obj));
+                     }
+                }
+                return objects;
+          }
+          
+          function getKeys(object) {
+                var allKeys= [];
+                if (object instanceof Match)
+                     return [
+                          {
+                                key: "value"
+                          }
+                     ];
+                     
+                    
+                var keys = Object.keys(object);
+                for (var index in keys) {
+                     var key = keys[index];
+                     var obj = object[key];
+                     if (obj instanceof Match) {
+                          allKeys.push(
+                                {
+                                     key,
+                                     parent: object
+                                }
+                          );
+                     }
+                     else {
+                          allKeys.push(...getKeys(obj));
+                     }
+                }
+                return allKeys;
+          }
+          
+          function onmatch(character) {
+                if (this.value === null)
+                     this.value = character;
+                else
+                     this.value += character;
+          }
+     }
+     
+     readEnd() {
+
+          if (this.success === undefined) {
+                super.readEnd();
+          }
+          
+          if (this.success)
+                this.setValues();
+          
+     }
+    
+     setValues() {
+          var i = 0;
+          var object = this.#object;
+          var keys = this.#keys;
+          var matches = super.matches;
+          
+          // Single match, get its value
+          if (matches.length === 1) {
+                var item = matches[0];
+                this.value = item.value;
+                return;
+          }
+          
+          // Multiple matches
+          for (var index in matches) {
+                var item = matches[index];
                 var key = keys[index];
-                var obj = object[key];
-                if (obj instanceof Match) {
-                    allKeys.push(
-                        {
-                            key,
-                            parent: object
-                        }
-                    );
-                }
-                else {
-                    allKeys.push(...getKeys(obj));
-                }
-            }
-            return allKeys;
-        }
-        
-        function onmatch(character) {
-            if (this.value === null)
-                this.value = character;
-            else
-                this.value += character;
-        }
-    }
-    
-    readEnd() {
+                var parent = key.parent;
+                parent[key.key] = item.value;
+          }
 
-        if (this.success === undefined) {
-            super.readEnd();
-        }
-        
-        if (this.success)
-            this.setValues();
-        
-    }
-   
-    setValues() {
-        var i = 0;
-        var object = this.#object;
-        var keys = this.#keys;
-        var matches = super.matches;
-        
-        // Single match, get its value
-        if (matches.length === 1) {
-            var item = matches[0];
-            this.value = item.value;
-            return;
-        }
-        
-        // Multiple matches
-        for (var index in matches) {
-            var item = matches[index];
-            var key = keys[index];
-            var parent = key.parent;
-            parent[key.key] = item.value;
-        }
-
-        this.value = {};
-        Object.assign(this.value, object);
-    }
-    
+          this.value = {};
+          Object.assign(this.value, object);
+     }
+     
  
 }
 
-                </script>
-            </pre>
-      
-            <h3>Testing Capture</h3>
-      
-            <details>
-                <summary>
+                     </script>
+                </pre>
+        
+                <h3>Testing Capture</h3>
+        
+                <details>
+                     <summary>
 Capture a simple object with a sub object.
-                </summary>
-                <pre>
-                    <script>
+                     </summary>
+                     <pre>
+                          <script>
 
 var capture = new Capture(
-    {
-        a: new Character("a"),
-        b: new Character("b"),
-        c: {
-            nested: {
-                c: new Character("c")
-            }
-        }
-   }
+     {
+          a: new Character("a"),
+          b: new Character("b"),
+          c: {
+                nested: {
+                     c: new Character("c")
+                }
+          }
+    }
 );
 capture.read("abc");
 document.writeln("value: " + capture.value);
@@ -921,260 +922,245 @@ document.writeln("c: " + capture.value.c);
 capture = new Capture(new Character("a"));
 capture.read("a");
 capture.write(document);
-                    </script>
-                </pre>
-            </details>
-        </details>
-      
-      
-      
-        <h2>Repeat</h2>
-      
-        <details>
-            <summary>
+                          </script>
+                     </pre>
+                </details>
+          </details>
+        
+        
+        
+          <h2>Repeat</h2>
+        
+          <details>
+                <summary>
 A class to match an array of items
 matching the input Match constructor.
 
 When the input Match constructor fails,
 the repeat finishes.
-            </summary>
-      
-            <pre>
-                <script class="export">
+                </summary>
+        
+                <pre>
+                     <script class="export">
 class Repeat extends Match {
-    #Match;
-    #match;
-    #items = [];
+     #Match;
+     #match;
+     #items = [];
   
-    constructor(Match) {
-        super();
-        this.#Match = Match;
-        this.#match = new this.#Match();
-      
-    }
-   
-    match(character) {
-   
-        var matched =
-            this.#match.match(character);
-         
-        if (matched)
-           this.onmatch(character);
-           
-        if (this.#match.success) {
-      
-            this.#items.push(
-                this.#match
-            );
+     constructor(Match) {
+          super();
+          this.#Match = Match;
+          this.#match = new this.#Match();
+        
+     }
+    
+     match(character) {
+    
+          var matched =
+                this.#match.match(character);
             
-            this.#match =
-               new this.#Match();
-           
-        }
-        else if (this.#match.success ===
-                 false)
-        {
-            this.checkSuccess();
-            this.#match =
-                new this.#Match();
-        }
-      
-        return matched;
-      
-    }
-   
-    readEnd() {
-        if (this.#match.success ===
-            undefined)
-        {
-            this.#match.readEnd();
-            if (this.#match.success) {
-
+          if (matched)
+              this.onmatch(character);
+              
+          if (this.#match.success) {
+        
                 this.#items.push(
-                    this.#match
-               );
+                     this.#match
+                );
+                
+                this.#match =
+                    new this.#Match();
+              
+          }
+          else if (this.#match.success ===
+                      false)
+          {
+                this.checkSuccess();
+                this.#match =
+                     new this.#Match();
+          }
+        
+          return matched;
+        
+     }
+    
+     readEnd() {
+          if (this.#match.success ===
+                undefined)
+          {
+                this.#match.readEnd();
+                if (this.#match.success) {
+
+                     this.#items.push(
+                          this.#match
+                    );
+                }
+          }
+          this.checkSuccess();
+          super.readEnd();
+     }
+    
+     checkSuccess() {
+        
+          if (this.#items.length > 0) {
+                this.success = true;
+          }
+          else {
+                this.success = false;
             }
-        }
-        this.checkSuccess();
-        super.readEnd();
+     }
+    
+     get items() {
+          return this.#items;
+     }
+    /*
+    get value() {
+        return this.items.map(
+            item => {
+                return item.value;
+            }
+        ).join("");
     }
-   
-    checkSuccess() {
-      
-        if (this.#items.length > 0) {
-            this.success = true;
-        }
-        else {
-            this.success = false;
-         }
-    }
-   
-    get items() {
-        return this.#items;
-    }
-   /*
-   get value() {
-      return this.items.map(
-         item => {
-            return item.value;
-         }
-      ).join("");
-   }
-   */
+    */
 }
 
 
-                </script>
-            </pre>
-      
-            <h3>Simple test</h3>
-            
-            <details>
-                <summary>
+                     </script>
+                </pre>
+        
+                <h3>Simple test</h3>
+                
+                <details>
+                     <summary>
 Create a repeater class that matches the
 Not A class.
-                </summary>
-                <pre>
-                    <script>
+                     </summary>
+                     <pre>
+                          <script>
 class RepeatNotAlphabet extends Repeat {
-   constructor() {
-      super(NotAlphabet)
-   }
-      
+    constructor() {
+        super(NotAlphabet)
+    }
+        
 }
 
 var repeatNotAlphabet =
-   new RepeatNotAlphabet();
+    new RepeatNotAlphabet();
 repeatNotAlphabet.read("#$&@!?");
 repeatNotAlphabet.write(document);
-   
-                    </script>
-                </pre>
-            </details>
-        </details>
-         
-        <h3>Testing Repeat with Sentence</h3>
-         
-        <details>
-            <summary>
+    
+                          </script>
+                     </pre>
+                </details>
+          </details>
+            
+          <h3>Testing Repeat with Sentence</h3>
+            
+          <details>
+                <summary>
 Create a series of classes to parse a
 sentence consisting of tokens seperated
 by punctuation.
-            </summary>
-            <pre>
-                <script>
+                </summary>
+                <pre>
+                     <script>
 
 class Punctuation extends Or {
-   constructor() {
-      super(
-         new Character(" "),
-         new Character("\t"),
-         new Character("."),
-         new Character("!")
-      );
-   }
-   
+    constructor() {
+        super(
+            new Character(" "),
+            new Character("\t"),
+            new Character("."),
+            new Character("!")
+        );
+    }
+    
 }
 
 class Char extends Not {
-   constructor() {
-      super(
-         new Punctuation()
-      );
-   }
-   
+    constructor() {
+        super(
+            new Punctuation()
+        );
+    }
+    
 }
 
 class Token extends Repeat {
-   constructor() {
-      super(
-         Char
-      );
-   }
+    constructor() {
+        super(
+            Char
+        );
+    }
 }
 
 class Seperator extends Repeat {
 
-   constructor() {
-      super(
-         Punctuation
-      );
-   }
-   
-}
-
-class TokenOr extends Or {
-   constructor() {
-      super(
-         new Token(),
-         new Seperator()
-      );
-   }
-   /*
-   get value() {
-      return this.item.value;
-   }
-   */
-}
-
-class TokenAnd extends And {
-    #token;
-    
     constructor() {
-        var token;
         super(
-            token = new Capture(
-                new Token()
-            ),
-            new Optional(
-                new Seperator()
-            )
+            Punctuation
         );
-        
-        this.#token = token;
     }
     
-    get value() {
-        return this.#token.value;
-    }
-    
+}
+
+
+class TokenAndSeperator extends And {
+     #token;
+     
+     constructor() {
+          var token;
+          super(
+                token = new Capture(
+                     new Token()
+                ),
+                new Optional(
+                     new Seperator()
+                )
+          );
+          
+          this.#token = token;
+     }
+     
+     get value() {
+          return this.#token.value;
+     }
+     
 
 }
-   
+    
 class Sentence extends Repeat {
-   constructor() {
-      super(
-          TokenAnd
-      );
-   }
-   
+    constructor() {
+        super(
+             TokenAndSeperator
+        );
+    }
+    
 }
 
 var sentence = new Sentence();
 
 sentence.read("hello world!");
 
-sentence.write(document);
-
 if (sentence.success) {
 
-   sentence.items.forEach(
-      token => {
-         document.writeln(
-            "*" +
-            token.value + 
-            "*"
-         );
-      }
-   );
+    sentence.items.forEach(
+        token => {
+            document.writeln(
+                "*" +
+                token.value + 
+                "*"
+            );
+        }
+    );
 }
-            </script>
-         </pre>
-      </details>
-      
-      <a id="downloadCode"><h2 class="highlight">Download Code</h2></a>
-      <pre>
-         <script type="module" style="display:none;">
+                </script>
+            </pre>
+        </details>
+        
+        <a id="downloadCode"><h2 class="highlight">Download Code</h2></a>
+        <pre>
+            <script type="module" style="display:none;">
 var code = generateCode();
 var a = document.getElementById("downloadCode");
 
@@ -1182,42 +1168,42 @@ a.href = createDownloadURL(code);
 a.download = "parser.js";
 
 function generateCode() {
-    
-    var details = document.querySelectorAll("details");
-    
-    details.forEach(
-        (detail) => {
-            detail.setAttribute("open", "true");
-        }
-    );
-    
-    var x = document.querySelectorAll("script.export");
+     
+     var details = document.querySelectorAll("details");
+     
+     details.forEach(
+          (detail) => {
+                detail.setAttribute("open", "true");
+          }
+     );
+     
+     var x = document.querySelectorAll("script.export");
 
-    var code = "";
-   
-    x.forEach(
-        (script) => {
-            
-            code += script.innerText.trim() + "\r\n";
-        }
-    );
+     var code = "";
     
-    details.forEach(
-        (detail) => {
-            detail.removeAttribute("open");
-        }
-    );
-   
-    return code;
+     x.forEach(
+          (script) => {
+                
+                code += script.innerText.trim() + "\r\n";
+          }
+     );
+     
+     details.forEach(
+          (detail) => {
+                detail.removeAttribute("open");
+          }
+     );
+    
+     return code;
 }
 
 function createDownloadURL(string) {
-    const blob = new Blob([string], { type: "text/javascript" });
-    return URL.createObjectURL(blob);
+     const blob = new Blob([string], { type: "text/javascript" });
+     return URL.createObjectURL(blob);
 }
 
-         </script>
-      </pre>
-    
-   </body>
+            </script>
+        </pre>
+     
+    </body>
 </html>

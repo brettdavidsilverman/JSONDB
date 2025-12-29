@@ -10,7 +10,7 @@
     setCredentialsCookie($credentials);
     header("Content-Type: text/plain");
 
-    var_dump(_urldecode("[]"));
+    var_dump(getHeader("origin"));
     
 
 ?>

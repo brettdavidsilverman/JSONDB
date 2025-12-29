@@ -6,13 +6,12 @@
     
     http_response_code(200);
     
+    
     setCredentialsCookie($credentials);
-    
-    
+
     $method = $_SERVER['REQUEST_METHOD'];
 
     if ($method === "POST") {
-
         handlePost($credentials);
     }
     else if ($method === "GET") {

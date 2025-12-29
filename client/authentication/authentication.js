@@ -2,18 +2,13 @@ class Authentication
 {
     static _uploadProgressName = null;
     static _uploadMaxFilesize = null;
-    #credentials = null;
     
     constructor(authenticationServer = document.location.origin) {
         
-        this.credentials = this.getCredentials();
-    
         this.authenticationServer =
             authenticationServer;
         this.url = this.authenticationServer;
         
-        if (this.authenticated)
-            this.updateJobs();
     }
     
     authenticate() {
@@ -47,33 +42,43 @@ class Authentication
         }
     }
     
-    async fetch(url, parameters) {
+    fetch(url, parameters) {
         var _this = this;
+        
+        var credentials = this.credentials;
+        var xAuthToken = null;
+        if (credentials != null) {
+            xAuthToken =
+                encodeURIComponent(
+                    JSON.stringify(credentials)
+                );
+        }
 
         var defaultParameters = {
             mode: "cors",
             method: "GET",
+            credentials: "include",
             headers: {
-                "x-auth-token":
-                     encodeURIComponent(
-                         JSON.stringify(this.credentials)
-                    )
+                "X-Auth-Token": xAuthToken
             }
         }
-     
+
         if (parameters)
             Object.assign(defaultParameters, parameters);
-
+            
         var ok;
         var status;
         
         url = encodeSlashes(url);
         
+        var fullURL = new URL(url, this.url);
+
         var promise =
-            fetch(url, defaultParameters)
+            fetch(fullURL, defaultParameters)
             .then(
                 (response) => {
-                    _this.saveCredentials(response);
+
+                    _this.saveResponseCredentials(response);
                     ok = response.ok;
                     status = response.status;
                     return response.text();
@@ -126,11 +131,11 @@ class Authentication
         }
     }
     
-    postJSON(url, json) {
+    postObject(url, object) {
     
         var parameters = {
             method: "POST",
-            body: JSON.stringify(json)
+            body: JSON.stringify(object)
         }
         
    
@@ -237,14 +242,14 @@ class Authentication
    
         var _this = this;
 
-        return this.postJSON(
+        return this.postObject(
             "/my/jobs/$",
             status
         )
         .then(
             (jobPath) => {
 
-                var promise = _this.postJSON(
+                var promise = _this.postObject(
                     jobPath + "/jobPath",
                     jobPath
                 )
@@ -328,7 +333,7 @@ class Authentication
 
         var _this = this;
         
-        this.authenticated = false;
+        this.clearCredentials();
         
         if ( email == null || !email.length )
             throw new Error("Missing email");
@@ -337,26 +342,22 @@ class Authentication
             throw new Error("Missing secret");
         
         var parameters = {
-            mode: "cors",
             method: "POST",
             body: JSON.stringify(
-                     {
-                         email: email,
-                         secret: secret
-                     }
-                 )
+                {
+                    email: email,
+                    secret: secret
+                }
+            )
         }
 
-        var _this = this;
         var promise =
-            this.logoff().then(
-                () => {
-                    return _this.fetch(_this.url + "/server/authentication/logon.php", parameters)
-                }
+            this.fetch(
+                this.url + "/server/authentication/logon.php", 
+                parameters
             )
             .then(
                 function(credentials) {
-                    _this.credentials = credentials;
                     return credentials;
                 }
             );
@@ -364,32 +365,10 @@ class Authentication
         return promise;
     }
     
-    get credentials() {
-        return this.#credentials;
-    }
-    
-    set credentials(creds) {
-
-        if (creds) {
-            this.setCookie(creds);
-            this.authenticated =
-                 creds.authenticated;
-        }
-        else 
-            this.authenticated = false;
-            
-        this.#credentials = creds;
-        
-        if (this.#credentials)
-             this.#credentials.toString =
-                 function() {
-                     return JSON.stringify(this);
-                 }
-    }
     
     get authenticated() {
         var credentials = this.credentials;
-
+        
         if (credentials != null) {
             var authenticated =
                 credentials.authenticated;
@@ -399,31 +378,21 @@ class Authentication
                 authenticated && (
                     credentials.expires > now
                 );
-     
+
             return authenticated;
         }
       
       return false;
         
     }
-    
-    set authenticated(value) {
-
-        if (!value) {
-            document.cookie = "credentials=;path=/;max-age=0;"
-        }
-    }
 
     refresh()
-    {
-        var _this = this;
-
+    {
         var promise =
             this.fetch(this.url + "/server/authentication/refresh.php")
             .then(
                 function(authenticated) {
-                    _this.authenticated = authenticated;
-                    return _this.authenticated;
+                    return authenticated;
                 }
             );
 
@@ -449,7 +418,7 @@ class Authentication
         }
             
         var promise =
-            this.fetch(this.url + "/server/authentication/userEmailExists.php", parameters);
+            fetch(this.url + "/server/authentication/userEmailExists.php", parameters);
             
         return promise;
 
@@ -531,7 +500,7 @@ class Authentication
     
     changeSecret(email, oldSecret, newSecret) {
 
-        this.authenticated = false;
+        this.clearCredentials();
         
         var parameters = {
             method: "POST",
@@ -555,13 +524,11 @@ class Authentication
     
     logoff()
     {
-        var _this = this;
-        
+        this.clearCredentials();
         var promise =
             this.fetch(this.url + "/server/authentication/logoff.php")
             .then(
                 function(json) {
-                    _this.authenticated = false;
                     return json;
                 }
             );
@@ -593,106 +560,74 @@ class Authentication
         
     }
     
-    setCookie(credentials) {
-         
-        if (!credentials) {
-             document.cookie =
-                 "credentials=;" +
-                 "path=/;";
-            return;
-            
-        }
-        
-        var credentialsString =
-            encodeURIComponent(
-                JSON.stringify(
-                    credentials
-                )
-            );
-            
-        var expires = "0";
-        if (credentials.expires) {
-     
-            expires = 
-                new Date(credentials.expires);
-     
-            expires =
-                expires.toUTCString();
-                    
-        }
-
-        var cookie;
-        
-        if (credentials.authenticated)
-        {
-                 
-            cookie =
-                "credentials=" +
-                credentialsString + ";" +
-                "path=/" + ";";
-                    
-            if (expires)
-                cookie += "expires=" + expires + ";"
-        }
-        else
-        {
-            cookie =
-                "credentials=;" +
-                "path=/;";
-        }
-        
-        document.cookie = cookie;
-        
-
+    get credentialsKey() {
+        var url = new URL(this.url);
+        var key = "Credentials " + url.origin;
+        return key;
     }
     
-    saveCredentials(response) {
-
-         if (response.status == 401) {
-             // clear cookie
-             document.cookie =
-                 "credentials=;" +
-                 "path=/;";
-             this.onHandleLogon();
-             throw new LogonError();
-         }
-         
-         var credentialsString =
-            response.headers.get("x-auth-token");
-
-         var credentials = null;
-         if (credentialsString) {
-             credentials = JSON.parse(
-                 decodeURIComponent(credentialsString)
-             );
-         }
-          
-         this.credentials = credentials;
-
-    }
-    
-    
-    getCredentials() {
-        var credentialsString =
-            this.getCookie(
-                "credentials"
-            );
-        if (credentialsString)
-            credentialsString =
-                decodeURIComponent(
-                    credentialsString
-                );
-                
+    get credentials() {
         
-            
-        var credentials = null;
+        var credentialsString =
+            localStorage.getItem(
+                this.credentialsKey
+            );
         
         if (credentialsString) {
-            credentials = JSON.parse(credentialsString);
+            return JSON.parse(
+                credentialsString
+            );
         }
         
-        return credentials;
+        return null;
     }
+    
+    set credentials(credentials) {
+        if (credentials == null)
+            this.clearCredentials();
+        else
+            localStorage.setItem(
+                this.credentialsKey,
+                JSON.stringify(credentials)
+            );
+    }
+    
+    saveResponseCredentials(response) {
+        
+        var xAuthToken =
+            response.headers.get("X-Auth-Token");
+            
+        if (xAuthToken)
+        {
+            this.credentials =
+                JSON.parse(
+                    decodeURIComponent(xAuthToken)
+                );
+        }
+        else
+            this.credentials = null;
+        
+    }
+    
+    clearCredentials() {
+/*
+        var pastDate = "Thu, 01 Jan 1970 00:00:00 UTC";
+        var url = new URL(this.url);
+        
+        // Build the cookie string
+        document.cookie =
+            "credentials=; " +
+            "expires=" + pastDate + "; " +
+            "path=/; " +
+            "domain=" + url.hostname;
+*/
+        localStorage.removeItem(
+            this.credentialsKey
+        );
+
+        return;
+    }
+    
 
     // Returns a base64 encode SHA-512 hash
     // of the file
@@ -970,5 +905,4 @@ class LogonError extends Error {
           super("Please logon");
      }
 }
-
 

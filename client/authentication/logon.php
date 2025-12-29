@@ -17,7 +17,7 @@
         <script src="/client/console/console.js"></script>
         <script src="sha512.js"></script>
         <script src="thumbnailSecret.js"></script>
-        <script src="authentication.js?v=9"></script>
+        <script src="authentication.js"></script>
         <link rel="stylesheet" type="text/css" href="/style.css" />
         <link rel="stylesheet" type="text/css" href="style.css" />
         <title>Logon</title>
@@ -184,7 +184,6 @@ function logon()
                         prompt("Credentials", authentication.credentials);
                     }
                     saveFields();
-                    
                     document.location.replace(redirect);
                     return;
                 }
@@ -217,7 +216,7 @@ function logon()
             }
         ).catch(
             function(error) {
-                alert(error);
+                displayError(error, "logon.php.logon");
             }
         ).finally(
             function() {
@@ -343,10 +342,15 @@ function update()
 {
  
     authentication.refresh().then(
-            function(auth){
-                updateForm();
-            }
-        );
+        function(auth){
+            updateForm();
+        }
+    )
+    .catch(
+        (error) => {
+            displayError(error, "logon.php.update");
+        }
+    );
 
 }
 

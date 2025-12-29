@@ -383,6 +383,7 @@ BEGIN
        SELECT *
        FROM   Session
        WHERE  Session.sessionKey = _sessionKey
+       AND         Session.ipAddress = _ipAddress
        FOR UPDATE
     ) THEN
      
@@ -2122,4 +2123,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-02  6:52:12
+-- Dump completed on 2025-12-29 13:39:02

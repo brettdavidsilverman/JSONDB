@@ -333,7 +333,8 @@ function escapeString($string) {
 function getHeader($name) {
      
     $headers = getallheaders();
-   
+    $name = strtolower($name);
+    
    
     $lowerCaseHeaders = null;
    

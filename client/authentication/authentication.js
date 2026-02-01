@@ -44,7 +44,7 @@ class Authentication
     
     fetch(url, parameters) {
         var _this = this;
-        
+        /*
         var credentials = this.credentials;
         var xAuthToken = null;
         if (credentials != null) {
@@ -53,14 +53,14 @@ class Authentication
                     JSON.stringify(credentials)
                 );
         }
-
+*/
         var defaultParameters = {
             mode: "cors",
             method: "GET",
-            credentials: "include",
+            credentials: "include"/*,
             headers: {
                 "X-Auth-Token": xAuthToken
-            }
+            }*/
         }
 
         if (parameters)
@@ -69,25 +69,25 @@ class Authentication
         var ok;
         var status;
         
-        url = encodeSlashes(url);
-        
-        var fullURL = new URL(url, this.url);
-
         var promise =
-            fetch(fullURL, defaultParameters)
+            fetch(url, defaultParameters)
             .then(
                 (response) => {
 
-                    _this.saveResponseCredentials(response);
+                  //  _this.saveResponseCredentials(response);
                     ok = response.ok;
                     status = response.status;
+                    
                     return response.text();
                     
                 }
             )
             .then(
                 (text) => {
-
+                    if (status == "401") {
+                        throw new Error("Unauthorised", "authentication.fetch");
+                    }
+                    
                     if (text == "undefined") {
                        return undefined;
                     }
@@ -124,11 +124,7 @@ class Authentication
 
         return promise;
         
-        function encodeSlashes(url) {
-            url = url.replace("%2F", "%252F");
-            url = url.replace("%2f", "%252f");
-            return url;
-        }
+        
     }
     
     postObject(url, object) {
@@ -568,20 +564,22 @@ class Authentication
     
     get credentials() {
         
-        var credentialsString =
+        var credentialsString = 
+            this.getCookie("credentials");
+        /*
             localStorage.getItem(
                 this.credentialsKey
             );
-        
+        */
         if (credentialsString) {
             return JSON.parse(
-                credentialsString
+                decodeURIComponent(credentialsString)
             );
         }
         
         return null;
     }
-    
+    /*
     set credentials(credentials) {
         if (credentials == null)
             this.clearCredentials();
@@ -608,23 +606,9 @@ class Authentication
             this.credentials = null;
         
     }
-    
+    */
     clearCredentials() {
-/*
-        var pastDate = "Thu, 01 Jan 1970 00:00:00 UTC";
-        var url = new URL(this.url);
-        
-        // Build the cookie string
-        document.cookie =
-            "credentials=; " +
-            "expires=" + pastDate + "; " +
-            "path=/; " +
-            "domain=" + url.hostname;
-*/
-        localStorage.removeItem(
-            this.credentialsKey
-        );
-
+        document.cookie = "";
         return;
     }
     

@@ -309,7 +309,8 @@ fetchButton.onclick = function() {
     authentication.authenticate();
 
     localStorage.setItem("path", pathInput.value);
-            
+    
+
     var promise =
     authentication.fetch(url)
     .then(
@@ -555,7 +556,6 @@ function getURL(publish = false) {
         return pathInput.value;
     }
 
- 
     url = new URL(pathInput.value, authentication.url);
 
     if (url.pathname.endsWith("/")) {
@@ -585,12 +585,13 @@ function getURL(publish = false) {
     // lower case
     url.pathname = url.pathname.replaceAll("%2f", "%252f");
     
-    
+    /*
     var str = url.pathname;
     if (url.search)
        str += url.search;
-       
-    return str;
+       */
+//alert("here " + url);
+    return url;
 }
 
 function isInteger(value) {

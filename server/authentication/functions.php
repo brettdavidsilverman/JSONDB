@@ -253,9 +253,6 @@ function setCredentialsCookie($credentials)
         $credentialsString =
             json_encode($credentials);
     }
-    
-    if (!is_null($credentialsString))
-        header("X-Auth-Token: " . urlencode($credentialsString));
 
     setcookie(
         "credentials",
@@ -275,16 +272,9 @@ function setCredentialsCookie($credentials)
 function getCredentialsCookie()
 {
 
-    $credentialsString =
-        getHeader("X-Auth-Token");
-    
-    if (!is_null($credentialsString))
-        $credentialsString =
-            urldecode($credentialsString);
-            
+    $credentialsString = null;
 
-    if (is_null($credentialsString) &&
-        array_key_exists("credentials", $_COOKIE))
+    if (array_key_exists("credentials", $_COOKIE))
     {
         $credentialsString =
             $_COOKIE["credentials"];
@@ -375,16 +365,15 @@ function authenticate($ignoreExpires = false)
 
     $connection->close();
     
-    $isFetchClient =
-         !is_null(
-             getHeader("X-Auth-Token")
-         );
+    $isFetchClient = true;
          
     if (is_null($credentials) ||
         $credentials["authenticated"] !== true) {
          
         if ($isFetchClient) {
-            http_response_code(401);
+            header("HTTP/1.1 401 Unauthorised");
+            
+           // http_response_code(401);
             header("content-type: application/json");
             echo json_encode("Invalid credentials");
         }
